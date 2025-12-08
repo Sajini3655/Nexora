@@ -1,75 +1,65 @@
-# React + TypeScript + Vite
+Nexora
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Nexora is an AI-powered project and issue management system designed to improve team collaboration, streamline task management, and detect workflow blockers. It features AI-assisted chat, task summarization, and optional ticket creation for detected blockers.
 
-Currently, two official plugins are available:
+Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Project & task lifecycle management
 
-## React Compiler
+AI-assisted task assignment and prioritization
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+Role-based dashboards: Admin, Manager, Developer, Client
 
-Note: This will impact Vite dev & build performances.
+Task-level chat with AI summarization and blocker detection
 
-## Expanding the ESLint configuration
+Natural language search for tasks and projects
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Optional ticket creation for blockers
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Tech Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Frontend: React + Material-UI
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Backend: Spring Boot (main), Python + FastAPI (AI/chat)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Databases: PostgreSQL + MongoDB
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+AI Services: Groq API
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Deployment: Docker / AWS / Firebase
+
+Getting Started
+
+Clone the repository
+
+git clone https://github.com/yourusername/nexora.git
+cd nexora
+
+
+Frontend
+
+cd frontend
+npm install
+npm start
+
+
+Python AI backend
+
+cd backend/ai
+pip install -r requirements.txt
+uvicorn main:app --reload
+
+
+Spring Boot backend
+
+cd backend/springboot
+./mvnw spring-boot:run
+
+Usage
+
+Open the frontend in your browser
+
+Start a chat with AI for task discussion and blocker detection
+
+Decide whether to create tickets for blockers
+
