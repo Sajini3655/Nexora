@@ -1,8 +1,7 @@
 import React from "react";
 import { Box, Typography, Grid, Divider } from "@mui/material";
 import Card from "../../components/ui/Card";
-import useAuth from "../../hooks/useAuth";
-
+import { AuthProvider, useAuth } from "../../context/AuthContext.jsx";
 export default function AdminProfile() {
   const { user } = useAuth();
 

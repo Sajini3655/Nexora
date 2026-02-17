@@ -7,25 +7,40 @@ import {
   Typography,
   Box,
   MenuItem,
-  Alert
+  Alert,
+  Button as MUIButton
 } from "@mui/material";
 
 import Input from "../../components/ui/Input";
-import Button from "../../components/ui/Button";
+import useApi from "../../hooks/useApi";
 
 const ROLES = ["ADMIN", "MANAGER", "DEVELOPER", "CLIENT"];
 
+function isValidEmail(value) {
+  const e = value.trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+
+// ✅ prevents "/api/api/..." no matter what baseURL is
+function normalizeInvitePath(apiInstance) {
+  const base = (apiInstance?.defaults?.baseURL || "").replace(/\/+$/, "");
+  const hasApiSuffix = /\/api$/i.test(base);
+  return hasApiSuffix ? "/admin/users/invite" : "/api/admin/users/invite";
+}
+
 export default function InviteUserDialog({ open, onClose, onInvited }) {
+  const api = useApi();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("CLIENT");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [inviteUrl, setInviteUrl] = useState("");
 
   const canSubmit = useMemo(() => {
-    const e = email.trim();
-    return name.trim().length >= 2 && e.includes("@") && e.includes(".") && role;
+    return name.trim().length >= 2 && isValidEmail(email) && !!role;
   }, [name, email, role]);
 
   const reset = () => {
@@ -34,6 +49,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
     setRole("CLIENT");
     setMsg("");
     setErr("");
+    setInviteUrl("");
     setLoading(false);
   };
 
@@ -46,21 +62,28 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
   async function handleInvite() {
     setErr("");
     setMsg("");
-    if (!canSubmit) return;
+    setInviteUrl("");
+
+    if (!canSubmit || loading) return;
 
     try {
       setLoading(true);
 
-      // TODO: connect backend later:
-      // await api.post("/api/admin/invite", { name, email, role });
+      const path = normalizeInvitePath(api);
 
-      // fake delay
-      await new Promise((r) => setTimeout(r, 450));
+      const res = await api.post(path, {
+        name: name.trim(),
+        email: email.trim(),
+        role
+      });
 
-      setMsg("Invitation prepared. (Connect backend to send email.)");
+      const data = res?.data || {};
+      setMsg(data.message || "User invited.");
+      if (data.inviteUrl) setInviteUrl(data.inviteUrl);
+
       onInvited?.({ name: name.trim(), email: email.trim(), role });
     } catch (e) {
-      setErr(e?.response?.data?.message || "Invite failed");
+      setErr(e?.response?.data?.message || e?.message || "Invite failed");
     } finally {
       setLoading(false);
     }
@@ -86,19 +109,53 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
           Invite User
         </Typography>
         <Typography variant="body2" sx={{ opacity: 0.7 }}>
-          Create an invitation for a new Nexora user.
+          Send an invitation to a new user.
         </Typography>
       </DialogTitle>
 
       <DialogContent sx={{ pt: 2 }}>
-        {err ? <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert> : null}
-        {msg ? <Alert severity="success" sx={{ mb: 2 }}>{msg}</Alert> : null}
+        {err ? (
+          <Alert severity="error" sx={{ mb: 2, whiteSpace: "pre-line" }}>
+            {err}
+          </Alert>
+        ) : null}
+
+        {msg ? (
+          <Alert severity="success" sx={{ mb: 2, whiteSpace: "pre-line" }}>
+            {msg}
+          </Alert>
+        ) : null}
+
+        {inviteUrl ? (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Invite link (copy & share if email fails):
+            <Box sx={{ mt: 1, wordBreak: "break-all", fontSize: 13, opacity: 0.9 }}>
+              {inviteUrl}
+            </Box>
+          </Alert>
+        ) : null}
 
         <Box sx={{ display: "grid", gap: 1.5 }}>
-          <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            label="Full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-          <Input select label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
+          <Input
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={!!email && !isValidEmail(email)}
+            helperText={email && !isValidEmail(email) ? "Enter a valid email (example@gmail.com)" : ""}
+          />
+
+          <Input
+            select
+            label="Role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
             {ROLES.map((r) => (
               <MenuItem key={r} value={r}>
                 {r}
@@ -113,12 +170,17 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
       </DialogContent>
 
       <DialogActions sx={{ p: 2 }}>
-        <Button tone="soft" onClick={handleClose}>
+        <MUIButton variant="outlined" onClick={handleClose} disabled={loading}>
           Cancel
-        </Button>
-        <Button loading={loading} disabled={!canSubmit} onClick={handleInvite}>
-          Send Invite
-        </Button>
+        </MUIButton>
+
+        <MUIButton
+          variant="contained"
+          onClick={handleInvite}
+          disabled={!canSubmit || loading}
+        >
+          {loading ? "Sending..." : "Send Invite"}
+        </MUIButton>
       </DialogActions>
     </Dialog>
   );

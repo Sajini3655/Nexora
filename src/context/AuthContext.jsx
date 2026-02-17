@@ -1,43 +1,60 @@
-import React from "react";
-import { createContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import useApi from "../hooks/useApi.jsx";
+import { normalizeRole } from "../utils/permissions";
 
-export const AuthContext = createContext(null);
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const api = useApi();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Load current user if token exists
   async function loadMe() {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setUser(null);
-        return;
-      }
-      const res = await api.get("/api/auth/me");
-      const me = res.data;
-    const role = me.role?.startsWith("ROLE_") ? me.role.replace("ROLE_", "") : me.role;
-    setUser({ ...me, role });
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUser(null);
+      return null;
+    }
 
-    } catch {
+    try {
+      const res = await api.get("/auth/me");
+      const me = res.data;
+      const normalizedUser = { ...me, role: normalizeRole(me.role) };
+      setUser(normalizedUser);
+      return normalizedUser;
+    } catch (err) {
+      console.warn("loadMe failed, clearing token", err);
       localStorage.removeItem("token");
       setUser(null);
+      return null;
     }
   }
 
-  async function login(email, password) {
-    const res = await api.post("/api/auth/login", { email, password });
-    localStorage.setItem("token", res.data.token);
-    // backend login response includes user object, but /me is safer
-    await loadMe();
-    return res.data;
+  async function login({ email, password }) {
+    const res = await api.post("/auth/login", { email, password });
+    const { token } = res.data;
+    if (!token) throw new Error("No token received");
+    localStorage.setItem("token", token);
+    return await loadMe();
   }
 
-  async function register(payload) {
-    // payload: {name,email,password,role}
-    const res = await api.post("/api/auth/register", payload);
+  // Register function for normal registration (if needed)
+  async function register({ name, email, password, role }) {
+    const res = await api.post("/auth/register", { name, email, password, role });
+    const { token } = res.data;
+    if (!token) throw new Error("No token received on registration");
+    localStorage.setItem("token", token);
+    return await loadMe();
+  }
+
+  // ✅ Accept invite function for token-based registration
+  async function acceptInvite(token, password) {
+    const res = await api.post("/auth/accept-invite", null, {
+      params: { token, password },
+    });
+    // Optionally, login automatically if your backend returns a token
+    // localStorage.setItem("token", res.data.token);
     return res.data;
   }
 
@@ -52,13 +69,16 @@ export function AuthProvider({ children }) {
       await loadMe();
       setLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, refresh: loadMe }),
+    () => ({ user, loading, login, logout, register, acceptInvite, refresh: loadMe }),
     [user, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
 }

@@ -1,52 +1,88 @@
-import React from "react";
-import { Box, Typography, Alert } from "@mui/material";
-import { useState } from "react";
-import Input from "../../components/ui/Input.jsx";
-import Button from "../../components/ui/Button.jsx";
-import Card from "../../components/ui/Card.jsx";
-import useAuth from "../../hooks/useAuth";
-import { useNavigate, Link } from "react-router-dom";
+// src/pages/auth/Login.jsx
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function Login() {
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [err, setErr] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setErr("");
+    setError("");
+    setLoading(true);
+
     try {
-      await login(email, password);
-      navigate("/admin");
-    } catch (e2) {
-      setErr(e2?.response?.data?.message || "Login failed");
+      const user = await login({ email, password });
+
+      if (!user) throw new Error("Login failed");
+
+      // Redirect based on role
+      const role = user.role.toUpperCase();
+      if (role === "ADMIN") navigate("/admin");
+      else if (role === "MANAGER") navigate("/manager");
+      else navigate("/login");
+    } catch (err) {
+      setError(err.message || "Login failed");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <Box sx={{
-      minHeight: "100vh",
-      display: "grid",
-      placeItems: "center",
-      p: 2
-    }}>
-      <Card sx={{ width: 420 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
-          Login
-        </Typography>
-        {err ? <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert> : null}
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-          <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <Button type="submit">Sign In</Button>
-          <Typography variant="body2" sx={{ opacity: 0.8 }}>
-            No account? <Link to="/register">Register</Link>
-          </Typography>
-        </Box>
-      </Card>
-    </Box>
+    <div style={{ maxWidth: 400, margin: "100px auto", padding: 20, border: "1px solid #ccc", borderRadius: 8 }}>
+      <h2 style={{ textAlign: "center" }}>Login</h2>
+      {error && <div style={{ color: "red", marginBottom: 10 }}>{error}</div>}
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: 10 }}>
+          <label>Email:</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={{ width: "100%", padding: 8, marginTop: 4 }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 10 }}>
+          <label>Password:</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={{ width: "100%", padding: 8, marginTop: 4 }}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: 10,
+            background: "#1976d2",
+            color: "#fff",
+            border: "none",
+            borderRadius: 4,
+            cursor: loading ? "not-allowed" : "pointer"
+          }}
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
+      </form>
+
+      <p style={{ marginTop: 15, textAlign: "center" }}>
+        Don't have an account? <a href="/register">Register</a>
+      </p>
+    </div>
   );
 }

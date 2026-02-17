@@ -1,26 +1,20 @@
+// src/components/layout/ProtectedRoute.jsx
 import React from "react";
-import { Navigate } from "react-router-dom";
-import useAuth from "../../hooks/useAuth";
-import Spinner from "../ui/Spinner";
-import { hasRole } from "../../utils/permissions";
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext.jsx";
 
-export default function ProtectedRoute({ children, requiredRoles = [] }) {
+export default function ProtectedRoute({ allowedRoles = [] }) {
   const { user, loading } = useAuth();
 
-  if (loading) return <Spinner />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (loading) return <div style={{ textAlign: "center", marginTop: 100 }}>Loading...</div>;
 
-  // If roles are required, block when user role isn't allowed
-  if (requiredRoles.length > 0 && !hasRole(user, requiredRoles)) {
-    return (
-      <div style={{ padding: 24, color: "white" }}>
-        <h2>You don’t have permission to view this page.</h2>
-        <p>
-          Logged in as: {user?.email} ({user?.role})
-        </p>
-      </div>
-    );
+  if (!user) return <Outlet />; // allow public pages (login/register) to render
+
+  if (allowedRoles.length && !allowedRoles.includes(user.role.toUpperCase())) {
+    // redirect to dashboard if role not allowed
+    const role = user.role.toUpperCase();
+    return <Navigate to={role === "ADMIN" ? "/admin" : "/manager"} replace />;
   }
 
-  return children;
+  return <Outlet />; // allowed route
 }

@@ -1,66 +1,101 @@
-import React from "react";
-import { Box, Typography, Alert, MenuItem } from "@mui/material";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Box, Typography, Alert } from "@mui/material";
 import Input from "../../components/ui/Input.jsx";
 import Button from "../../components/ui/Button.jsx";
 import Card from "../../components/ui/Card.jsx";
-import useAuth from "../../hooks/useAuth";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import axios from "axios";
 
 export default function Register() {
-  const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(""); // read-only
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("ADMIN");
-  const [msg, setMsg] = useState("");
+  const [token, setToken] = useState("");
   const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const tokenParam = searchParams.get("token");
+    if (!tokenParam) {
+      setErr("Invalid registration link");
+      setLoading(false);
+      return;
+    }
+    setToken(tokenParam);
+
+    // ✅ fetch email from backend using token
+    axios
+      .get(`http://localhost:8081/api/auth/accept-invite`, {
+        params: { token: tokenParam },
+      })
+      .then((res) => {
+        setEmail(res.data.email); // backend returns { email: "...", name: "..." }
+      })
+      .catch(() => {
+        setErr("Invalid or expired token");
+      })
+      .finally(() => setLoading(false));
+  }, [searchParams]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setErr("");
     setMsg("");
+
+    if (!token) {
+      setErr("Token missing. Cannot register.");
+      return;
+    }
+
     try {
-      await register({ name, email, password, role });
-      setMsg("Registered successfully. Now login.");
-      setTimeout(() => navigate("/login"), 700);
+      // ✅ Correct POST to backend with token & password as params
+      await axios.post(
+        `http://localhost:8081/api/auth/accept-invite`,
+        null, // body is empty
+        {
+          params: {
+            token: token,
+            password: password,
+          },
+        }
+      );
+
+      setMsg("Registered successfully! Redirecting to login...");
+      setTimeout(() => navigate("/login"), 1500);
     } catch (e2) {
-      setErr(e2?.response?.data?.message || "Register failed");
+      setErr(e2.response?.data?.message || "Registration failed");
     }
   }
 
+  if (loading) return <div>Loading...</div>;
+
   return (
-    <Box sx={{ width: 480, borderRadius: 4, boxShadow: "0 30px 80px rgba(0,0,0,0.55)" }}>
+    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 2 }}>
       <Card sx={{ width: 460 }}>
         <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
-          Register
+          Complete Registration
         </Typography>
-        {err ? <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert> : null}
-        {msg ? <Alert severity="success" sx={{ mb: 2 }}>{msg}</Alert> : null}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-          <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
+        {msg && <Alert severity="success" sx={{ mb: 2 }}>{msg}</Alert>}
+
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+        >
+          <Input label="Email" value={email} disabled />
           <Input
-            select
-            label="Role"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          >
-            <MenuItem value="ADMIN">ADMIN</MenuItem>
-            <MenuItem value="MANAGER">MANAGER</MenuItem>
-            <MenuItem value="DEVELOPER">DEVELOPER</MenuItem>
-            <MenuItem value="CLIENT">CLIENT</MenuItem>
-          </Input>
-
-          <Button type="submit">Create Account</Button>
-
-          <Typography variant="body2" sx={{ opacity: 0.8 }}>
-            Have account? <Link to="/login">Login</Link>
-          </Typography>
+            label="New Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <Button type="submit">Set Password & Register</Button>
         </Box>
       </Card>
     </Box>

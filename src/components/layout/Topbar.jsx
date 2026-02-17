@@ -16,8 +16,8 @@ import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
 
-import useAuth from "../../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "../../context/AuthContext.jsx";
+ import { useNavigate } from "react-router-dom";
 import { useLayout } from "../../context/LayoutContext";
 
 export default function Topbar() {

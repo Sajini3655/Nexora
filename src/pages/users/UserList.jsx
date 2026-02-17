@@ -123,7 +123,8 @@ export default function UserList() {
       if (role && role !== "ALL") params.role = role;
       if (enabledParam !== undefined) params.enabled = enabledParam;
 
-      const res = await api.get("/api/admin/users", { params });
+      // FIXED: Removed /api prefix (baseURL already has it)
+      const res = await api.get("/admin/users", { params });
       setRows(res.data.items || []);
       setTotal(res.data.total ?? 0);
     } catch (e) {
@@ -156,7 +157,8 @@ export default function UserList() {
     const nextEnabled = !user.enabled;
 
     try {
-      await api.patch(`/api/admin/users/${user.id}/status`, { enabled: nextEnabled });
+      // FIXED: Removed /api prefix
+      await api.patch(`/admin/users/${user.id}/status`, { enabled: nextEnabled });
       await load();
     } catch (e) {
       setErr(e?.response?.data?.message || "Failed to update user status");
@@ -169,7 +171,8 @@ export default function UserList() {
     if (!ok) return;
 
     try {
-      await api.delete(`/api/admin/users/${user.id}`);
+      // FIXED: Removed /api prefix
+      await api.delete(`/admin/users/${user.id}`);
       // if last item on page got deleted, move back
       if (rows.length === 1 && page > 0) setPage((p) => p - 1);
       else await load();
@@ -183,7 +186,8 @@ export default function UserList() {
     // payload expected: { name, email, role }
     setErr("");
     try {
-      const res = await api.post("/api/admin/users/invite", payload);
+      // FIXED: Removed /api prefix
+      const res = await api.post("/admin/users/invite", payload);
       // show invite URL
       const inviteUrl = res.data?.inviteUrl;
       if (inviteUrl) {

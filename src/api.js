@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/tickets"; // backend endpoint
+const API_URL = "http://localhost:8081/tickets"; // backend endpoint
 
 export const getTickets = () => axios.get(API_URL);
 export const createTicket = (ticket) => axios.post(API_URL, ticket);

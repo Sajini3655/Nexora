@@ -1,18 +1,18 @@
-import React from "react";
 import axios from "axios";
-import { API_BASE_URL } from "../utils/constants";
 
 export default function useApi() {
   const api = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: 12000
+    baseURL: "http://localhost:8081/api",
   });
 
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  });
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem("token");
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
   return api;
 }
