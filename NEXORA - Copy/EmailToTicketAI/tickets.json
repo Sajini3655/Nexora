@@ -1,0 +1,67 @@
+[
+  {
+    "ticket_id": "TKT-001",
+    "source": "email",
+    "subject": "BLOCKER",
+    "summary": "Server returns HTTP 500 after submitting login credentials, blocking QA access to dashboard.",
+    "body": "Hi team,\r\nAfter submitting credentials on the login page, the server returns HTTP 500\r\nevery time.\r\nThis is blocking all QA and we cannot access the dashboard.\r\nHappens on Chrome and Edge. Started today around 10:15 AM.\r\n\n--- mail_boundary ---\n<div><span style=\"color:rgb(49,49,49);font-family:&#39;-apple-system&#39;,sans-serif;font-size:17px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;white-space:normal;word-spacing:1px;text-decoration:none;display:inline!important;float:none\">Hi team,</span><br style=\"color:rgb(49,49,49);font-family:&#39;-apple-system&#39;,sans-serif;font-size:17px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;white-space:normal;word-spacing:1px;text-decoration:none\"><span style=\"color:rgb(49,49,49);font-family:&#39;-apple-system&#39;,sans-serif;font-size:17px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;white-space:normal;word-spacing:1px;text-decoration:none;display:inline!important;float:none\">After submitting credentials on the login page, the server returns HTTP 500 every time.</span><br style=\"color:rgb(49,49,49);font-family:&#39;-apple-system&#39;,sans-serif;font-size:17px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;white-space:normal;word-spacing:1px;text-decoration:none\"><span style=\"color:rgb(49,49,49);font-family:&#39;-apple-system&#39;,sans-serif;font-size:17px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;white-space:normal;word-spacing:1px;text-decoration:none;display:inline!important;float:none\">This is blocking all QA and we cannot access the dashboard.</span><br style=\"color:rgb(49,49,49);font-family:&#39;-apple-system&#39;,sans-serif;font-size:17px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;white-space:normal;word-spacing:1px;text-decoration:none\"><span style=\"color:rgb(49,49,49);font-family:&#39;-apple-system&#39;,sans-serif;font-size:17px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;white-space:normal;word-spacing:1px;text-decoration:none;display:inline!important;float:none\">Happens on Chrome and Edge. Started today around 10:15 AM.</span></div>",
+    "reported_by": "vishiiboy03@gmail.com",
+    "priority": "Critical",
+    "category": "blocker",
+    "confidence": 1.0,
+    "received_at": "2025-12-11T09:48:34.489236+00:00",
+    "status": "Open"
+  },
+  {
+    "ticket_id": "TKT-002",
+    "source": "email",
+    "subject": "Regarding Database Issue",
+    "summary": "Database server is experiencing an issue",
+    "body": "Hi ponz,\r\n\r\nThere is an issue with the database server.",
+    "reported_by": "supeshasalya2004@gmail.com",
+    "priority": "High",
+    "category": "error",
+    "confidence": 0.8,
+    "received_at": "2025-12-11T10:10:58.510981+00:00",
+    "status": "Open"
+  },
+  {
+    "ticket_id": "TKT-003",
+    "source": "email",
+    "subject": "Regarding Database Issue",
+    "summary": "Database server is experiencing an issue",
+    "body": "Hi ponz,\r\n\r\nThere is an issue with the database server.",
+    "reported_by": "supeshasalya2004@gmail.com",
+    "priority": "High",
+    "category": "error",
+    "confidence": 0.8,
+    "received_at": "2025-12-11T10:10:58.843711+00:00",
+    "status": "Open"
+  },
+  {
+    "ticket_id": "TKT-004",
+    "source": "email",
+    "subject": "Blocker",
+    "summary": "The email reports a blocker issue, but the content is incomplete and unclear.",
+    "body": "Hi,\r\n\r\nAthal hutto",
+    "reported_by": "supeshasalya2004@gmail.com",
+    "priority": "High",
+    "category": "blocker",
+    "confidence": 1.0,
+    "received_at": "2025-12-11T10:12:03.351527+00:00",
+    "status": "Open"
+  },
+  {
+    "ticket_id": "TKT-005",
+    "source": "email",
+    "subject": "BLOCKER",
+    "summary": "Login page returns HTTP 500 error on Chrome and Edge, blocking QA access to dashboard.",
+    "body": "Hi team,\r\nAfter submitting credentials on the login page, the server returns HTTP 500\r\nevery time.\r\nThis is blocking all QA and we cannot access the dashboard.\r\nHappens on Chrome and Edge. Started today around 10:15 AM.",
+    "reported_by": "vishiiboy03@gmail.com",
+    "priority": "Critical",
+    "category": "blocker",
+    "confidence": 1.0,
+    "received_at": "2025-12-11T16:44:46.545226+00:00",
+    "status": "Open"
+  }
+]

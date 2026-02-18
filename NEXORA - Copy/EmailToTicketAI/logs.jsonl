@@ -1,0 +1,43 @@
+{"event": "error", "uid": 18, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "error", "uid": 31, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "error", "uid": 34, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "error", "uid": 35, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "error", "uid": 36, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "ignored", "uid": 1}
+{"event": "error", "uid": 1, "error": "command STORE illegal in state LOGOUT, only allowed in states SELECTED"}
+{"event": "error", "uid": 14, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "no_action", "uid": 37, "confidence": 0.0}
+{"event": "error", "uid": 37, "error": "command STORE illegal in state LOGOUT, only allowed in states SELECTED"}
+{"event": "ticket_created", "ticket_id": "TKT-001", "category": "blocker"}
+{"event": "error", "uid": 38, "error": "command STORE illegal in state LOGOUT, only allowed in states SELECTED"}
+{"event": "no_action", "uid": 39, "confidence": 0.0}
+{"event": "no_action", "uid": 39, "confidence": 0.0}
+{"event": "error", "uid": 39, "error": "command STORE illegal in state LOGOUT, only allowed in states SELECTED"}
+{"event": "error", "uid": 39, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "error", "uid": 40, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "ticket_created", "ticket_id": "TKT-002", "category": "error"}
+{"event": "error", "uid": 41, "error": "command STORE illegal in state LOGOUT, only allowed in states SELECTED"}
+{"event": "error", "uid": 41, "error": "400 Client Error: Bad Request for url: https://api.groq.com/openai/v1/chat/completions"}
+{"event": "ticket_created", "ticket_id": "TKT-003", "category": "error"}
+{"event": "ticket_created", "ticket_id": "TKT-004", "category": "blocker"}
+{"event": "ticket_created", "ticket_id": "TKT-005", "category": "blocker"}
+{"event": "ticket_created", "ticket_id": "TKT-001", "category": "blocker"}
+{"event": "ticket_created", "ticket_id": "TKT-002", "category": "bug"}
+{"event": "ticket_created", "ticket_id": "TKT-003", "category": "bug"}
+{"event": "no_action", "uid": 48, "confidence": 0.8}
+{"event": "ticket_created", "ticket_id": "TKT-004", "category": "info"}
+{"event": "ticket_created", "ticket_id": "TKT-005", "category": "info"}
+{"event": "no_action", "uid": 63, "confidence": 0.8}
+{"event": "no_action", "uid": 64, "confidence": 1.0}
+{"event": "no_action", "uid": 65, "confidence": 0.8}
+{"event": "no_action", "uid": 55, "confidence": 0.8}
+{"event": "no_action", "uid": 56, "confidence": 0.8}
+{"event": "no_action", "uid": 57, "confidence": 0.8}
+{"event": "no_action", "uid": 58, "confidence": 0.0}
+{"event": "ticket_created", "ticket_id": "TKT-006", "category": "info"}
+{"event": "no_action", "uid": 50, "confidence": 0.0}
+{"event": "ticket_created", "ticket_id": "TKT-007", "category": "info"}
+{"event": "ticket_created", "ticket_id": "TKT-008", "category": "info"}
+{"event": "no_action", "uid": 53, "confidence": 0.8}
+{"event": "no_action", "uid": 54, "confidence": 0.0}
+{"event": "no_action", "uid": 49, "confidence": 0.8}

@@ -1,0 +1,5 @@
+﻿python-dotenv
+imapclient
+mail-parser
+requests
+langdetect
