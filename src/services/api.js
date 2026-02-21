@@ -1,7 +1,8 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/apiBase.js";
 
 const API = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8081"}/api`,
+  baseURL: `${API_BASE_URL}/api`,
 });
 
 // ✅ Auth endpoints

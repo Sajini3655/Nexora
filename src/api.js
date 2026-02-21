@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "./config/apiBase.js";
 
-const API_URL = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8081"}/tickets`;
+const API_URL = `${API_BASE_URL}/tickets`;
 
 export const getTickets = () => axios.get(API_URL);
 export const createTicket = (ticket) => axios.post(API_URL, ticket);

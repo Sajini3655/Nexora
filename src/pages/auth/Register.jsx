@@ -5,6 +5,7 @@ import Button from "../../components/ui/Button.jsx";
 import Card from "../../components/ui/Card.jsx";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
+import { API_BASE_URL } from "../../config/apiBase.js";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function Register() {
 
     // ✅ fetch email from backend using token
     axios
-      .get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8081"}/api/auth/accept-invite`, {
+      .get(`${API_BASE_URL}/api/auth/accept-invite`, {
         params: { token: tokenParam },
       })
       .then((res) => {
@@ -53,7 +54,7 @@ export default function Register() {
     try {
       // ✅ Correct POST to backend with token & password as params
       await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8081"}/api/auth/accept-invite`,
+        `${API_BASE_URL}/api/auth/accept-invite`,
         null, // body is empty
         {
           params: {
