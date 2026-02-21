@@ -1,7 +1,7 @@
 // src/services/managerService.js
 import axios from "axios";
 
-const API_BASE = "http://localhost:8081/api/manager";
+const API_BASE = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8081"}/api/manager`;
 
 // Helper to add auth headers (if you connect backend later)
 const getAuthHeaders = () => {

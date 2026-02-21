@@ -28,7 +28,7 @@ export default function Register() {
 
     // ✅ fetch email from backend using token
     axios
-      .get(`http://localhost:8081/api/auth/accept-invite`, {
+      .get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8081"}/api/auth/accept-invite`, {
         params: { token: tokenParam },
       })
       .then((res) => {
@@ -53,7 +53,7 @@ export default function Register() {
     try {
       // ✅ Correct POST to backend with token & password as params
       await axios.post(
-        `http://localhost:8081/api/auth/accept-invite`,
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8081"}/api/auth/accept-invite`,
         null, // body is empty
         {
           params: {
