@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8081/tickets"; // backend endpoint
+const API_URL = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8081"}/tickets`;
 
 export const getTickets = () => axios.get(API_URL);
 export const createTicket = (ticket) => axios.post(API_URL, ticket);
