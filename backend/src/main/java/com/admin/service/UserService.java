@@ -9,6 +9,9 @@ import com.admin.exception.ResourceNotFoundException;
 import com.admin.repository.InviteTokenRepository;
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.mail.MailException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final InviteTokenRepository inviteTokenRepository;
     private final UserRepository userRepository;
@@ -105,17 +110,22 @@ public class UserService {
 
         String inviteUrl = frontendBaseUrl + "/register?token=" + token;
 
-        mailService.sendInviteEmail(
-                email,
-                name,
-                user.getRole().name(),
-                inviteUrl,
-                null
-        );
-
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Invite email sent successfully.");
         response.put("inviteUrl", inviteUrl);
+
+        try {
+            mailService.sendInviteEmail(
+                    email,
+                    name,
+                    user.getRole().name(),
+                    inviteUrl,
+                    null
+            );
+            response.put("message", "Invite email sent successfully.");
+        } catch (MailException ex) {
+            log.error("Failed to send invite email to {}: {}", email, ex.getMessage(), ex);
+            response.put("message", "Invite created, but email delivery failed. Copy and share the invite link.");
+        }
 
         return response;
     }
