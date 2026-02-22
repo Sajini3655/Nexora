@@ -29,7 +29,9 @@ public class UserService {
     private final UserRepository userRepository;
     private final MailService mailService;
 
-    @Value("${app.frontend.base-url:http://localhost:5173}")
+    private static final String PRODUCTION_FRONTEND_URL = "https://nexora1-lemon.vercel.app";
+
+    @Value("${app.frontend.base-url:" + PRODUCTION_FRONTEND_URL + "}")
     private String frontendBaseUrl;
 
     // -----------------------------
@@ -108,7 +110,10 @@ public class UserService {
 
         inviteTokenRepository.save(inviteToken);
 
-        String inviteUrl = frontendBaseUrl + "/register?token=" + token;
+        String baseUrl = (frontendBaseUrl == null || frontendBaseUrl.isBlank())
+                ? PRODUCTION_FRONTEND_URL
+                : frontendBaseUrl;
+        String inviteUrl = baseUrl.replaceAll("/+$", "") + "/register?token=" + token;
 
         Map<String, String> response = new HashMap<>();
         response.put("inviteUrl", inviteUrl);
