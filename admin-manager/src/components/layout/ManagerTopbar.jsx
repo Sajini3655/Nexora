@@ -1,5 +1,6 @@
 // src/components/layout/ManagerTopbar.jsx
 import React, { useState } from "react";
+
 import {
   AppBar,
   Toolbar,
@@ -10,15 +11,15 @@ import {
   Menu,
   MenuItem,
   Divider,
-  Chip,
 } from "@mui/material";
 
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
+import ManagerNlqSearch from "../nlq/ManagerNlqSearch.jsx";
 
-import { AuthProvider, useAuth } from "../../context/AuthContext.jsx";
- import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useNavigate } from "react-router-dom";
 
 export default function ManagerTopbar({ onMenuClick }) {
   const { user, logout } = useAuth();
@@ -28,7 +29,6 @@ export default function ManagerTopbar({ onMenuClick }) {
   const open = Boolean(anchorEl);
 
   const initials = (user?.name?.[0] || user?.email?.[0] || "M").toUpperCase();
-  const roleLabel = user?.role || "MANAGER";
 
   return (
     <AppBar
@@ -42,43 +42,80 @@ export default function ManagerTopbar({ onMenuClick }) {
       }}
     >
       <Toolbar sx={{ minHeight: 72 }}>
-        {/* Hamburger */}
-        <IconButton
-          edge="start"
-          color="inherit"
-          onClick={onMenuClick}
-          sx={{
-            mr: 1,
-            borderRadius: 2,
-            border: "1px solid rgba(255,255,255,0.10)",
-          }}
-        >
-          <MenuIcon />
-        </IconButton>
-
-        {/* Brand */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
-          <Box
+        {/* Left: Hamburger + Brand */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, minWidth: 0 }}>
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={onMenuClick}
             sx={{
-              width: 28,
-              height: 28,
+              mr: 0.5,
               borderRadius: 2,
-              background: "linear-gradient(135deg, rgba(124,92,255,0.95), rgba(124,92,255,0.35))",
-              border: "1px solid rgba(255,255,255,0.14)",
-              boxShadow: "0 12px 34px rgba(124,92,255,0.18)",
+              border: "1px solid rgba(255,255,255,0.10)",
             }}
-          />
-          <Typography sx={{ fontWeight: 950, letterSpacing: -0.4 }}>
-            Nexora
-          </Typography>
+          >
+            <MenuIcon />
+          </IconButton>
+
+          <Box
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/manager")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                navigate("/manager");
+              }
+            }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.2,
+              cursor: "pointer",
+              userSelect: "none",
+              borderRadius: 2,
+              px: 0.5,
+              py: 0.25,
+              "&:focus-visible": {
+                outline: "2px solid rgba(124,92,255,0.55)",
+                outlineOffset: 2,
+              },
+            }}
+          >
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: 2,
+                background:
+                  "linear-gradient(135deg, rgba(124,92,255,0.95), rgba(124,92,255,0.35))",
+                border: "1px solid rgba(255,255,255,0.14)",
+                boxShadow: "0 12px 34px rgba(124,92,255,0.18)",
+              }}
+            />
+            <Typography sx={{ fontWeight: 950, letterSpacing: -0.4, whiteSpace: "nowrap" }}>
+              Nexora
+            </Typography>
+          </Box>
         </Box>
 
-        <Box sx={{ flexGrow: 1 }} />
+        {/* Middle: NLQ Search */}
+        <Box
+          sx={{
+            flexGrow: 1,
+            display: { xs: "none", sm: "flex" },
+            justifyContent: "center",
+            px: 2,
+            minWidth: 0,
+          }}
+        >
+          <ManagerNlqSearch />
+        </Box>
 
         {/* User block */}
         {user && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {/* Name + role */}
+            {/* Name */}
             <Box
               sx={{
                 display: { xs: "none", sm: "flex" },
@@ -89,17 +126,6 @@ export default function ManagerTopbar({ onMenuClick }) {
               <Typography variant="body2" sx={{ opacity: 0.85, fontWeight: 800 }}>
                 {user.name || user.email}
               </Typography>
-              <Chip
-                size="small"
-                label={roleLabel}
-                sx={{
-                  height: 22,
-                  fontWeight: 900,
-                  letterSpacing: 0.3,
-                  background: "rgba(124,92,255,0.16)",
-                  border: "1px solid rgba(124,92,255,0.25)",
-                }}
-              />
             </Box>
 
             {/* Avatar */}
@@ -143,23 +169,11 @@ export default function ManagerTopbar({ onMenuClick }) {
             >
               <Box sx={{ px: 2, py: 1.6 }}>
                 <Typography fontWeight={950} sx={{ lineHeight: 1.1 }}>
-                  {user.name || "Manager"}
+                  {user.name || user.email}
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.7 }}>
                   {user.email}
                 </Typography>
-                <Box sx={{ mt: 1 }}>
-                  <Chip
-                    size="small"
-                    label={roleLabel}
-                    sx={{
-                      height: 22,
-                      fontWeight: 900,
-                      background: "rgba(124,92,255,0.16)",
-                      border: "1px solid rgba(124,92,255,0.25)",
-                    }}
-                  />
-                </Box>
               </Box>
 
               <Divider />

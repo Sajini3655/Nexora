@@ -1,5 +1,5 @@
 // src/pages/dashboard/ManagerDashboard.jsx
-import React, { useState } from "react";
+import React, { useEffect,useState } from "react";
 import {
   Box,
   Typography,
@@ -17,9 +17,26 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation,useNavigate } from "react-router-dom";
+
+
 
 export default function ManagerDashboard() {
+
+  const location = useLocation();
+
+useEffect(() => {
+  const target = location.state?.scrollTo;
+  if (!target) return;
+
+  const t = setTimeout(() => {
+    const el = document.getElementById(target);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 120);
+
+  return () => clearTimeout(t);
+}, [location.state]);
+
   const navigate = useNavigate();
 
   const projects = [
@@ -46,6 +63,9 @@ export default function ManagerDashboard() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [assignedDeveloper, setAssignedDeveloper] = useState("");
 
+  const secondaryText = "rgba(255,255,255,0.72)";
+  const tertiaryText = "rgba(255,255,255,0.56)";
+
   const glassBoxStyle = {
     p: 2,
     borderRadius: 2,
@@ -53,7 +73,8 @@ export default function ManagerDashboard() {
     backdropFilter: "blur(5px)",
     border: "1px solid rgba(255,255,255,0.1)",
     cursor: "pointer",
-    "&:hover": { transform: "scale(1.02)", boxShadow: "0 8px 30px rgba(0,0,0,0.2)" },
+    transition: "transform 120ms ease, box-shadow 120ms ease",
+    "&:hover": { transform: "translateY(-1px)", boxShadow: "0 8px 30px rgba(0,0,0,0.2)" },
   };
 
   const statBoxStyle = {
@@ -62,7 +83,7 @@ export default function ManagerDashboard() {
     bgcolor: "rgba(255,255,255,0.05)",
     backdropFilter: "blur(5px)",
     border: "1px solid rgba(255,255,255,0.1)",
-    textAlign: "center",
+    textAlign: "left",
   };
 
   const getStatusColor = (status) => {
@@ -94,27 +115,93 @@ export default function ManagerDashboard() {
   const getProjectName = (projectId) => projects.find(p => p.id === projectId)?.name || "Unknown Project";
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Manager Dashboard</Typography>
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
+      <Typography variant="h4" sx={{ mb: 0.75, fontWeight: 950, letterSpacing: -0.4 }}>
+        Manager Dashboard
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 3, color: tertiaryText }}>
+        Overview of projects and incoming tickets.
+      </Typography>
 
       {/* Key Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={4}><Box sx={statBoxStyle}><Typography variant="h6">Total Projects</Typography><Typography variant="h5">{projects.length}</Typography></Box></Grid>
-        <Grid item xs={12} md={4}><Box sx={statBoxStyle}><Typography variant="h6">Active Projects</Typography><Typography variant="h5">{projects.filter(p => p.status==="Active").length}</Typography></Box></Grid>
-        <Grid item xs={12} md={4}><Box sx={statBoxStyle}><Typography variant="h6">Total Tickets</Typography><Typography variant="h5">{clientTickets.length+chatTickets.length}</Typography></Box></Grid>
+        <Grid item xs={12} md={4}>
+          <Box sx={statBoxStyle}>
+            <Typography variant="body2" sx={{ color: tertiaryText, fontWeight: 800 }}>
+              Total Projects
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 950, mt: 0.5 }}>
+              {projects.length}
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Box sx={statBoxStyle}>
+            <Typography variant="body2" sx={{ color: tertiaryText, fontWeight: 800 }}>
+              Active Projects
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 950, mt: 0.5 }}>
+              {projects.filter(p => p.status === "Active").length}
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Box sx={statBoxStyle}>
+            <Typography variant="body2" sx={{ color: tertiaryText, fontWeight: 800 }}>
+              Total Tickets
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 950, mt: 0.5 }}>
+              {clientTickets.length + chatTickets.length}
+            </Typography>
+          </Box>
+        </Grid>
       </Grid>
 
       {/* Projects */}
-      <Typography variant="h5" sx={{ mb: 2 }}>Projects</Typography>
+      <Typography id="projectsSection" variant="h5" sx={{ mb: 2, fontWeight: 900 }}>
+        Projects
+      </Typography>
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {projects.map(proj => (
           <Grid item xs={12} md={4} key={proj.id}>
-            <Tooltip title={`Click for details\nDevelopers: ${proj.developers.join(", ")}\nDue: ${proj.dueDate}`} arrow>
+            <Tooltip
+              title={
+                <Box sx={{ py: 0.5 }}>
+                  <Typography variant="caption" sx={{ display: "block", fontWeight: 900 }}>
+                    Click for details
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: "block" }}>
+                    Developers: {proj.developers.join(", ")}
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: "block" }}>
+                    Due: {proj.dueDate}
+                  </Typography>
+                </Box>
+              }
+              arrow
+            >
               <Box sx={glassBoxStyle} onClick={() => navigate(`/manager/projects/${proj.id}`)}>
-                <Chip label={proj.status} size="small" sx={{ mb: 1, bgcolor: getStatusColor(proj.status), color:"#fff" }}/>
-                <Typography variant="h6">{proj.name}</Typography>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1 }}>
+                  <Chip
+                    label={proj.status}
+                    size="small"
+                    sx={{ bgcolor: getStatusColor(proj.status), color: "#fff", fontWeight: 900 }}
+                  />
+                  <Typography variant="caption" sx={{ color: tertiaryText, fontWeight: 800 }}>
+                    Due {proj.dueDate}
+                  </Typography>
+                </Box>
+
+                <Typography variant="h6" sx={{ fontWeight: 950, lineHeight: 1.2, mb: 0.5 }}>
+                  {proj.name}
+                </Typography>
+                <Typography variant="body2" sx={{ color: secondaryText, mb: 1 }}>
+                  {proj.developers.length} developer{proj.developers.length === 1 ? "" : "s"} assigned
+                </Typography>
                 <LinearProgress variant="determinate" value={proj.progress} sx={{ mt:1, mb:1, height:8, borderRadius:5, backgroundColor:"rgba(255,255,255,0.1)", "& .MuiLinearProgress-bar":{backgroundColor:getStatusColor(proj.status)}}}/>
-                <Typography variant="body2">{proj.progress}% complete</Typography>
+                <Typography variant="body2" sx={{ color: secondaryText }}>
+                  {proj.progress}% complete
+                </Typography>
               </Box>
             </Tooltip>
           </Grid>
@@ -122,24 +209,56 @@ export default function ManagerDashboard() {
       </Grid>
 
       {/* Tickets */}
-      <Typography variant="h5" sx={{ mb: 2 }}>Tickets</Typography>
+      <Typography id="ticketsSection" variant="h5" sx={{ mb: 2, fontWeight: 900 }}>
+        Tickets
+      </Typography>
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
-          <Typography variant="h6" sx={{ mb:1 }}>Client Tickets</Typography>
-          {clientTickets.map(ticket => (
-            <Box key={ticket.id} sx={glassBoxStyle} onClick={() => handleOpenModal(ticket, "client")}>
-              <Typography variant="body1">{ticket.title} — <i>{getProjectName(ticket.projectId)}</i></Typography>
-            </Box>
-          ))}
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 900 }}>Client Tickets</Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.2 }}>
+            {clientTickets.length === 0 ? (
+              <Box sx={{ ...glassBoxStyle, cursor: "default" }}>
+                <Typography variant="body2" sx={{ color: secondaryText }}>
+                  No client tickets right now.
+                </Typography>
+              </Box>
+            ) : (
+              clientTickets.map(ticket => (
+                <Box key={ticket.id} sx={glassBoxStyle} onClick={() => handleOpenModal(ticket, "client")}>
+                  <Typography variant="body1" sx={{ fontWeight: 900, mb: 0.25 }}>
+                    {ticket.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: secondaryText }}>
+                    {getProjectName(ticket.projectId)}
+                  </Typography>
+                </Box>
+              ))
+            )}
+          </Box>
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Typography variant="h6" sx={{ mb:1 }}>Chat Tickets</Typography>
-          {chatTickets.map(ticket => (
-            <Box key={ticket.id} sx={glassBoxStyle} onClick={() => handleOpenModal(ticket, "chat")}>
-              <Typography variant="body1">{ticket.title} — <i>{getProjectName(ticket.projectId)}</i></Typography>
-            </Box>
-          ))}
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 900 }}>Chat Tickets</Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.2 }}>
+            {chatTickets.length === 0 ? (
+              <Box sx={{ ...glassBoxStyle, cursor: "default" }}>
+                <Typography variant="body2" sx={{ color: secondaryText }}>
+                  No chat tickets right now.
+                </Typography>
+              </Box>
+            ) : (
+              chatTickets.map(ticket => (
+                <Box key={ticket.id} sx={glassBoxStyle} onClick={() => handleOpenModal(ticket, "chat")}>
+                  <Typography variant="body1" sx={{ fontWeight: 900, mb: 0.25 }}>
+                    {ticket.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: secondaryText }}>
+                    {getProjectName(ticket.projectId)}
+                  </Typography>
+                </Box>
+              ))
+            )}
+          </Box>
         </Grid>
       </Grid>
 

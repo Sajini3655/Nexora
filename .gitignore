@@ -1,0 +1,13 @@
+# ===== Frontend =====
+admin-manager/node_modules/
+admin-manager/dist/
+
+# ===== Backend =====
+backend/target/
+backend/data/
+
+# ===== General =====
+*.log
+.DS_Store
+.idea/
+.vscode/
