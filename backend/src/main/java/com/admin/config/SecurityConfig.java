@@ -32,10 +32,14 @@ public class SecurityConfig {
         http
             .cors(cors -> {})
             .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .authorizeHttpRequests(auth -> auth
                 // ✅ Public endpoints
                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers("/api/auth/accept-invite").permitAll() // fixes 403 for GET & POST
+
+                // H2 console (local dev only)
+                .requestMatchers("/h2/**").permitAll()
 
                 // Role-based routes
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
