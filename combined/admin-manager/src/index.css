@@ -1,0 +1,9 @@
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: #e7e9ee; /* force visible text */
+  background: #0b1020; /* fallback if theme bg doesn't show */
+}

@@ -1,0 +1,27 @@
+# Node
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/.vite/
+
+# Java / Maven
+**/target/
+**/*.class
+
+# H2 / local data
+**/data/
+**/*.mv.db
+**/*.trace.db
+
+# Env
+**/.env
+**/.env.*
+
+# Logs
+**/*.log
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
