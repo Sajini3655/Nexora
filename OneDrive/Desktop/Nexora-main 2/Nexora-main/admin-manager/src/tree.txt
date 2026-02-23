@@ -1,0 +1,76 @@
+Folder PATH listing for volume OS
+Volume serial number is 0E51-21E5
+C:.
+|   api.js
+|   App.jsx
+|   index.css
+|   Login.jsx
+|   main.jsx
+|   TicketForm.jsx
+|   TicketList.jsx
+|   tree.txt
+|   
++---api
+|       axios.js
+|       
++---assets
+|       react.svg
+|       
++---components
+|   +---layout
+|   |       AdminLayout.jsx
+|   |       ProtectedRoute.jsx
+|   |       PublicRoute.jsx
+|   |       Sidebar.jsx
+|   |       Topbar.jsx
+|   |       
+|   \---ui
+|           Button.jsx
+|           Card.jsx
+|           Input.jsx
+|           PageHeader.jsx
+|           Spinner.jsx
+|           StatCard.jsx
+|           Surface.jsx
+|           
++---context
+|       AuthContext.jsx
+|       LayoutContext.jsx
+|       
++---hooks
+|       useApi.jsx
+|       useAuth.jsx
+|       
++---pages
+|   +---access
+|   |       AccessControl.jsx
+|   |       
+|   +---auth
+|   |       Login.jsx
+|   |       Register.jsx
+|   |       
+|   +---chat
+|   |       ChatPage.jsx
+|   |       
+|   +---dashboard
+|   |       AdminDashboard.jsx
+|   |       
+|   +---profile
+|   |       AdminProfile.jsx
+|   |       
+|   +---settings
+|   |       AdminSettingsPage.jsx
+|   |       
+|   +---tasks
+|   |       TaskList.jsx
+|   |       TaskView.jsx
+|   |       
+|   \---users
+|           InviteUserDialog.jsx
+|           UserList.jsx
+|           
+\---utils
+        constants.js
+        formatDate.js
+        permissions.js
+        
