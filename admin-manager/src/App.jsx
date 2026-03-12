@@ -17,6 +17,16 @@ import AdminProfile from "./pages/profile/AdminProfile.jsx";
 import AdminSettingsPage from "./pages/settings/AdminSettingsPage.jsx";
 import AccessControl from "./pages/access/AccessControl.jsx";
 
+// Developer Pages
+import DevDashboardHome from "./pages/developer/DevDashboardHome.jsx";
+import DevWorkspace from "./pages/developer/DevWorkspace.jsx";
+import DevTaskList from "./pages/developer/DevTaskList.jsx";
+import DevTaskView from "./pages/developer/DevTaskView.jsx";
+import DevTicketView from "./pages/developer/DevTicketView.jsx";
+import DevTicketCreate from "./pages/developer/DevTicketCreate.jsx";
+import DevProfile from "./pages/developer/DevProfile.jsx";
+import DevSettings from "./pages/developer/DevSettings.jsx";
+
 // Layout Components
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
 import Sidebar from "./components/layout/Sidebar.jsx";
@@ -24,6 +34,7 @@ import ManagerSidebar from "./components/layout/ManagerSidebar.jsx";
 import ManagerTopbar from "./components/layout/ManagerTopbar.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
 import Surface from "./components/ui/Surface.jsx";
+import DeveloperShell from "./components/layout/DeveloperShell.jsx";
 
 // Auth
 import { useAuth } from "./context/AuthContext.jsx";
@@ -142,6 +153,42 @@ export default function App() {
         <Route
           path="/manager/ai-assignment"
           element={<ManagerShell><AIAssignment /></ManagerShell>}
+        />
+      </Route>
+
+      {/* DEVELOPER ROUTES */}
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} />}>
+        <Route
+          path="/developer"
+          element={<DeveloperShell><DevDashboardHome /></DeveloperShell>}
+        />
+        <Route
+          path="/developer/project/:projectId"
+          element={<DeveloperShell><DevWorkspace /></DeveloperShell>}
+        />
+        <Route
+          path="/developer/tasks"
+          element={<DeveloperShell><DevTaskList /></DeveloperShell>}
+        />
+        <Route
+          path="/developer/tasks/:id"
+          element={<DeveloperShell><DevTaskView /></DeveloperShell>}
+        />
+        <Route
+          path="/developer/tickets/new"
+          element={<DeveloperShell><DevTicketCreate /></DeveloperShell>}
+        />
+        <Route
+          path="/developer/tickets/:id"
+          element={<DeveloperShell><DevTicketView /></DeveloperShell>}
+        />
+        <Route
+          path="/developer/profile"
+          element={<DeveloperShell><DevProfile /></DeveloperShell>}
+        />
+        <Route
+          path="/developer/settings"
+          element={<DeveloperShell><DevSettings /></DeveloperShell>}
         />
       </Route>
 

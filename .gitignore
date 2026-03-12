@@ -11,3 +11,10 @@ backend/data/
 .DS_Store
 .idea/
 .vscode/
+
+# ===== tests =====
+backend/src/test/
+node_modules
+
+backend/*.db
+backend/*.trace.db

@@ -7,10 +7,6 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // If a developer logs in from this shared login screen, redirect them to the Developer UI.
-  // Override with Vite env var: VITE_DEVELOPER_APP_URL
-  const devAppUrl = import.meta.env.VITE_DEVELOPER_APP_URL || "http://localhost:5174";
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,11 +27,7 @@ export default function Login() {
       if (role === "ADMIN") navigate("/admin");
       else if (role === "MANAGER") navigate("/manager");
       else if (role === "DEVELOPER") {
-        const token = localStorage.getItem("token");
-        const url = token
-          ? `${devAppUrl}/?token=${encodeURIComponent(token)}`
-          : devAppUrl;
-        window.location.assign(url);
+        navigate("/developer");
       } else navigate("/login");
     } catch (err) {
       setError(err.message || "Login failed");

@@ -1,9 +1,9 @@
 @echo off
 setlocal
 
-REM Opens 3 terminals: backend + admin/manager UI + developer UI
+REM Opens 2 terminals: backend + unified UI (admin/manager/developer)
 start "Backend" cmd /k "cd backend && mvn spring-boot:run"
-start "Admin+Manager UI" cmd /k "cd admin-manager && npm install && npm run dev"
-start "Developer UI" cmd /k "cd developer && npm install && npm run dev"
+REM Install once at repo root (npm workspaces) and run each UI in its own terminal.
+start "Admin+Manager UI" cmd /k "npm install && npm run dev:admin"
 
 endlocal

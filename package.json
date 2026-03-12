@@ -1,0 +1,14 @@
+{
+  "name": "nexora",
+  "private": true,
+  "workspaces": [
+    "admin-manager"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w admin-manager",
+    "dev:admin": "npm run dev -w admin-manager",
+    "build": "npm run build -w admin-manager",
+    "preview": "npm run preview -w admin-manager"
+  },
+  "devDependencies": {}
+}

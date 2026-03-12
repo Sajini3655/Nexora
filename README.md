@@ -1,17 +1,42 @@
-# Nexora Combined (Admin/Manager + Developer) — Single Backend
+# Nexora (Admin/Manager/Developer) — Single Frontend + Single Backend
 
-This zip contains:
-- **Admin/Manager Frontend** (Vite + React + MUI)
-- **Developer Frontend** (Vite + React + Tailwind theme)
+This repo contains:
+- **Unified Frontend** (Vite + React + MUI) in `admin-manager/`
 - **One shared Spring Boot backend**
 
 ## What you asked for
-✅ When logging in with a **Developer** account on the shared login page (Admin/Manager frontend), you are redirected to the **Developer dashboard**.
+✅ When logging in with a **Developer** account, you are routed to the **Developer dashboard** inside the same frontend.
+
+✅ Developer routes now live inside the unified frontend under `/developer/*`.
 
 ## Ports
 - Backend: `http://localhost:8081`
-- Admin/Manager UI: `http://localhost:5173`
-- Developer UI: `http://localhost:5174`
+- Frontend UI: `http://localhost:5173`
+
+## Run frontend from repo root (recommended)
+This repo is set up as an **npm workspaces** monorepo so you can install once and run the UI.
+
+From the repo root:
+
+```bash
+npm install
+npm run dev
+```
+
+Or run them individually:
+
+```bash
+npm run dev:admin
+```
+
+> Note: the Vite app is configured with a **strict port** (5173). If you already have something running on that port, the dev server will fail fast.
+> 
+> On Windows you can find/kill the process using:
+>
+> ```bash
+> netstat -ano | findstr :5173
+> taskkill /PID <PID> /F
+> ```
 
 ## Run backend (H2 DB – no PostgreSQL needed)
 From `backend/`:
@@ -38,19 +63,8 @@ npm install
 npm run dev
 ```
 
-## Run Developer frontend
-From `developer/`:
-
-```bash
-npm install
-npm run dev
-```
-
-## Developer redirect logic
-- Login stores JWT in `localStorage.token`.
-- If role is `DEVELOPER`, Admin/Manager UI redirects to:
-  `http://localhost:5174/?token=<JWT>`
-- Developer UI reads `?token=` and stores it into `localStorage.token`.
+## Developer routing
+- Developer pages are served from the same frontend under `/developer/*` (e.g. `/developer`, `/developer/tasks`, `/developer/profile`).
 
 ---
 
