@@ -2,6 +2,7 @@ package com.admin.controller;
 
 import com.admin.dto.InviteRequest;
 import com.admin.dto.PageResponse;
+import com.admin.dto.RoleUpdateRequest;
 import com.admin.dto.StatusUpdateRequest;
 import com.admin.dto.UserResponse;
 import com.admin.service.UserService;
@@ -27,7 +28,7 @@ public class AdminUserController {
             @RequestParam(name = "role", required = false) String role,
             @RequestParam(name = "enabled", required = false) Boolean enabled,
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "20") int size
+            @RequestParam(name = "size", defaultValue = "10") int size
     ) {
         return ResponseEntity.ok(userService.getUsers(q, role, enabled, page, size));
     }
@@ -37,12 +38,26 @@ public class AdminUserController {
         return ResponseEntity.ok(userService.inviteUser(request));
     }
 
+    @PostMapping("/{id}/resend-invite")
+    public ResponseEntity<Map<String, String>> resendInvite(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(userService.resendInvite(id));
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<Void> updateUserStatus(
             @PathVariable("id") Long id,
             @Valid @RequestBody StatusUpdateRequest request
     ) {
         userService.updateUserStatus(id, request.getEnabled());
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/role")
+    public ResponseEntity<Void> updateUserRole(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody RoleUpdateRequest request
+    ) {
+        userService.updateUserRole(id, request.getRole());
         return ResponseEntity.ok().build();
     }
 

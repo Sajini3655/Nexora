@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -8,7 +8,8 @@ import {
   Box,
   MenuItem,
   Alert,
-  Button as MUIButton
+  Button as MUIButton,
+  Stack,
 } from "@mui/material";
 
 import Input from "../../components/ui/Input";
@@ -21,11 +22,32 @@ function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
-// ✅ prevents "/api/api/..." no matter what baseURL is
-function normalizeInvitePath(apiInstance) {
-  const base = (apiInstance?.defaults?.baseURL || "").replace(/\/+$/, "");
-  const hasApiSuffix = /\/api$/i.test(base);
-  return hasApiSuffix ? "/admin/users/invite" : "/api/admin/users/invite";
+function extractErrorMessage(error) {
+  const data = error?.response?.data;
+  const status = error?.response?.status;
+
+  console.error("Invite API status:", status);
+  console.error("Invite API response data:", data);
+
+  if (status === 401 || status === 403) {
+    return "Your session expired. Please log in again.";
+  }
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (data?.message) {
+    return data.message;
+  }
+
+  if (data && typeof data === "object") {
+    return Object.entries(data)
+      .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
+      .join("\n");
+  }
+
+  return error?.message || "Invite failed";
 }
 
 export default function InviteUserDialog({ open, onClose, onInvited }) {
@@ -36,8 +58,11 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
   const [role, setRole] = useState("CLIENT");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [warn, setWarn] = useState("");
   const [err, setErr] = useState("");
   const [inviteUrl, setInviteUrl] = useState("");
+  const [sent, setSent] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const canSubmit = useMemo(() => {
     return name.trim().length >= 2 && isValidEmail(email) && !!role;
@@ -48,10 +73,17 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
     setEmail("");
     setRole("CLIENT");
     setMsg("");
+    setWarn("");
     setErr("");
     setInviteUrl("");
     setLoading(false);
+    setSent(false);
+    setCopied(false);
   };
+
+  useEffect(() => {
+    if (open) reset();
+  }, [open]);
 
   const handleClose = () => {
     if (loading) return;
@@ -61,31 +93,52 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
 
   async function handleInvite() {
     setErr("");
+    setWarn("");
     setMsg("");
     setInviteUrl("");
+    setCopied(false);
 
     if (!canSubmit || loading) return;
 
     try {
       setLoading(true);
 
-      const path = normalizeInvitePath(api);
-
-      const res = await api.post(path, {
+      const res = await api.post("/admin/users/invite", {
         name: name.trim(),
-        email: email.trim(),
-        role
+        email: email.trim().toLowerCase(),
+        role,
       });
 
       const data = res?.data || {};
-      setMsg(data.message || "User invited.");
-      if (data.inviteUrl) setInviteUrl(data.inviteUrl);
 
-      onInvited?.({ name: name.trim(), email: email.trim(), role });
+      setMsg(data.message || "Invite created successfully.");
+      setInviteUrl(data.inviteUrl || "");
+
+      if (data.emailStatus === "PENDING") {
+        setWarn("Invite was saved. Email is being handled after database commit.");
+      } else if (data.emailStatus === "FAILED") {
+        setWarn(data.emailMessage || "Invite was created, but email sending failed.");
+      }
+
+      setSent(true);
+      onInvited?.(data);
     } catch (e) {
-      setErr(e?.response?.data?.message || e?.message || "Invite failed");
+      const message = extractErrorMessage(e);
+      setErr(message);
+      console.error("Invite failed:", e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!inviteUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+    } catch {
+      setErr("Could not copy invite link.");
     }
   }
 
@@ -100,8 +153,8 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
           borderRadius: 4,
           border: "1px solid rgba(255,255,255,0.12)",
           background: "rgba(15,18,35,0.92)",
-          backdropFilter: "blur(14px)"
-        }
+          backdropFilter: "blur(14px)",
+        },
       }}
     >
       <DialogTitle sx={{ pb: 1 }}>
@@ -120,6 +173,12 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
           </Alert>
         ) : null}
 
+        {warn ? (
+          <Alert severity="warning" sx={{ mb: 2, whiteSpace: "pre-line" }}>
+            {warn}
+          </Alert>
+        ) : null}
+
         {msg ? (
           <Alert severity="success" sx={{ mb: 2, whiteSpace: "pre-line" }}>
             {msg}
@@ -128,10 +187,19 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
 
         {inviteUrl ? (
           <Alert severity="info" sx={{ mb: 2 }}>
-            Invite link (copy & share if email fails):
-            <Box sx={{ mt: 1, wordBreak: "break-all", fontSize: 13, opacity: 0.9 }}>
+            <Typography sx={{ fontWeight: 700, mb: 1 }}>
+              Invite link
+            </Typography>
+
+            <Box sx={{ wordBreak: "break-all", fontSize: 13, opacity: 0.9, mb: 1 }}>
               {inviteUrl}
             </Box>
+
+            <Stack direction="row" spacing={1}>
+              <MUIButton size="small" variant="contained" onClick={handleCopyLink}>
+                {copied ? "Copied" : "Copy Link"}
+              </MUIButton>
+            </Stack>
           </Alert>
         ) : null}
 
@@ -140,6 +208,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
             label="Full name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            disabled={sent}
           />
 
           <Input
@@ -147,7 +216,8 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={!!email && !isValidEmail(email)}
-            helperText={email && !isValidEmail(email) ? "Enter a valid email (example@gmail.com)" : ""}
+            helperText={email && !isValidEmail(email) ? "Enter a valid email address" : ""}
+            disabled={sent}
           />
 
           <Input
@@ -155,6 +225,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
             label="Role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
+            disabled={sent}
           >
             {ROLES.map((r) => (
               <MenuItem key={r} value={r}>
@@ -162,25 +233,29 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
               </MenuItem>
             ))}
           </Input>
-
-          <Typography variant="caption" sx={{ opacity: 0.65 }}>
-            Tip: Keep CLIENT as default. Give ADMIN only when required.
-          </Typography>
         </Box>
       </DialogContent>
 
       <DialogActions sx={{ p: 2 }}>
-        <MUIButton variant="outlined" onClick={handleClose} disabled={loading}>
-          Cancel
-        </MUIButton>
+        {!sent ? (
+          <>
+            <MUIButton variant="outlined" onClick={handleClose} disabled={loading}>
+              Cancel
+            </MUIButton>
 
-        <MUIButton
-          variant="contained"
-          onClick={handleInvite}
-          disabled={!canSubmit || loading}
-        >
-          {loading ? "Sending..." : "Send Invite"}
-        </MUIButton>
+            <MUIButton
+              variant="contained"
+              onClick={handleInvite}
+              disabled={!canSubmit || loading}
+            >
+              {loading ? "Sending..." : "Send Invite"}
+            </MUIButton>
+          </>
+        ) : (
+          <MUIButton variant="contained" onClick={handleClose}>
+            OK
+          </MUIButton>
+        )}
       </DialogActions>
     </Dialog>
   );

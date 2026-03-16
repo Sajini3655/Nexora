@@ -1,7 +1,11 @@
 package com.admin.controller;
 
-import com.admin.dto.*;
+import com.admin.dto.AuthResponse;
+import com.admin.dto.LoginRequest;
+import com.admin.dto.RegisterRequest;
+import com.admin.dto.UserResponse;
 import com.admin.entity.InviteToken;
+import com.admin.service.AuditLogService;
 import com.admin.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,27 +21,37 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final AuditLogService auditLogService;
 
-    // Complete registration using token + password (old / register endpoint)
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authService.register(request));
+        InviteToken inviteToken = authService.getInviteToken(request.getToken());
+        String email = inviteToken.getUser().getEmail();
+        String role = inviteToken.getUser().getRole().name();
+
+        AuthResponse response = authService.register(request);
+
+        auditLogService.log(
+                "REGISTERED_USER",
+                email,
+                email,
+                "User registered with role " + role
+        );
+
+        return ResponseEntity.ok(response);
     }
 
-    // Login
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    // Get current user info
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me(Authentication authentication) {
         String email = authentication.getName();
         return ResponseEntity.ok(authService.me(email));
     }
 
-    // ✅ Fetch invite token info for registration form (GET)
     @GetMapping("/accept-invite")
     public ResponseEntity<Map<String, String>> getInviteEmail(@RequestParam String token) {
         InviteToken inviteToken = authService.getInviteToken(token);
@@ -46,16 +60,27 @@ public class AuthController {
                 "email", inviteToken.getUser().getEmail(),
                 "name", inviteToken.getUser().getName()
         );
+
         return ResponseEntity.ok(response);
     }
 
-    // ✅ Complete registration (set password + activate user) (POST)
     @PostMapping("/accept-invite")
     public ResponseEntity<String> acceptInvite(
             @RequestParam String token,
             @RequestParam String password
     ) {
+        InviteToken inviteToken = authService.getInviteToken(token);
+        String email = inviteToken.getUser().getEmail();
+
         authService.acceptInvite(token, password);
+
+        auditLogService.log(
+                "ACCEPTED_INVITE",
+                email,
+                email,
+                "User accepted invite and activated account"
+        );
+
         return ResponseEntity.ok("Account activated successfully");
     }
 }

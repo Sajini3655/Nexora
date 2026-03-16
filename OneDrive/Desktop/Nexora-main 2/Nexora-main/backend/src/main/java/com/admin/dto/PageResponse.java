@@ -2,19 +2,22 @@ package com.admin.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.List;
 
-@Data
-@Builder
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class PageResponse<T> {
+
     private List<T> items;
-    private long total;
     private int page;
     private int size;
+    private long total;
     private int totalPages;
 }

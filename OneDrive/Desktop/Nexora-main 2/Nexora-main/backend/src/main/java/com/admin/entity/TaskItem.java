@@ -22,44 +22,54 @@ public class TaskItem {
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(length = 2000)
     private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TaskStatus status;
+    private TaskPriority priority;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TaskPriority priority;
+    private TaskStatus status;
 
     private LocalDate dueDate;
 
     private Integer estimatedPoints;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
+    @JoinColumn(name = "created_by_id")
     private User createdBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_to")
+    @JoinColumn(name = "assigned_to_id")
     private User assignedTo;
 
-    @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
+
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column
     private LocalDateTime updatedAt;
 
     @PrePersist
-    void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
-        if (status == null) status = TaskStatus.TODO;
-        if (priority == null) priority = TaskPriority.MEDIUM;
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+        if (status == null) {
+            status = TaskStatus.TODO;
+        }
     }
 
     @PreUpdate
-    void onUpdate() {
+    public void preUpdate() {
         updatedAt = LocalDateTime.now();
     }
 }

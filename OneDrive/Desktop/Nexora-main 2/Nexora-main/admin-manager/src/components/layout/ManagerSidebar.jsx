@@ -14,13 +14,15 @@ export default function ManagerSidebar({ open, onClose }) {
     <Box
       sx={{
         width: 250,
-        bgcolor: "#1f2937",
+        bgcolor: "rgba(15,20,40,0.96)",
+        backdropFilter: "blur(10px)",
         color: "white",
         position: "fixed",
-        top: "72px",
-        height: "calc(100% - 72px)",
+        top: "64px",
+        height: "calc(100% - 64px)",
         display: open ? "block" : "none",
         zIndex: 1200,
+        borderRight: "1px solid rgba(255,255,255,0.08)",
       }}
     >
       <List>
@@ -39,8 +41,6 @@ export default function ManagerSidebar({ open, onClose }) {
         <ListItemButton onClick={() => handleNavigate("/manager/ai-assignment")}>
           <ListItemText primary="AI Task Assignment" />
         </ListItemButton>
-
-        {/* Settings page not implemented in this build */}
       </List>
     </Box>
   );

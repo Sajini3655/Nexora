@@ -7,16 +7,26 @@ export default function ManagerShell({ children }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#111827", color: "white" }}>
-      
-      {/* Sidebar */}
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        bgcolor: "#050b18",
+        color: "white",
+      }}
+    >
       <ManagerSidebar open={open} onClose={() => setOpen(false)} />
 
-      {/* Main content */}
       <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-        
-        {/* Topbar */}
-        <AppBar position="fixed" sx={{ bgcolor: "#1f2937" }}>
+        <AppBar
+          position="fixed"
+          elevation={0}
+          sx={{
+            bgcolor: "rgba(10,16,35,0.82)",
+            backdropFilter: "blur(10px)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
           <Toolbar>
             <IconButton
               edge="start"
@@ -26,18 +36,17 @@ export default function ManagerShell({ children }) {
             >
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6">Manager Panel</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Manager Panel
+            </Typography>
           </Toolbar>
         </AppBar>
 
-        {/* Spacer for fixed AppBar */}
         <Toolbar />
 
-        {/* Page Content */}
-        <Box sx={{ flexGrow: 1, p: 3 }}>
+        <Box sx={{ flexGrow: 1 }}>
           {children}
         </Box>
-
       </Box>
     </Box>
   );

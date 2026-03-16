@@ -13,7 +13,6 @@ public class MailService {
 
     private final JavaMailSender mailSender;
 
-    // Optional: if not provided, invites will still be created and the invite URL is returned.
     @Value("${app.mail.from:noreply@nexora.local}")
     private String from;
 
@@ -28,7 +27,6 @@ public class MailService {
                 "You have been invited to Nexora Admin.\n" +
                 "Role: " + safeRole + "\n\n" +
                 "Invite link:\n" + inviteUrl + "\n\n" +
-                "Temporary password (share securely):\n" + tempPassword + "\n\n" +
                 "Thanks,\n" +
                 "Nexora Team\n";
 
@@ -43,8 +41,7 @@ public class MailService {
             System.out.println("✅ MailService: Email SENT to: " + toEmail);
         } catch (MailException ex) {
             System.out.println("❌ MailService: Email FAILED: " + ex.getMessage());
-            // Don't fail the whole request in local/demo mode.
-            // The API still returns the invite URL so you can complete registration manually.
+            // do not throw
         }
     }
 }

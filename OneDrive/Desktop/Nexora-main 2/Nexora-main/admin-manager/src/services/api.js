@@ -1,19 +1,75 @@
 import axios from "axios";
 
-const API = axios.create({
-  baseURL: "http://localhost:8081/api", // your Spring Boot API
+const api = axios.create({
+  baseURL: "http://localhost:8081/api",
 });
 
-// ✅ Auth endpoints
-export const register = (data) => API.post("/auth/register", data);
-export const login = (data) => API.post("/auth/login", data);
-export const me = () => API.get("/auth/me");
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-// Tickets (you already have these)
-const TICKET_URL = "/tickets";
-export const getTickets = () => API.get(TICKET_URL);
-export const createTicket = (ticket) => API.post(TICKET_URL, ticket);
-export const updateTicket = (id, ticket) => API.put(`${TICKET_URL}/${id}`, ticket);
-export const deleteTicket = (id) => API.delete(`${TICKET_URL}/${id}`);
+export const getAdminDashboard = async () => {
+  const response = await api.get("/admin/dashboard");
+  return response.data;
+};
 
-export default API;
+export const getAdminDashboardStats = async () => {
+  const response = await api.get("/admin/dashboard/stats");
+  return response.data;
+};
+
+export const getRecentUsers = async () => {
+  const response = await api.get("/admin/dashboard/recent-users");
+  return response.data;
+};
+
+export const getSystemHealth = async () => {
+  const response = await api.get("/admin/dashboard/system-health");
+  return response.data;
+};
+
+export const getRegistrationsLast7Days = async () => {
+  const response = await api.get("/admin/dashboard/registrations-last-7-days");
+  return response.data;
+};
+
+export const getAdminActivity = async () => {
+  const response = await api.get("/admin/dashboard/activity");
+  return response.data;
+};
+
+export const getAdminUsers = async (params) => {
+  const response = await api.get("/admin/users", { params });
+  return response.data;
+};
+
+export const inviteAdminUser = async (payload) => {
+  const response = await api.post("/admin/users/invite", payload);
+  return response.data;
+};
+
+export const resendInvite = async (id) => {
+  const response = await api.post(`/admin/users/${id}/resend-invite`);
+  return response.data;
+};
+
+export const updateAdminUserStatus = async (id, enabled) => {
+  const response = await api.patch(`/admin/users/${id}/status`, { enabled });
+  return response.data;
+};
+
+export const updateAdminUserRole = async (id, role) => {
+  const response = await api.patch(`/admin/users/${id}/role`, { role });
+  return response.data;
+};
+
+export const deleteAdminUser = async (id) => {
+  const response = await api.delete(`/admin/users/${id}`);
+  return response.data;
+};
+
+export default api;
