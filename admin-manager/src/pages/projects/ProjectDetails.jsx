@@ -9,13 +9,16 @@ import {
 } from "@mui/material";
 import { useParams } from "react-router-dom";
 import ChatBox from "../../dev/pages/chat/src/ChatBox.tsx";
+import { fetchProjectDetails } from "../../services/managerService";
 
 export default function ProjectDetails() {
-  const { projectId } = useParams();
+  const params = useParams();
+  const routeProjectId = params.projectId || params.id;
 
   const [project, setProject] = useState(null);
   const [summary, setSummary] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -23,55 +26,77 @@ export default function ProjectDetails() {
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-
         if (parsedUser?.id && parsedUser?.name) {
           setCurrentUser(parsedUser);
         } else {
-          setCurrentUser({
-            id: 34,
-            name: "Manager"
-          });
+          setCurrentUser({ id: 34, name: "Manager" });
         }
       } catch (error) {
         console.error("Invalid user in localStorage", error);
-        setCurrentUser({
-          id: 34,
-          name: "Manager"
-        });
+        setCurrentUser({ id: 34, name: "Manager" });
       }
     } else {
-      setCurrentUser({
-        id: 34,
-        name: "Manager"
-      });
+      setCurrentUser({ id: 34, name: "Manager" });
     }
+  }, []);
 
-    const fakeProject = {
-      id: projectId || "2",
-      name: "E-Commerce Platform",
-      description: "Online shopping platform with payment integration.",
-      tasks: [
-        {
-          id: 1,
-          title: "Frontend Setup",
-          status: "In Progress",
-          progress: 60,
-          assignedDevelopers: ["Alice", "Bob"]
-        },
-        {
-          id: 2,
-          title: "Backend API",
-          status: "Pending",
-          progress: 20,
-          assignedDevelopers: ["Charlie"]
-        }
-      ]
+  useEffect(() => {
+    const loadProject = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchProjectDetails(routeProjectId);
+        console.log("FINAL PROJECT DETAILS:", data);
+        setProject(data);
+      } catch (error) {
+        console.error("Failed to load project details", error);
+        setProject(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setProject(fakeProject);
-  }, [projectId]);
+    if (routeProjectId) {
+      loadProject();
+    } else {
+      setLoading(false);
+    }
+  }, [routeProjectId]);
 
-  if (!project || !currentUser) {
+  const getProjectName = (project) =>
+    project?.name || project?.projectName || project?.title || "Untitled Project";
+
+  const getProjectDescription = (project) =>
+    project?.description ||
+    project?.projectDescription ||
+    project?.details ||
+    "No description available.";
+
+  const getTaskTitle = (task) =>
+    task?.title || task?.taskName || task?.name || "Untitled Task";
+
+  const getTaskStatus = (task) =>
+    task?.status || task?.taskStatus || "Unknown";
+
+  const getTaskProgress = (task) => {
+    if (task?.progress != null) return task.progress;
+    const status = String(task?.status || task?.taskStatus || "").toLowerCase();
+
+    if (status.includes("complete")) return 100;
+    if (status.includes("progress")) return 60;
+    if (status.includes("pending")) return 20;
+    return 0;
+  };
+
+  const getDevelopers = (task) => {
+    if (Array.isArray(task?.assignedDevelopers)) return task.assignedDevelopers;
+    if (Array.isArray(task?.assignees)) return task.assignees;
+    if (Array.isArray(task?.developers)) return task.developers;
+    if (task?.assignedTo) return [task.assignedTo];
+    if (task?.developerName) return [task.developerName];
+    return [];
+  };
+
+  if (loading || !currentUser) {
     return (
       <Box sx={{ p: 3 }}>
         <Typography>Loading project...</Typography>
@@ -79,14 +104,37 @@ export default function ProjectDetails() {
     );
   }
 
+  if (!project) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h5" sx={{ mb: 1 }}>
+          Project not found
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          Real data did not match this page yet.
+        </Typography>
+
+        <Paper sx={{ p: 2, background: "#fff8e1" }}>
+          <Typography variant="subtitle2">Debug info</Typography>
+          <Typography variant="body2">
+            Route param value: {String(routeProjectId || "undefined")}
+          </Typography>
+          <Typography variant="body2">
+            Check browser console for: PROJECTS API RESULT, TASKS API RESULT, FINAL PROJECT DETAILS
+          </Typography>
+        </Paper>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 1 }}>
-        {project.name}
+        {getProjectName(project)}
       </Typography>
 
       <Typography variant="body1" sx={{ mb: 3 }}>
-        {project.description}
+        {getProjectDescription(project)}
       </Typography>
 
       <Grid container spacing={3}>
@@ -95,33 +143,55 @@ export default function ProjectDetails() {
             Tasks
           </Typography>
 
-          {project.tasks.map((task) => (
-            <Paper key={task.id} sx={{ p: 3, mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                {task.title}
-              </Typography>
+          {Array.isArray(project.tasks) && project.tasks.length > 0 ? (
+            project.tasks.map((task, index) => {
+              const developers = getDevelopers(task);
+              const progressValue = getTaskProgress(task);
 
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                Status: {task.status}
-              </Typography>
+              return (
+                <Paper key={task?.id || task?.taskId || index} sx={{ p: 3, mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    {getTaskTitle(task)}
+                  </Typography>
 
-              <LinearProgress
-                variant="determinate"
-                value={task.progress ?? 0}
-                sx={{ height: 8, borderRadius: 5, mb: 1 }}
-              />
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Status: {getTaskStatus(task)}
+                  </Typography>
 
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {task.progress ?? 0}% complete
-              </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={progressValue}
+                    sx={{ height: 8, borderRadius: 5, mb: 1 }}
+                  />
 
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                {task.assignedDevelopers.map((dev) => (
-                  <Chip key={dev} label={dev} />
-                ))}
-              </Box>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    {progressValue}% complete
+                  </Typography>
+
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                    {developers.length > 0 ? (
+                      developers.map((dev, devIndex) => (
+                        <Chip
+                          key={devIndex}
+                          label={
+                            typeof dev === "string"
+                              ? dev
+                              : dev?.name || dev?.fullName || dev?.username || "Developer"
+                          }
+                        />
+                      ))
+                    ) : (
+                      <Chip label="No developers assigned" variant="outlined" />
+                    )}
+                  </Box>
+                </Paper>
+              );
+            })
+          ) : (
+            <Paper sx={{ p: 3 }}>
+              <Typography>No tasks found for this project.</Typography>
             </Paper>
-          ))}
+          )}
         </Grid>
 
         <Grid item xs={12} md={4}>
@@ -131,7 +201,7 @@ export default function ProjectDetails() {
             </Typography>
 
             <ChatBox
-              projectId={String(project.id)}
+              projectId={String(project?.id || project?.projectId || routeProjectId)}
               currentUserId={String(currentUser.id)}
               currentUserName={currentUser.name}
               onSummary={setSummary}

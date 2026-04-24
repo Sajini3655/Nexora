@@ -57,7 +57,6 @@ public class TaskAssignmentService {
                     .build();
         }
 
-        // score each candidate
         SuggestAssigneeResponse best = null;
         double bestScore = -1;
         for (DeveloperSummaryDto dev : candidates) {
@@ -162,6 +161,8 @@ public class TaskAssignmentService {
                 .assignedToId(t.getAssignedTo() == null ? null : t.getAssignedTo().getId())
                 .assignedToName(t.getAssignedTo() == null ? null : t.getAssignedTo().getName())
                 .createdAt(t.getCreatedAt())
+                .projectId(t.getProject() == null ? null : t.getProject().getId())
+                .projectName(t.getProject() == null ? null : t.getProject().getName())
                 .build();
     }
 
@@ -176,7 +177,6 @@ public class TaskAssignmentService {
     }
 
     private SkillExtraction extractRequiredSkills(String text) {
-        // simple keyword-based extraction ("AI-like" baseline). Replace with LLM later.
         Map<String, List<String>> keywords = new LinkedHashMap<>();
         keywords.put("React", List.of("react", "jsx", "component", "frontend", "ui"));
         keywords.put("Node.js", List.of("node", "express", "api", "backend", "jwt", "auth"));
@@ -200,11 +200,9 @@ public class TaskAssignmentService {
         }
 
         if (hits.isEmpty()) {
-            // fallback if nothing detected
             return new SkillExtraction(List.of("General"), Map.of("General", 1.0));
         }
 
-        // weights normalized from hit counts
         Map<String, Double> weights = new LinkedHashMap<>();
         for (var e : hits.entrySet()) {
             weights.put(e.getKey(), e.getValue() / (double) totalHits);
@@ -213,7 +211,7 @@ public class TaskAssignmentService {
     }
 
     private static class ScoreResult {
-        final double total; // 0..1
+        final double total;
         final double skillScore;
         final double workloadScore;
         final double experienceScore;
@@ -243,7 +241,6 @@ public class TaskAssignmentService {
         List<String> matched = new ArrayList<>();
         List<String> missing = new ArrayList<>();
 
-        // Skill score (0..1)
         double skillScore = 0.0;
         for (String reqSkill : extraction.requiredSkills) {
             double w = extraction.weights.getOrDefault(reqSkill, 0.0);
@@ -257,13 +254,11 @@ public class TaskAssignmentService {
             }
         }
 
-        // Workload score (0..1)
         int cap = dev.getCapacityPoints() == null ? 20 : dev.getCapacityPoints();
         int active = dev.getActiveWorkloadPoints() == null ? 0 : dev.getActiveWorkloadPoints();
         double workloadRatio = cap <= 0 ? 1.0 : Math.min(1.0, active / (double) cap);
         double workloadScore = 1.0 - workloadRatio;
 
-        // Experience fit (0..1)
         double expValue = switch (dev.getExperienceLevel() == null ? ExperienceLevel.JUNIOR : dev.getExperienceLevel()) {
             case JUNIOR -> 0.70;
             case MID -> 0.85;
@@ -274,7 +269,6 @@ public class TaskAssignmentService {
         double experienceScore = 1.0 - Math.min(0.4, Math.abs(expValue - difficulty));
         experienceScore = clamp(experienceScore, 0.6, 1.0);
 
-        // total (weighted)
         double total = 0.60 * skillScore + 0.25 * workloadScore + 0.15 * experienceScore;
         total = clamp(total, 0.0, 1.0);
 
@@ -285,9 +279,9 @@ public class TaskAssignmentService {
 
     private double estimateDifficulty(int requiredSkillCount, Integer estimatedPoints) {
         int pts = estimatedPoints == null ? 0 : estimatedPoints;
-        if (pts >= 8 || requiredSkillCount >= 4) return 1.00;   // HARD
-        if (pts >= 4 || requiredSkillCount >= 2) return 0.85;   // MEDIUM
-        return 0.70;                                            // EASY
+        if (pts >= 8 || requiredSkillCount >= 4) return 1.00;
+        if (pts >= 4 || requiredSkillCount >= 2) return 0.85;
+        return 0.70;
     }
 
     private String buildExplanation(DeveloperSummaryDto dev, List<String> matched, List<String> missing, int active, int cap) {
