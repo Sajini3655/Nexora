@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Box,
   Tabs,
   Tab,
@@ -18,35 +19,15 @@ import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-
-/**
- * Demo model
- * Later endpoints:
- * - GET /api/access/modules
- * - GET /api/access/roles
- * - GET /api/access/role-matrix
- * - GET /api/access/users?role=CLIENT
- * - GET /api/access/user-overrides?userId=...
- * - PUT /api/access/role-matrix
- * - PUT /api/access/user-overrides
- */
-
-const MODULES = [
-  { key: "DASHBOARD", label: "Dashboard", desc: "Basic overview access" },
-  { key: "TASKS", label: "Tasks", desc: "Task workflows and boards" },
-  { key: "CHAT", label: "Chat", desc: "Messaging and announcements" },
-  { key: "FILES", label: "Files", desc: "Uploads and downloads" },
-  { key: "REPORTS", label: "Reports", desc: "Exports and analytics" }
-];
-
-const ROLES = ["MANAGER", "DEVELOPER", "CLIENT"];
-
-// Demo users for overrides (you can later fetch from /api/users)
-const demoUsers = [
-  { id: 1, name: "Client A", email: "client@nexora.com", role: "CLIENT" },
-  { id: 2, name: "Client B", email: "client2@nexora.com", role: "CLIENT" },
-  { id: 3, name: "Dev B", email: "dev@nexora.com", role: "DEVELOPER" }
-];
+import {
+  getAccessModules,
+  getAccessRoleMatrix,
+  getAccessRoles,
+  getAccessUserOverrides,
+  getAccessUsers,
+  saveAccessRoleMatrix,
+  saveAccessUserOverrides,
+} from "../../services/api";
 
 function Pill({ label }) {
   return (
@@ -63,41 +44,77 @@ function Pill({ label }) {
 
 export default function AccessControl() {
   const [tab, setTab] = useState(0);
+  const [modules, setModules] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // Role Matrix state
-  const [roleAccess, setRoleAccess] = useState(() => {
-    const init = {};
-    for (const r of ROLES) {
-      init[r] = {};
-      for (const m of MODULES) {
-        // sensible defaults:
-        // - managers/devs: mostly true
-        // - clients: only dashboard + chat by default
-        init[r][m.key] = r === "CLIENT" ? ["DASHBOARD", "CHAT"].includes(m.key) : true;
-      }
-    }
-    return init;
-  });
+  const [roleAccess, setRoleAccess] = useState({});
 
   // User Overrides state (null=inherit, true=allow, false=deny)
-  const [selectedUserId, setSelectedUserId] = useState(demoUsers[0].id);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const selectedUser = useMemo(
-    () => demoUsers.find((u) => u.id === selectedUserId),
-    [selectedUserId]
+    () => users.find((u) => u.id === selectedUserId),
+    [users, selectedUserId]
   );
 
-  const [overrides, setOverrides] = useState(() => {
-    const init = {};
-    for (const u of demoUsers) {
-      init[u.id] = {};
-      for (const m of MODULES) init[u.id][m.key] = null;
+  const [overrides, setOverrides] = useState({});
+
+  useEffect(() => {
+    loadAccessData();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedUserId || modules.length === 0) return;
+    loadUserOverrides(selectedUserId);
+  }, [selectedUserId, modules]);
+
+  const loadAccessData = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const [modulesData, rolesData, matrixData, usersData] = await Promise.all([
+        getAccessModules(),
+        getAccessRoles(),
+        getAccessRoleMatrix(),
+        getAccessUsers(),
+      ]);
+
+      setModules(modulesData ?? []);
+      setRoles(rolesData ?? []);
+      setRoleAccess(matrixData ?? {});
+      setUsers(usersData ?? []);
+
+      if (usersData?.length) {
+        setSelectedUserId((prev) => prev ?? usersData[0].id);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load access control data.");
+    } finally {
+      setLoading(false);
     }
-    // demo example: allow FILES for Client A even if role denies
-    init[1]["FILES"] = true;
-    // demo example: deny CHAT for Dev B
-    init[3]["CHAT"] = false;
-    return init;
-  });
+  };
+
+  const loadUserOverrides = async (userId) => {
+    try {
+      const raw = await getAccessUserOverrides(userId);
+      const shaped = {};
+      for (const m of modules) {
+        shaped[m.key] = Object.prototype.hasOwnProperty.call(raw || {}, m.key)
+          ? raw[m.key]
+          : null;
+      }
+      setOverrides(shaped);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load user overrides.");
+    }
+  };
 
   const toggleRole = (role, moduleKey) => {
     setRoleAccess((prev) => ({
@@ -107,14 +124,11 @@ export default function AccessControl() {
   };
 
   const setOverride = (userId, moduleKey, value) => {
-    setOverrides((prev) => ({
-      ...prev,
-      [userId]: { ...prev[userId], [moduleKey]: value }
-    }));
+    setOverrides((prev) => ({ ...prev, [moduleKey]: value }));
   };
 
   const effectiveAccess = (user, moduleKey) => {
-    const o = overrides[user.id]?.[moduleKey];
+    const o = overrides[moduleKey];
     if (o === true || o === false) return o;
     return Boolean(roleAccess[user.role]?.[moduleKey]);
   };
@@ -124,12 +138,48 @@ export default function AccessControl() {
     if (!selectedUser) return { allowed: 0, denied: 0 };
     let allowed = 0;
     let denied = 0;
-    for (const m of MODULES) {
+    for (const m of modules) {
       effectiveAccess(selectedUser, m.key) ? allowed++ : denied++;
     }
     return { allowed, denied };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUserId, roleAccess, overrides]);
+  }, [selectedUserId, roleAccess, overrides, modules, users]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await saveAccessRoleMatrix(roleAccess);
+
+      if (selectedUserId) {
+        const saved = await saveAccessUserOverrides({
+          userId: selectedUserId,
+          overrides,
+        });
+
+        const shaped = {};
+        for (const m of modules) {
+          shaped[m.key] = Object.prototype.hasOwnProperty.call(saved || {}, m.key)
+            ? saved[m.key]
+            : null;
+        }
+        setOverrides(shaped);
+      }
+
+      setSuccess("Access control changes saved.");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to save access control changes.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <Typography sx={{ opacity: 0.8 }}>Loading access control...</Typography>;
+  }
 
   return (
     <Box>
@@ -137,11 +187,23 @@ export default function AccessControl() {
         title="Access Control"
         subtitle="Define module access by role, and override per user (especially for clients)."
         right={
-          <Button variant="outlined" onClick={() => alert("Hook this to backend later")}>
-            Save Changes
+          <Button variant="outlined" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
         }
       />
+
+      {error ? (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      ) : null}
+
+      {success ? (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {success}
+        </Alert>
+      ) : null}
 
       <Card sx={{ p: 2.5 }}>
         <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
@@ -153,13 +215,15 @@ export default function AccessControl() {
 
         {tab === 0 ? (
           <RoleMatrix
+            modules={modules}
+            roles={roles}
             roleAccess={roleAccess}
             onToggleRole={toggleRole}
           />
         ) : (
           <UserOverrides
-            users={demoUsers}
-            modules={MODULES}
+            users={users}
+            modules={modules}
             roleAccess={roleAccess}
             overrides={overrides}
             selectedUserId={selectedUserId}
@@ -173,7 +237,7 @@ export default function AccessControl() {
   );
 }
 
-function RoleMatrix({ roleAccess, onToggleRole }) {
+function RoleMatrix({ modules, roles, roleAccess, onToggleRole }) {
   return (
     <Box>
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
@@ -188,7 +252,7 @@ function RoleMatrix({ roleAccess, onToggleRole }) {
       </Typography>
 
       <Grid container spacing={2.5}>
-        {MODULES.map((m) => (
+        {modules.map((m) => (
           <Grid item xs={12} key={m.key}>
             <Card sx={{ p: 2.25 }}>
               <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
@@ -200,12 +264,12 @@ function RoleMatrix({ roleAccess, onToggleRole }) {
                 </Box>
 
                 <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                  {ROLES.map((r) => (
+                  {roles.map((r) => (
                     <FormControlLabel
                       key={r}
                       control={
                         <Switch
-                          checked={Boolean(roleAccess[r][m.key])}
+                          checked={Boolean(roleAccess?.[r]?.[m.key])}
                           onChange={() => onToggleRole(r, m.key)}
                         />
                       }
@@ -233,13 +297,17 @@ function UserOverrides({
   setOverride,
   summary
 }) {
-  const selectedUser = users.find((u) => u.id === selectedUserId);
+  const selectedUser = users.find((u) => u.id === selectedUserId) || null;
 
   const effectiveAccess = (user, moduleKey) => {
-    const o = overrides[user.id]?.[moduleKey];
+    const o = overrides[moduleKey];
     if (o === true || o === false) return o;
     return Boolean(roleAccess[user.role]?.[moduleKey]);
   };
+
+  if (!selectedUser) {
+    return <Typography sx={{ opacity: 0.8 }}>No users available for overrides.</Typography>;
+  }
 
   return (
     <Box>
@@ -258,7 +326,7 @@ function UserOverrides({
         <Input
           select
           label="Select User"
-          value={selectedUserId}
+          value={selectedUserId ?? ""}
           onChange={(e) => setSelectedUserId(Number(e.target.value))}
           sx={{ width: 360 }}
         >
@@ -290,7 +358,7 @@ function UserOverrides({
 
       <Grid container spacing={2.5}>
         {modules.map((m) => {
-          const overrideVal = overrides[selectedUserId]?.[m.key]; // null/true/false
+          const overrideVal = overrides[m.key]; // null/true/false
           const eff = selectedUser ? effectiveAccess(selectedUser, m.key) : false;
 
           return (

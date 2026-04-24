@@ -1,12 +1,19 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { FiHome, FiUser, FiMessageCircle } from "react-icons/fi";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 export default function DevSidebar({ collapsed }) {
+  const { moduleAccess } = useAuth();
+
   const menuItems = [
-    { name: "Dashboard", icon: <FiHome />, path: "/dev" },
+    ...(moduleAccess?.DASHBOARD
+      ? [{ name: "Dashboard", icon: <FiHome />, path: "/dev" }]
+      : []),
     { name: "Profile", icon: <FiUser />, path: "/dev/profile" },
-    { name: "Chat", icon: <FiMessageCircle />, path: "/dev/chat" },
+    ...(moduleAccess?.CHAT
+      ? [{ name: "Chat", icon: <FiMessageCircle />, path: "/dev/chat" }]
+      : []),
   ];
 
   return (
