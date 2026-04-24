@@ -32,6 +32,15 @@ public class ManagerTaskController {
         return ResponseEntity.ok(taskAssignmentService.createTask(authentication.getName(), request));
     }
 
+    @PatchMapping("/tasks/{taskId}/assignee")
+    public ResponseEntity<TaskDto> assignTask(
+            Authentication authentication,
+            @PathVariable Long taskId,
+            @RequestBody AssignTaskRequest request
+    ) {
+        return ResponseEntity.ok(taskAssignmentService.assignTask(authentication.getName(), taskId, request));
+    }
+
     @GetMapping("/tasks")
     public ResponseEntity<List<TaskDto>> listMyTasks(Authentication authentication) {
         return ResponseEntity.ok(taskAssignmentService.listManagerTasks(authentication.getName()));

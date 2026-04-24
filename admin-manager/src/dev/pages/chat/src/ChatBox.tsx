@@ -66,6 +66,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     [sessionId]
   );
 
+  const wsUrlWithToken = useMemo(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return WS_URL;
+    }
+    return `${WS_URL}?token=${encodeURIComponent(token)}`;
+  }, []);
+
   useEffect(() => {
     chatWindowRef.current?.scrollTo({
       top: chatWindowRef.current.scrollHeight,
@@ -78,6 +86,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
     const initializeChat = async () => {
       try {
+        if (!projectId || !currentUserId) {
+          throw new Error("Missing project or user context for chat session.");
+        }
+
         setLoadingSession(true);
         setErrorMessage("");
         setChat([]);
@@ -154,7 +166,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     }
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(WS_URL),
+      webSocketFactory: () => new SockJS(wsUrlWithToken),
       reconnectDelay: 5000,
       onConnect: () => {
         setSocketConnected(true);
@@ -189,6 +201,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       },
       onStompError: () => {
         setErrorMessage("WebSocket error occurred.");
+        setSocketConnected(false);
       },
       onWebSocketClose: () => {
         setSocketConnected(false);
@@ -205,7 +218,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         stompClientRef.current = null;
       }
     };
-  }, [subscriptionTopic, sessionId, currentUserId, chatEnded]);
+  }, [subscriptionTopic, sessionId, currentUserId, chatEnded, wsUrlWithToken]);
 
   const buildAiMessages = (messages: Message[]) => {
     return messages.map((m) => ({
@@ -371,9 +384,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       gap: 8,
       borderTop: "1px solid rgba(255,255,255,0.06)",
       background: "rgba(255,255,255,0.03)",
+      alignItems: "center",
     },
     input: {
       flex: 1,
+      minWidth: 0,
       padding: "12px 14px",
       borderRadius: 14,
       border: "1px solid rgba(255,255,255,0.15)",
@@ -437,7 +452,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     footerInfo: {
       padding: "8px 14px 0 14px",
       fontSize: 12,
-      opacity: 0.7,
+      color: "rgba(222,230,255,0.8)",
       display: "flex",
       justifyContent: "space-between"
     },
@@ -529,6 +544,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         <Button
           variant="contained"
           onClick={handleSend}
+          sx={{ minWidth: 72, px: 1.8, whiteSpace: "nowrap", fontWeight: 700 }}
           disabled={
             !input.trim() ||
             endingChat ||
@@ -544,6 +560,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           color="secondary"
           variant="outlined"
           onClick={handleEndChat}
+          sx={{ minWidth: 92, px: 1.4, whiteSpace: "nowrap", fontWeight: 700 }}
           disabled={chat.length === 0 || endingChat || chatEnded || loadingSession}
         >
           {endingChat ? "Ending..." : "End Chat"}

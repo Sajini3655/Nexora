@@ -10,13 +10,33 @@ import {
   CircularProgress
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { fetchProjects } from "../../services/managerService";
+import { fetchManagerTasks, fetchProjects } from "../../services/managerService";
 
 export default function ProjectManagement() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const getProjectId = (project) =>
+    String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
+
+  const normalizeTaskStatus = (task) =>
+    String(task?.status || task?.taskStatus || task?.state || "")
+      .trim()
+      .toLowerCase();
+
+  const isTaskDone = (task) => {
+    const status = normalizeTaskStatus(task);
+    return (
+      status === "done" ||
+      status === "complete" ||
+      status === "completed" ||
+      status === "closed" ||
+      status === "resolved"
+    );
+  };
 
   useEffect(() => {
     let active = true;
@@ -25,11 +45,15 @@ export default function ProjectManagement() {
       try {
         setLoading(true);
         setError("");
-        const data = await fetchProjects();
+        const [projectsData, tasksData] = await Promise.all([
+          fetchProjects(),
+          fetchManagerTasks(),
+        ]);
         if (!active) {
           return;
         }
-        setProjects(Array.isArray(data) ? data : []);
+        setProjects(Array.isArray(projectsData) ? projectsData : []);
+        setTasks(Array.isArray(tasksData) ? tasksData : []);
       } catch (err) {
         if (!active) {
           return;
@@ -53,9 +77,35 @@ export default function ProjectManagement() {
   }, []);
 
   const projectCards = useMemo(() => {
+    const tasksByProject = new Map();
+
+    tasks.forEach((task) => {
+      const projectKey = String(
+        task?.projectId ??
+          task?.project_id ??
+          task?.project?.id ??
+          task?.project?.projectId ??
+          ""
+      );
+
+      if (!projectKey) {
+        return;
+      }
+
+      if (!tasksByProject.has(projectKey)) {
+        tasksByProject.set(projectKey, []);
+      }
+
+      tasksByProject.get(projectKey).push(task);
+    });
+
     return projects.map((project) => {
-      const totalTasks = project.tasks?.length || 0;
-      const doneTasks = (project.tasks || []).filter((task) => task.status === "DONE").length;
+      const projectId = getProjectId(project);
+      const taskList = Array.isArray(project?.tasks)
+        ? project.tasks
+        : tasksByProject.get(projectId) || [];
+      const totalTasks = taskList.length;
+      const doneTasks = taskList.filter((task) => isTaskDone(task)).length;
       const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
       let status = "Planning";
@@ -64,15 +114,15 @@ export default function ProjectManagement() {
       }
 
       return {
-        id: project.id,
-        name: project.name,
-        description: project.description,
+        id: projectId,
+        name: project?.name || project?.projectName || "Untitled Project",
+        description: project?.description || project?.projectDescription || "No description provided.",
         status,
         progress,
         tasks: totalTasks,
       };
     });
-  }, [projects]);
+  }, [projects, tasks]);
 
   if (loading) {
     return (

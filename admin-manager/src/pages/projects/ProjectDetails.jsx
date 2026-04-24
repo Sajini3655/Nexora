@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  CircularProgress,
   Box,
   Typography,
   Paper,
@@ -10,35 +11,16 @@ import {
 import { useParams } from "react-router-dom";
 import ChatBox from "../../dev/pages/chat/src/ChatBox.tsx";
 import { fetchProjectDetails } from "../../services/managerService";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function ProjectDetails() {
   const params = useParams();
   const routeProjectId = params.projectId || params.id;
+  const { user, loading: authLoading } = useAuth();
 
   const [project, setProject] = useState(null);
   const [summary, setSummary] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser?.id && parsedUser?.name) {
-          setCurrentUser(parsedUser);
-        } else {
-          setCurrentUser({ id: 34, name: "Manager" });
-        }
-      } catch (error) {
-        console.error("Invalid user in localStorage", error);
-        setCurrentUser({ id: 34, name: "Manager" });
-      }
-    } else {
-      setCurrentUser({ id: 34, name: "Manager" });
-    }
-  }, []);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -96,10 +78,19 @@ export default function ProjectDetails() {
     return [];
   };
 
-  if (loading || !currentUser) {
+  if (loading || authLoading) {
+    return (
+      <Box sx={{ p: 3, display: "flex", alignItems: "center", gap: 1.5 }}>
+        <CircularProgress size={22} />
+        <Typography>Loading project...</Typography>
+      </Box>
+    );
+  }
+
+  if (!user) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Loading project...</Typography>
+        <Typography>Please log in to access project details.</Typography>
       </Box>
     );
   }
@@ -202,8 +193,8 @@ export default function ProjectDetails() {
 
             <ChatBox
               projectId={String(project?.id || project?.projectId || routeProjectId)}
-              currentUserId={String(currentUser.id)}
-              currentUserName={currentUser.name}
+              currentUserId={String(user.id)}
+              currentUserName={user.name || user.email || "Manager"}
               onSummary={setSummary}
             />
           </Paper>
@@ -212,21 +203,26 @@ export default function ProjectDetails() {
             <Paper
               sx={{
                 p: 3,
+                border: "1px solid rgba(99, 102, 241, 0.45)",
                 borderLeft: "5px solid #6366f1",
-                background: "#f9fafb"
+                background:
+                  "linear-gradient(180deg, rgba(16, 21, 41, 0.96) 0%, rgba(11, 15, 31, 0.98) 100%)",
+                color: "#e6ebff",
+                borderRadius: 3,
+                boxShadow: "0 18px 40px rgba(0, 0, 0, 0.28)"
               }}
             >
-              <Typography variant="h6" sx={{ mb: 1 }}>
+              <Typography variant="h6" sx={{ mb: 1, color: "#ffffff", fontWeight: 700 }}>
                 AI Summary
               </Typography>
 
-              <Typography variant="body2" sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 2, color: "#d6ddff", lineHeight: 1.6 }}>
                 {summary.summary || "No summary available."}
               </Typography>
 
               {summary.blockers?.length > 0 && (
                 <>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: "#f5f7ff", fontWeight: 700 }}>
                     Detected Blockers
                   </Typography>
 
@@ -242,9 +238,14 @@ export default function ProjectDetails() {
                       <Chip
                         key={index}
                         label={blocker}
-                        color="error"
                         variant="outlined"
-                        sx={{ width: "fit-content" }}
+                        sx={{
+                          width: "fit-content",
+                          color: "#ff8080",
+                          borderColor: "rgba(255, 95, 95, 0.75)",
+                          background: "rgba(120, 22, 22, 0.22)",
+                          fontWeight: 600
+                        }}
                       />
                     ))}
                   </Box>
@@ -253,11 +254,11 @@ export default function ProjectDetails() {
 
               {summary.ticket_message && (
                 <>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: "#f5f7ff", fontWeight: 700 }}>
                     Ticket Status
                   </Typography>
 
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ color: "#c9d6ff" }}>
                     {summary.ticket_message}
                   </Typography>
                 </>

@@ -15,6 +15,25 @@ export default function ProjectManagementDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const getProjectId = (item) =>
+    String(item?.id ?? item?.projectId ?? item?.project_id ?? "");
+
+  const getTaskStatus = (task) =>
+    String(task?.status || task?.taskStatus || task?.state || "")
+      .trim()
+      .toLowerCase();
+
+  const isTaskDone = (task) => {
+    const status = getTaskStatus(task);
+    return (
+      status === "done" ||
+      status === "complete" ||
+      status === "completed" ||
+      status === "closed" ||
+      status === "resolved"
+    );
+  };
+
   useEffect(() => {
     let active = true;
 
@@ -28,7 +47,7 @@ export default function ProjectManagementDetails() {
         }
 
         const selected = (Array.isArray(data) ? data : []).find(
-          (item) => String(item.id) === String(projectId)
+          (item) => getProjectId(item) === String(projectId)
         );
 
         if (!selected) {
@@ -60,10 +79,11 @@ export default function ProjectManagementDetails() {
     };
   }, [projectId]);
 
-  const totalTasks = project?.tasks?.length || 0;
+  const tasks = Array.isArray(project?.tasks) ? project.tasks : [];
+  const totalTasks = tasks.length;
   const doneTasks = useMemo(
-    () => (project?.tasks || []).filter((task) => task.status === "DONE").length,
-    [project]
+    () => tasks.filter((task) => isTaskDone(task)).length,
+    [tasks]
   );
   const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
@@ -89,7 +109,7 @@ export default function ProjectManagementDetails() {
   return (
     <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
-        Manage: {project.name}
+        Manage: {project?.name || project?.projectName || "Untitled Project"}
       </Typography>
 
       <Paper sx={{ p: 3, mb: 4 }}>
@@ -97,7 +117,7 @@ export default function ProjectManagementDetails() {
           Project Overview
         </Typography>
         <Typography variant="body1" sx={{ mb: 2, opacity: 0.85 }}>
-          {project.description || "No description provided."}
+          {project?.description || project?.projectDescription || "No description provided."}
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
           <Chip label={`Tasks: ${totalTasks}`} />
@@ -108,22 +128,22 @@ export default function ProjectManagementDetails() {
 
       <Typography variant="h6" sx={{ mb: 2 }}>Tasks</Typography>
 
-      {(project.tasks || []).length === 0 ? (
+      {tasks.length === 0 ? (
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography>No tasks found in this project.</Typography>
         </Paper>
-      ) : (project.tasks || []).map((task) => (
-        <Paper key={task.id} sx={{ p: 3, mb: 3 }}>
+      ) : tasks.map((task, index) => (
+        <Paper key={task?.id || task?.taskId || index} sx={{ p: 3, mb: 3 }}>
           <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 700 }}>
-            {task.title}
+            {task?.title || task?.taskName || task?.name || "Untitled Task"}
           </Typography>
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
             <Chip
-              label={`Status: ${task.status || "-"}`}
-              color={task.status === "DONE" ? "success" : "primary"}
+              label={`Status: ${task?.status || task?.taskStatus || "-"}`}
+              color={isTaskDone(task) ? "success" : "primary"}
               size="small"
             />
-            <Chip label={`Priority: ${task.priority || "-"}`} variant="outlined" size="small" />
+            <Chip label={`Priority: ${task?.priority || task?.taskPriority || "-"}`} variant="outlined" size="small" />
           </Box>
         </Paper>
       ))}
