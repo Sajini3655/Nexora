@@ -1,6 +1,7 @@
 package com.admin.service;
 
 import com.admin.dto.AuthResponse;
+import com.admin.dto.ChangePasswordRequest;
 import com.admin.dto.InviteLookupResponse;
 import com.admin.dto.LoginRequest;
 import com.admin.dto.RegisterRequest;
@@ -82,6 +83,32 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return toUserResponse(user);
+    }
+
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        String normalizedEmail = safeTrim(email).toLowerCase();
+
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String currentPassword = request.getCurrentPassword() == null ? "" : request.getCurrentPassword();
+        String newPassword = safeTrim(request.getNewPassword());
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        if (newPassword.length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters long");
+        }
+
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new RuntimeException("New password must be different from current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     @Transactional(readOnly = true)

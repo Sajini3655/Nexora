@@ -26,10 +26,7 @@ public class TaskAssignmentService {
      */
     @Transactional(readOnly = true)
     public List<DeveloperSummaryDto> listDevelopers() {
-        List<User> devUsers = userRepository.findAll().stream()
-                .filter(u -> u.getRole() == Role.DEVELOPER)
-                .filter(User::isEnabled)
-                .toList();
+        List<User> devUsers = userRepository.findByRoleAndEnabled(Role.DEVELOPER, true);
 
         return devUsers.stream()
                 .map(this::toDeveloperSummary)
