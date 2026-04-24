@@ -38,10 +38,12 @@ export function AuthProvider({ children }) {
         setAccessLoading(false);
       }
 
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
       return normalizedUser;
     } catch (err) {
       console.warn("loadMe failed, clearing token", err);
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       setUser(null);
       setModuleAccess(null);
       setAccessLoading(false);
@@ -78,6 +80,7 @@ export function AuthProvider({ children }) {
 
   function logout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
     setModuleAccess(null);
     setAccessLoading(false);

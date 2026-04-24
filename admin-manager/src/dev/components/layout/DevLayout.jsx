@@ -1,35 +1,66 @@
 import React, { useState } from "react";
+import { Box } from "@mui/material";
 import DevSidebar from "./DevSidebar";
 import DevTopbar from "./DevTopbar";
 
 const DevLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen">
-      <div className="flex min-h-screen">
-        <DevSidebar collapsed={collapsed} />
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.08), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
+        color: "#e7e9ee"
+      }}
+    >
+      <DevSidebar open={sidebarOpen} collapsed={collapsed} onClose={() => setSidebarOpen(false)} />
 
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar */}
-          <div className="p-4 pb-0">
-            <div className="glass-panel rounded-3xl px-4 py-3">
-              <DevTopbar
-                collapsed={collapsed}
-                onToggleSidebar={() => setCollapsed((v) => !v)}
-              />
-            </div>
-          </div>
+      <Box
+        sx={{
+          flexGrow: 1,
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column"
+        }}
+      >
+        <Box sx={{ p: { xs: 1.5, md: 2 }, pb: 0 }}>
+          <DevTopbar
+            collapsed={collapsed}
+            onToggleSidebar={() => setSidebarOpen((v) => !v)}
+          />
+        </Box>
 
-          {/* Main content */}
-          <main className="p-4 flex-1 min-h-0">
-            <div className="glass-panel rounded-3xl p-5 md:p-6 h-full overflow-auto">
-              {children}
-            </div>
-          </main>
-        </div>
-      </div>
-    </div>
+        <Box
+          component="main"
+          sx={{
+            p: { xs: 1.5, md: 2 },
+            flexGrow: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column"
+          }}
+        >
+          <Box
+            sx={{
+              background: "rgba(15,20,40,0.5)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "20px",
+              p: { xs: 2, md: 2.5 },
+              height: "100%",
+              overflowY: "auto",
+              flexGrow: 1
+            }}
+          >
+            {children}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

@@ -9,5 +9,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     long countByCreatedBy_Id(Long userId);
     long countByAssignedTo_Id(Long userId);
 
+    List<Ticket> findAllByOrderByCreatedAtDesc();
+
     List<Ticket> findByCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(Long createdById, Long assignedToId);
 }
