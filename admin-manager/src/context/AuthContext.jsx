@@ -8,25 +8,43 @@ export function AuthProvider({ children }) {
   const api = useApi();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [moduleAccess, setModuleAccess] = useState(null);
+  const [accessLoading, setAccessLoading] = useState(false);
 
   // Load current user if token exists
   async function loadMe() {
     const token = localStorage.getItem("token");
     if (!token) {
       setUser(null);
+      setModuleAccess(null);
+      setAccessLoading(false);
       return null;
     }
 
     try {
+      setAccessLoading(true);
       const res = await api.get("/auth/me");
       const me = res.data;
       const normalizedUser = { ...me, role: normalizeRole(me.role) };
       setUser(normalizedUser);
+
+      try {
+        const accessRes = await api.get("/access/me");
+        setModuleAccess(accessRes.data ?? {});
+      } catch (accessErr) {
+        console.warn("load access failed", accessErr);
+        setModuleAccess({});
+      } finally {
+        setAccessLoading(false);
+      }
+
       return normalizedUser;
     } catch (err) {
       console.warn("loadMe failed, clearing token", err);
       localStorage.removeItem("token");
       setUser(null);
+      setModuleAccess(null);
+      setAccessLoading(false);
       return null;
     }
   }
@@ -61,6 +79,8 @@ export function AuthProvider({ children }) {
   function logout() {
     localStorage.removeItem("token");
     setUser(null);
+    setModuleAccess(null);
+    setAccessLoading(false);
   }
 
   useEffect(() => {
@@ -72,8 +92,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, register, acceptInvite, refresh: loadMe }),
-    [user, loading]
+    () => ({
+      user,
+      loading,
+      moduleAccess,
+      accessLoading,
+      login,
+      logout,
+      register,
+      acceptInvite,
+      refresh: loadMe,
+    }),
+    [user, loading, moduleAccess, accessLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

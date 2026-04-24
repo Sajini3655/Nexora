@@ -139,7 +139,7 @@ export default function App() {
         />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="DASHBOARD" />}>
         <Route
           path="/manager"
           element={
@@ -148,6 +148,9 @@ export default function App() {
             </ManagerShell>
           }
         />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="FILES" />}>
         <Route
           path="/manager/projects"
           element={
@@ -188,6 +191,9 @@ export default function App() {
             </ManagerShell>
           }
         />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="TASKS" />}>
         <Route
           path="/manager/ai-assignment"
           element={
@@ -217,22 +223,34 @@ export default function App() {
         />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="DASHBOARD" />}>
         <Route path="/dev" element={<DevDashboardHome />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="FILES" />}>
         <Route path="/dev/project/:id" element={<DevWorkspace />} />
 
+        <Route path="/dev/projects" element={<DevProjectList />} />
+        <Route path="/dev/projects/:id" element={<DevProjectView />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="TASKS" />}>
         <Route path="/dev/tasks" element={<DevTaskList />} />
         <Route path="/dev/tasks/:id" element={<DevTaskView />} />
 
         <Route path="/dev/tickets/new" element={<DevTicketCreate />} />
         <Route path="/dev/tickets/:id" element={<DevTicketView />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} />}>
 
         <Route path="/dev/profile" element={<DevProfile />} />
 
-        <Route path="/dev/projects" element={<DevProjectList />} />
-        <Route path="/dev/projects/:id" element={<DevProjectView />} />
-
         <Route path="/dev/settings" element={<DevSettings />} />
+
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="CHAT" />}>
 
         <Route path="/dev/chat" element={<Navigate to="/dev/chat/P-001" replace />} />
         <Route path="/dev/chat/:projectId" element={<DevChat />} />
