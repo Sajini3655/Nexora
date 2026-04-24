@@ -1,9 +1,24 @@
 import React, { useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
+import { Box, Chip, Stack, Typography } from "@mui/material";
+import Card from "../../../components/ui/Card.jsx";
 
 function Badge({ children }) {
-  return <span className="chip">{children}</span>;
+  return (
+    <Chip
+      label={children}
+      size="small"
+      sx={{
+        height: 26,
+        borderRadius: 999,
+        bgcolor: "rgba(255,255,255,0.06)",
+        color: "rgba(231,233,238,0.9)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        fontWeight: 800
+      }}
+    />
+  );
 }
 Badge.propTypes = { children: PropTypes.node.isRequired };
 
@@ -60,28 +75,33 @@ export default function TicketWidget({ title, hint, tickets }) {
   const visible = showAll ? filtered : filtered.slice(0, 3);
 
   return (
-    <div className="glass-card p-5">
-      {/* header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs text-slate-400">Tickets</p>
-          <h3 className="text-lg font-bold">{title}</h3>
-          {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
-        </div>
+    <Card sx={{ p: 2.5 }}>
+      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+        <Box>
+          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: "0.12em" }}>
+            Tickets
+          </Typography>
+          <Typography variant="h6" sx={{ fontWeight: 900, lineHeight: 1.1, letterSpacing: -0.3 }}>
+            {title}
+          </Typography>
+          {hint ? (
+            <Typography variant="body2" sx={{ mt: 0.75, color: "rgba(231,233,238,0.68)" }}>
+              {hint}
+            </Typography>
+          ) : null}
+        </Box>
 
         <Badge>{tickets.length} total</Badge>
-      </div>
+      </Box>
 
-      {/* status summary */}
-      <div className="flex flex-wrap gap-2 mt-4">
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
         <Badge>Open: {counts.Open}</Badge>
         <Badge>In Progress: {counts["In Progress"]}</Badge>
         <Badge>Done: {counts.Done}</Badge>
-      </div>
+      </Stack>
 
-      {/* filters */}
-      <div className="flex flex-col md:flex-row gap-2 mt-4">
-        <div className="flex gap-2 flex-wrap">
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 1.5, mt: 2 }}>
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
           {["All", "Open", "In Progress", "Done"].map((s) => (
             <button
               key={s}
@@ -96,7 +116,7 @@ export default function TicketWidget({ title, hint, tickets }) {
               {s}
             </button>
           ))}
-        </div>
+        </Stack>
 
         <input
           className="md:ml-auto input md:w-72"
@@ -104,46 +124,50 @@ export default function TicketWidget({ title, hint, tickets }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-      </div>
+      </Box>
 
-      {/* list */}
-      <div className="mt-4 space-y-3">
+      <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
         {visible.map((t) => (
-            <Link
-              key={t.id}
-              to={`/dev/tickets/${t.id}`}
+          <Link
+            key={t.id}
+            to={`/dev/tickets/${t.id}`}
             className="block rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition p-4"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-semibold truncate">{t.title}</p>
-                <p className="text-xs text-slate-400 mt-1">
+            <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 800 }} noWrap>
+                  {t.title}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)", mt: 0.5, display: "block" }}>
                   {t.id} • {t.status} • {t.createdAt}
-                </p>
+                </Typography>
 
-                <p className="text-sm text-slate-200 mt-2">{t.description}</p>
+                <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.86)", mt: 1.25 }}>
+                  {t.description}
+                </Typography>
 
-                <div className="flex flex-wrap gap-2 mt-3">
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 1.5 }}>
                   <Badge>Created via: {t.createdVia}</Badge>
-                  {t.client?.name && <Badge>Client: {t.client.name}</Badge>}
-                  {t.detectedFrom?.reason && <Badge>AI Blocker</Badge>}
-                </div>
-              </div>
+                  {t.client?.name ? <Badge>Client: {t.client.name}</Badge> : null}
+                  {t.detectedFrom?.reason ? <Badge>AI Blocker</Badge> : null}
+                </Stack>
+              </Box>
 
-              <div className="shrink-0 flex flex-col items-end gap-2">
+              <Box sx={{ shrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
                 <SeverityPill severity={t.severity} />
-                <span className="chip-muted">View</span>
-              </div>
-            </div>
+                <Chip size="small" label="View" sx={{ bgcolor: "rgba(124,92,255,0.16)", border: "1px solid rgba(124,92,255,0.25)", color: "#e7e9ee", fontWeight: 900 }} />
+              </Box>
+            </Box>
           </Link>
         ))}
 
         {filtered.length === 0 && (
-          <p className="text-sm text-slate-300">No tickets found.</p>
+          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)" }}>
+            No tickets found.
+          </Typography>
         )}
-      </div>
+      </Box>
 
-      {/* show more */}
       {filtered.length > 3 && (
         <button
           type="button"
@@ -153,7 +177,7 @@ export default function TicketWidget({ title, hint, tickets }) {
           {showAll ? "Show less" : `Show all (${filtered.length})`}
         </button>
       )}
-    </div>
+    </Card>
   );
 }
 
