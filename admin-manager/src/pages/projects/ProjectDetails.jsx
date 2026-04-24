@@ -12,13 +12,42 @@ import ChatBox from "../../dev/pages/chat/src/ChatBox.tsx";
 
 export default function ProjectDetails() {
   const { projectId } = useParams();
+
   const [project, setProject] = useState(null);
-  const [summary, setSummary] = useState("");
+  const [summary, setSummary] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // Replace this with backend data later
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+
+        if (parsedUser?.id && parsedUser?.name) {
+          setCurrentUser(parsedUser);
+        } else {
+          setCurrentUser({
+            id: 34,
+            name: "Manager"
+          });
+        }
+      } catch (error) {
+        console.error("Invalid user in localStorage", error);
+        setCurrentUser({
+          id: 34,
+          name: "Manager"
+        });
+      }
+    } else {
+      setCurrentUser({
+        id: 34,
+        name: "Manager"
+      });
+    }
+
     const fakeProject = {
-      id: projectId,
+      id: projectId || "2",
       name: "E-Commerce Platform",
       description: "Online shopping platform with payment integration.",
       tasks: [
@@ -42,8 +71,12 @@ export default function ProjectDetails() {
     setProject(fakeProject);
   }, [projectId]);
 
-  if (!project) {
-    return <Typography>Loading project...</Typography>;
+  if (!project || !currentUser) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography>Loading project...</Typography>
+      </Box>
+    );
   }
 
   return (
@@ -57,7 +90,6 @@ export default function ProjectDetails() {
       </Typography>
 
       <Grid container spacing={3}>
-        {/* LEFT SIDE */}
         <Grid item xs={12} md={8}>
           <Typography variant="h6" sx={{ mb: 2 }}>
             Tasks
@@ -92,7 +124,6 @@ export default function ProjectDetails() {
           ))}
         </Grid>
 
-        {/* RIGHT SIDE */}
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
@@ -100,8 +131,10 @@ export default function ProjectDetails() {
             </Typography>
 
             <ChatBox
-              projectId={project.id}
-              onSummary={(generatedSummary) => setSummary(generatedSummary)}
+              projectId={String(project.id)}
+              currentUserId={String(currentUser.id)}
+              currentUserName={currentUser.name}
+              onSummary={setSummary}
             />
           </Paper>
 
@@ -117,9 +150,48 @@ export default function ProjectDetails() {
                 AI Summary
               </Typography>
 
-              <Typography variant="body2">
-                {summary}
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                {summary.summary || "No summary available."}
               </Typography>
+
+              {summary.blockers?.length > 0 && (
+                <>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Detected Blockers
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                      mb: 2
+                    }}
+                  >
+                    {summary.blockers.map((blocker, index) => (
+                      <Chip
+                        key={index}
+                        label={blocker}
+                        color="error"
+                        variant="outlined"
+                        sx={{ width: "fit-content" }}
+                      />
+                    ))}
+                  </Box>
+                </>
+              )}
+
+              {summary.ticket_message && (
+                <>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Ticket Status
+                  </Typography>
+
+                  <Typography variant="body2">
+                    {summary.ticket_message}
+                  </Typography>
+                </>
+              )}
             </Paper>
           )}
         </Grid>
