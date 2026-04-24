@@ -18,7 +18,7 @@ const links = [
   { to: "/client/settings", label: "Settings" }
 ];
 
-export default function ClientSidebar({ open, onClose }) {
+function ClientSidebar({ open, onClose }) {
   const location = useLocation();
 
   const selected = (path) =>
@@ -144,3 +144,5 @@ export default function ClientSidebar({ open, onClose }) {
     </Drawer>
   );
 }
+
+export default ClientSidebar;

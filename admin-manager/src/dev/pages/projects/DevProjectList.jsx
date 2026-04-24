@@ -1,155 +1,113 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
 import DevLayout from "../../components/layout/DevLayout";
+import Card from "../../../components/ui/Card.jsx";
+import { deriveSingleProject, fetchDeveloperTasks } from "../../services/developerApi";
 
-const mockProjects = [
-  {
-    id: "p-101",
-    name: "Developer Dashboard UI",
-    manager: "Nimal Perera",
-    progress: 72,
-    devTaskCount: 8,
-    status: "Active",
-  },
-  {
-    id: "p-102",
-    name: "Auth + Roles (UI Prep)",
-    manager: "Kasun Silva",
-    progress: 35,
-    devTaskCount: 4,
-    status: "Active",
-  },
-  {
-    id: "p-103",
-    name: "Notifications + Chat UX",
-    manager: "Amaya Fernando",
-    progress: 10,
-    devTaskCount: 3,
-    status: "Planning",
-  },
-];
+export default function DevProjectList() {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-const cycleStatus = (s) => {
-  const order = ["Active", "Planning", "On Hold"];
-  const i = order.indexOf(s);
-  return order[(i + 1) % order.length];
-};
+  useEffect(() => {
+    let active = true;
 
-const pillClasses = (status) => {
-  const base =
-    "cursor-pointer select-none px-3 py-1 rounded-full text-xs font-medium border transition";
-  if (status === "Active")
-    return `${base} bg-green-50 text-green-700 border-green-200 hover:bg-green-100`;
-  if (status === "On Hold")
-    return `${base} bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100`;
-  return `${base} bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100`;
-};
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const data = await fetchDeveloperTasks();
+        if (!active) return;
+        setTasks(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (!active) return;
+        setError(err?.message || "Failed to load project list.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-// Professional progress: ring + badge (no bars)
-const ProgressRing = ({ value = 0 }) => {
-  const v = Math.max(0, Math.min(100, Number(value) || 0));
-  const r = 8;
-  const c = 2 * Math.PI * r;
-  const dash = (v / 100) * c;
+    load();
 
-  return (
-    <div className="flex items-center gap-2" title={`Progress: ${v}%`}>
-      <svg width="18" height="18" viewBox="0 0 20 20" className="shrink-0 text-gray-900">
-        <circle cx="10" cy="10" r={r} fill="none" stroke="rgb(229 231 235)" strokeWidth="2" />
-        <circle
-          cx="10"
-          cy="10"
-          r={r}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${c}`}
-          transform="rotate(-90 10 10)"
-        />
-      </svg>
+    return () => {
+      active = false;
+    };
+  }, []);
 
-      <div className="text-xs font-medium tabular-nums px-2 py-1 rounded border border-gray-200 bg-gray-50 text-gray-700">
-        {v}%
-      </div>
-    </div>
-  );
-};
+  const project = useMemo(() => deriveSingleProject(tasks), [tasks]);
 
-const DevProjectList = () => {
-  const [projects, setProjects] = useState(mockProjects);
-  const [search, setSearch] = useState("");
-  const navigate = useNavigate();
-
-  const filteredProjects = useMemo(() => {
-    const q = search.toLowerCase();
-    return projects.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.manager.toLowerCase().includes(q)
+  if (loading) {
+    return (
+      <DevLayout>
+        <Box sx={{ minHeight: "45vh", display: "grid", placeItems: "center" }}>
+          <Stack spacing={2} alignItems="center">
+            <CircularProgress color="primary" />
+            <Typography color="text.secondary">Loading projects...</Typography>
+          </Stack>
+        </Box>
+      </DevLayout>
     );
-  }, [projects, search]);
+  }
 
-  const toggleStatus = (id) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: cycleStatus(p.status) } : p))
+  if (error) {
+    return (
+      <DevLayout>
+        <Alert severity="error" sx={{ borderRadius: 3 }}>
+          {error}
+        </Alert>
+      </DevLayout>
     );
-  };
+  }
 
   return (
     <DevLayout>
-      <div>
-        {/* EXACT same baseline as Tasks */}
-        <h2 className="text-2xl font-bold mb-4">Projects</h2>
+      <Typography variant="h5" sx={{ fontWeight: 900, mb: 2, letterSpacing: -0.4 }}>
+        My Project
+      </Typography>
 
-        <input
-          className="mb-4 p-2 border rounded w-full"
-          placeholder="Search projects or manager..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {!project ? (
+        <Alert severity="info" sx={{ borderRadius: 3 }}>
+          No backend project is assigned yet.
+        </Alert>
+      ) : (
+        <Card sx={{ p: 2.5 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+                Backend project
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.3 }} noWrap>
+                {project.name}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.5 }}>
+                Project ID: {project.id}
+              </Typography>
+            </Box>
 
-        <ul className="space-y-2">
-          {filteredProjects.map((p) => (
-            <li
-              key={p.id}
-              className="p-3 bg-white rounded shadow flex justify-between items-center"
-            >
-              <div className="min-w-0">
-                <div className="font-medium truncate">{p.name}</div>
-                <div className="text-sm text-gray-500">
-                  {p.manager} • {p.devTaskCount} tasks
-                </div>
-              </div>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Box component={Link} to={`/dev/project/${project.id}`} sx={{ color: "#c4b5fd", fontWeight: 800 }}>
+                Open workspace
+              </Box>
+              <Box component={Link} to={`/dev/chat/${project.id}`} sx={{ color: "#c4b5fd", fontWeight: 800 }}>
+                Open chat
+              </Box>
+            </Stack>
+          </Box>
 
-              <div className="flex items-center gap-3 shrink-0">
-                <ProgressRing value={p.progress} />
-
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className={pillClasses(p.status)}
-                  onClick={() => toggleStatus(p.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") toggleStatus(p.id);
-                  }}
-                  title="Click to change status (UI only)"
-                >
-                  {p.status}
-                </div>
-
-                <button
-                  type="button"
-                  className="text-blue-600"
-                  onClick={() => navigate(`/dev/projects/${p.id}`)}
-                >
-                  View
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 2 }}>
+            <Box sx={{ px: 1.2, py: 0.6, borderRadius: 999, bgcolor: "rgba(124,92,255,0.16)", border: "1px solid rgba(124,92,255,0.25)" }}>
+              Tasks: {project.totalTasks}
+            </Box>
+            <Box sx={{ px: 1.2, py: 0.6, borderRadius: 999, bgcolor: "rgba(124,92,255,0.16)", border: "1px solid rgba(124,92,255,0.25)" }}>
+              Open: {project.openTasks}
+            </Box>
+            <Box sx={{ px: 1.2, py: 0.6, borderRadius: 999, bgcolor: "rgba(124,92,255,0.16)", border: "1px solid rgba(124,92,255,0.25)" }}>
+              Progress: {project.progress}%
+            </Box>
+          </Box>
+        </Card>
+      )}
     </DevLayout>
   );
-};
-
-export default DevProjectList;
+}

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box } from "@mui/material";
-import ClientSidebar from "./ClientSidebar";
+import ClientSidebar from "./ClientSidebar.jsx";
 import ClientTopbar from "./ClientTopbar";
 
 export default function ClientLayout({ children }) {
