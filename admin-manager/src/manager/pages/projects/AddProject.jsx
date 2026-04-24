@@ -8,9 +8,9 @@ import {
   Chip,
   Divider,
 } from "@mui/material";
-import { createProject } from "../../services/managerService";
-import Input from "../../components/ui/Input";
-import Button from "../../components/ui/Button";
+import { createProject } from "../../../services/managerService";
+import Input from "../../../components/ui/Input";
+import Button from "../../../components/ui/Button";
 
 const initialTask = { title: "", priority: "MEDIUM" };
 

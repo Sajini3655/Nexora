@@ -10,7 +10,7 @@ import {
   CircularProgress
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { fetchManagerTasks, fetchProjects } from "../../services/managerService";
+import { fetchManagerTasks, fetchProjects } from "../../../services/managerService";
 
 export default function ProjectManagement() {
   const navigate = useNavigate();

@@ -9,9 +9,9 @@ import {
   LinearProgress
 } from "@mui/material";
 import { useParams } from "react-router-dom";
-import ChatBox from "../../dev/pages/chat/src/ChatBox.tsx";
-import { fetchProjectDetails } from "../../services/managerService";
-import { useAuth } from "../../context/AuthContext.jsx";
+import ChatBox from "../../../dev/pages/chat/src/ChatBox.tsx";
+import { fetchProjectDetails } from "../../../services/managerService";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 export default function ProjectDetails() {
   const params = useParams();

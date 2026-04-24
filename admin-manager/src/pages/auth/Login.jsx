@@ -27,6 +27,7 @@ export default function Login() {
       if (role === "ADMIN") navigate("/admin");
       else if (role === "MANAGER") navigate("/manager");
       else if (role === "DEVELOPER") navigate("/dev");
+      else if (role === "CLIENT") navigate("/client");
       else navigate("/login");
     } catch (err) {
       setError(err.message || "Login failed");

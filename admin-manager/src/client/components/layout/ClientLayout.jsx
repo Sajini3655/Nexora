@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Box } from "@mui/material";
-import DevSidebar from "./DevSidebar";
-import DevTopbar from "./DevTopbar";
+import ClientSidebar from "./ClientSidebar";
+import ClientTopbar from "./ClientTopbar";
 
-const DevLayout = ({ children }) => {
+export default function ClientLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -16,7 +16,7 @@ const DevLayout = ({ children }) => {
         color: "#e7e9ee",
       }}
     >
-      <DevSidebar collapsed={collapsed} />
+      <ClientSidebar collapsed={collapsed} />
 
       <Box
         sx={{
@@ -38,7 +38,7 @@ const DevLayout = ({ children }) => {
               py: 1.5,
             }}
           >
-            <DevTopbar
+            <ClientTopbar
               collapsed={collapsed}
               onToggleSidebar={() => setCollapsed((v) => !v)}
             />
@@ -74,6 +74,4 @@ const DevLayout = ({ children }) => {
       </Box>
     </Box>
   );
-};
-
-export default DevLayout;
+}

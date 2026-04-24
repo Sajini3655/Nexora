@@ -46,7 +46,7 @@ import {
   getAdminDashboard,
   getRegistrationsLast7Days,
   getSystemHealth,
-} from "../../services/api";
+} from "../../../services/api";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);

@@ -12,8 +12,8 @@ import {
   Stack,
 } from "@mui/material";
 
-import Input from "../../components/ui/Input";
-import useApi from "../../hooks/useApi";
+import Input from "../../../components/ui/Input";
+import useApi from "../../../hooks/useApi";
 
 const ROLES = ["ADMIN", "MANAGER", "DEVELOPER", "CLIENT"];
 

@@ -11,11 +11,11 @@ import {
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
-import Card from "../../components/ui/Card";
-import Input from "../../components/ui/Input";
-import Button from "../../components/ui/Button";
-import useApi from "../../hooks/useApi.jsx";
-import { useAuth } from "../../context/AuthContext.jsx";
+import Card from "../../../components/ui/Card";
+import Input from "../../../components/ui/Input";
+import Button from "../../../components/ui/Button";
+import useApi from "../../../hooks/useApi.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 export default function AdminProfile() {
   const { user } = useAuth();
