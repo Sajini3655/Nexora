@@ -109,6 +109,40 @@ public class TaskAssignmentService {
         return toTaskDto(saved);
     }
 
+    @Transactional
+    public TaskDto assignTask(String managerEmail, Long taskId, AssignTaskRequest req) {
+        User manager = userRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
+        TaskItem task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (task.getCreatedBy() == null || task.getCreatedBy().getId() == null
+                || !task.getCreatedBy().getId().equals(manager.getId())) {
+            throw new ResourceNotFoundException("Task not found");
+        }
+
+        User assignee = null;
+        if (req != null && req.getAssignedToId() != null) {
+            assignee = userRepository.findById(req.getAssignedToId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
+
+            if (assignee.getRole() != Role.DEVELOPER) {
+                throw new RuntimeException("Assignee must be a developer.");
+            }
+
+            if (!Boolean.TRUE.equals(assignee.getEnabled())) {
+                throw new RuntimeException("Assignee must be an active developer.");
+            }
+        }
+
+        task.setAssignedTo(assignee);
+        task.setUpdatedAt(LocalDateTime.now());
+
+        TaskItem saved = taskRepository.save(task);
+        return toTaskDto(saved);
+    }
+
     @Transactional(readOnly = true)
     public List<TaskDto> listManagerTasks(String managerEmail) {
         User manager = userRepository.findByEmail(managerEmail)

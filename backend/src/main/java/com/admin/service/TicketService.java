@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -22,12 +23,21 @@ public class TicketService {
     
     public List<Ticket> getTicketsForUser(String userEmail) {
         User user = getUserByEmail(userEmail);
+
+        if (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER) {
+            return ticketRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+        }
+
         return ticketRepository.findByCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(user.getId(), user.getId());
     }
     
     public Ticket getTicketById(String userEmail, Long id) {
         User user = getUserByEmail(userEmail);
         Ticket ticket = getTicketOrThrow(id);
+
+        if (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER) {
+            return ticket;
+        }
 
         if (!isTicketVisibleToUser(ticket, user)) {
             throw new ResourceNotFoundException("Ticket not found");
@@ -89,7 +99,7 @@ public class TicketService {
     }
 
     private boolean canModifyTicket(Ticket ticket, User user) {
-        if (user.getRole() == Role.ADMIN) {
+        if (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER) {
             return true;
         }
 

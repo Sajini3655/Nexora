@@ -22,10 +22,12 @@ export function AuthProvider({ children }) {
       const me = res.data;
       const normalizedUser = { ...me, role: normalizeRole(me.role) };
       setUser(normalizedUser);
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
       return normalizedUser;
     } catch (err) {
       console.warn("loadMe failed, clearing token", err);
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       setUser(null);
       return null;
     }
@@ -60,6 +62,7 @@ export function AuthProvider({ children }) {
 
   function logout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
   }
 

@@ -5,7 +5,6 @@ import Login from "./pages/auth/Login.jsx";
 import Register from "./pages/auth/Register.jsx";
 import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
 import ManagerDashboard from "./pages/dashboard/ManagerDashboard.jsx";
-import ProjectList from "./pages/projects/ProjectList.jsx";
 import ProjectDetails from "./pages/projects/ProjectDetails.jsx";
 import ProjectManagement from "./pages/projects/ProjectManagement.jsx";
 import ProjectManagementDetails from "./pages/projects/ProjectManagementDetails.jsx";
@@ -152,7 +151,7 @@ export default function App() {
           path="/manager/projects"
           element={
             <ManagerShell>
-              <ProjectList />
+              <AddProject />
             </ManagerShell>
           }
         />

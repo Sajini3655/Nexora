@@ -5,25 +5,54 @@ export const createProject = async (payload) => {
   return response.data;
 };
 
+export const normalizeArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  if (Array.isArray(value?.projects)) return value.projects;
+  if (Array.isArray(value?.tasks)) return value.tasks;
+  if (Array.isArray(value?.content)) return value.content;
+  if (Array.isArray(value?.items)) return value.items;
+  return [];
+};
+
+export const getErrorMessage = (error, fallback) =>
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  error?.message ||
+  fallback;
+
 export const fetchProjects = async () => {
   const response = await api.get("/manager/projects/mine");
-  return response.data;
+  return normalizeArray(response.data);
 };
 
 export const getMyProjects = fetchProjects;
 
 export const fetchManagerTasks = async () => {
   const response = await api.get("/manager/tasks");
+  return normalizeArray(response.data);
+};
+
+export const fetchManagerDevelopers = async () => {
+  const response = await api.get("/manager/developers");
+  return normalizeArray(response.data);
+};
+
+export const suggestManagerTaskAssignment = async (payload) => {
+  const response = await api.post("/manager/tasks/suggest", payload);
   return response.data;
 };
 
-const normalizeArray = (value) => {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  if (Array.isArray(value?.projects)) return value.projects;
-  if (Array.isArray(value?.tasks)) return value.tasks;
-  if (Array.isArray(value?.content)) return value.content;
-  return [];
+export const createManagerTask = async (payload) => {
+  const response = await api.post("/manager/tasks", payload);
+  return response.data;
+};
+
+export const assignManagerTaskAssignee = async (taskId, assignedToId) => {
+  const response = await api.patch(`/manager/tasks/${taskId}/assignee`, {
+    assignedToId,
+  });
+  return response.data;
 };
 
 const getProjectKey = (project) =>
@@ -87,14 +116,6 @@ export const fetchProjectDetails = async (projectId) => {
       taskProjectId === String(projectId) ||
       (projectName && taskProjectName === projectName)
     );
-  });
-
-  console.log("MATCHED PROJECT:", project);
-  console.log("MATCHED TASKS:", projectTasks);
-  console.log("ALL TASKS:", tasks);
-
-  tasks.forEach((task, index) => {
-    console.log(`TASK ${index + 1}:`, JSON.stringify(task, null, 2));
   });
 
   return {

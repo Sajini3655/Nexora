@@ -20,6 +20,9 @@ public class ChatSession {
     @ManyToOne
     private Project project;
 
+    @ManyToOne
+    private User startedBy;
+
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
 

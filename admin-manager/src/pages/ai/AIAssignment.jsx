@@ -1,40 +1,39 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, Grid, Typography, Chip, Divider, MenuItem } from "@mui/material";
+import { Box, Grid, Typography, Chip, MenuItem, Divider } from "@mui/material";
 import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import useApi from "../../hooks/useApi.jsx";
-
-const priorityOptions = ["LOW", "MEDIUM", "HIGH"];
+import {
+  assignManagerTaskAssignee,
+  fetchManagerDevelopers,
+  fetchManagerTasks,
+  getErrorMessage,
+  suggestManagerTaskAssignment,
+} from "../../services/managerService";
 
 export default function AIAssignment() {
-  const api = useApi();
-
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("MEDIUM");
-  const [dueDate, setDueDate] = useState("");
-  const [estimatedPoints, setEstimatedPoints] = useState("");
-
   const [developers, setDevelopers] = useState([]);
   const [tasks, setTasks] = useState([]);
 
+  const [selectedTaskId, setSelectedTaskId] = useState("");
+  const [selectedDeveloperId, setSelectedDeveloperId] = useState("");
+
   const [suggestion, setSuggestion] = useState(null);
-  const [loadingSuggest, setLoadingSuggest] = useState(false);
-  const [loadingCreate, setLoadingCreate] = useState(false);
+  const [loadingAssignManual, setLoadingAssignManual] = useState(false);
+  const [loadingAssignAI, setLoadingAssignAI] = useState(false);
   const [msg, setMsg] = useState("");
 
   async function load() {
     try {
-      const [devRes, taskRes] = await Promise.all([
-        api.get("/manager/developers"),
-        api.get("/manager/tasks"),
+      const [developersData, tasksData] = await Promise.all([
+        fetchManagerDevelopers(),
+        fetchManagerTasks(),
       ]);
-      setDevelopers(devRes.data || []);
-      setTasks(taskRes.data || []);
+      setDevelopers(Array.isArray(developersData) ? developersData : []);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
     } catch (e) {
-      console.warn("Load failed", e);
+      setMsg(getErrorMessage(e, "Failed to load developers or tasks."));
     }
   }
 
@@ -43,266 +42,237 @@ export default function AIAssignment() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const canSuggest = useMemo(() => title.trim().length > 0, [title]);
+  const selectedTask = useMemo(
+    () => tasks.find((t) => String(t?.id) === String(selectedTaskId)) || null,
+    [tasks, selectedTaskId]
+  );
 
-  const handleSuggest = async () => {
+  const canAssignManual = useMemo(
+    () => Boolean(selectedTaskId && selectedDeveloperId),
+    [selectedTaskId, selectedDeveloperId]
+  );
+
+  const canAssignAI = useMemo(
+    () => Boolean(selectedTaskId && selectedTask?.title),
+    [selectedTaskId, selectedTask]
+  );
+
+  const handleAssignManual = async () => {
+    if (!canAssignManual) return;
+
     setMsg("");
     setSuggestion(null);
-    setLoadingSuggest(true);
-    try {
-      const res = await api.post("/manager/tasks/suggest", {
-        title,
-        description,
-        estimatedPoints: estimatedPoints ? Number(estimatedPoints) : null,
-      });
-      setSuggestion(res.data);
-    } catch (e) {
-      console.error(e);
-      setMsg("Suggestion failed. Check backend is running and you are logged in as MANAGER.");
-    } finally {
-      setLoadingSuggest(false);
-    }
-  };
+    setLoadingAssignManual(true);
 
-  const handleCreate = async () => {
-    setMsg("");
-    setLoadingCreate(true);
     try {
-      const assignedToId = suggestion?.recommendedDeveloper?.id || null;
-      await api.post("/manager/tasks", {
-        title,
-        description,
-        priority,
-        dueDate: dueDate || null,
-        estimatedPoints: estimatedPoints ? Number(estimatedPoints) : null,
-        assignedToId,
-      });
-
-      setMsg(assignedToId ? "Task created and assigned." : "Task created." );
-      setTitle("");
-      setDescription("");
-      setPriority("MEDIUM");
-      setDueDate("");
-      setEstimatedPoints("");
-      setSuggestion(null);
+      await assignManagerTaskAssignee(Number(selectedTaskId), Number(selectedDeveloperId));
+      const dev = developers.find((d) => String(d?.id) === String(selectedDeveloperId));
+      setMsg(dev ? `Assigned to ${dev.name}.` : "Task assignment updated.");
       await load();
     } catch (e) {
-      console.error(e);
-      setMsg("Create task failed.");
+      setMsg(getErrorMessage(e, "Manual assignment failed."));
     } finally {
-      setLoadingCreate(false);
+      setLoadingAssignManual(false);
     }
   };
 
+  const handleAssignWithAI = async () => {
+    if (!canAssignAI || !selectedTask) return;
+
+    setMsg("");
+    setSuggestion(null);
+    setLoadingAssignAI(true);
+
+    try {
+      const data = await suggestManagerTaskAssignment({
+        title: selectedTask?.title || "",
+        description: selectedTask?.description || "",
+        estimatedPoints:
+          selectedTask?.estimatedPoints != null
+            ? Number(selectedTask.estimatedPoints)
+            : null,
+      });
+
+      setSuggestion(data);
+
+      const recommendedId = data?.recommendedDeveloper?.id;
+      if (!recommendedId) {
+        throw new Error("No AI recommendation available for this task.");
+      }
+
+      await assignManagerTaskAssignee(Number(selectedTaskId), Number(recommendedId));
+      setSelectedDeveloperId(String(recommendedId));
+      setMsg(`AI assigned: ${data.recommendedDeveloper.name}.`);
+      await load();
+    } catch (e) {
+      setMsg(getErrorMessage(e, "AI assignment failed."));
+    } finally {
+      setLoadingAssignAI(false);
+    }
+  };
+
+  const panelSx = {
+    p: 2.8,
+    borderRadius: 3,
+    border: "1px solid rgba(255,255,255,0.1)",
+    background:
+      "linear-gradient(160deg, rgba(255,255,255,0.085), rgba(255,255,255,0.035))",
+    backdropFilter: "blur(12px)",
+    boxShadow: "0 18px 45px rgba(0,0,0,0.22)",
+  };
+
   return (
-    <Box>
+    <Box
+      sx={{
+        p: { xs: 0, md: 0.5 },
+        background:
+          "radial-gradient(850px 320px at 5% -10%, rgba(16,185,129,0.12), transparent 55%), radial-gradient(1000px 360px at 95% -20%, rgba(59,130,246,0.14), transparent 60%)",
+        borderRadius: 3,
+      }}
+    >
       <PageHeader
         title="AI Task Assignment"
-        subtitle="Create a task and get a developer recommendation based on skills + workload (demo logic)."
-        right={<Chip label={`Developers: ${developers.length}`} />}
+        subtitle="Assign developers to existing tasks manually or using AI skill/workload recommendations from backend data."
+        right={
+          <Chip
+            label={`Developers: ${developers.length}`}
+            sx={{
+              fontWeight: 700,
+              color: "#a7f3d0",
+              border: "1px solid rgba(16,185,129,0.28)",
+              backgroundColor: "rgba(16,185,129,0.12)",
+            }}
+          />
+        }
       />
 
-      <Grid container spacing={2.5}>
-        <Grid item xs={12} lg={7}>
-          <Card sx={{ p: 2.5 }}>
-            <Typography sx={{ fontWeight: 950, mb: 1.5 }}>Create task</Typography>
+      <Card sx={panelSx}>
+        <Typography sx={{ fontWeight: 950, mb: 1.6, fontSize: 21 }}>
+          Assign Developer
+        </Typography>
 
-            <Grid container spacing={1.5}>
-              <Grid item xs={12}>
-                <Input
-                  label="Task title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Implement login API"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Input
-                  label="Description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Add details here..."
-                  multiline
-                  minRows={4}
-                />
-              </Grid>
+        <Grid container spacing={1.5}>
+          <Grid item xs={12} md={6}>
+            <Input
+              select
+              label="Task"
+              value={selectedTaskId}
+              onChange={(e) => setSelectedTaskId(e.target.value)}
+            >
+              <MenuItem value="">Select task</MenuItem>
+              {tasks.map((task) => (
+                <MenuItem key={task.id} value={String(task.id)}>
+                  {task.title}
+                </MenuItem>
+              ))}
+            </Input>
+          </Grid>
 
-              <Grid item xs={12} md={4}>
-                <Input
-                  select
-                  label="Priority"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                >
-                  {priorityOptions.map((p) => (
-                    <MenuItem key={p} value={p}>{p}</MenuItem>
-                  ))}
-                </Input>
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Input
-                  label="Due date"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <Input
-                  label="Estimated points"
-                  value={estimatedPoints}
-                  onChange={(e) => setEstimatedPoints(e.target.value)}
-                  placeholder="e.g., 5"
-                />
-              </Grid>
-            </Grid>
-
-            <Box sx={{ display: "flex", gap: 1, mt: 2, flexWrap: "wrap" }}>
-              <Button
-                tone="soft"
-                loading={loadingSuggest}
-                disabled={!canSuggest}
-                onClick={handleSuggest}
-              >
-                Suggest developer
-              </Button>
-
-              <Button
-                loading={loadingCreate}
-                disabled={!title.trim()}
-                onClick={handleCreate}
-              >
-                Create task {suggestion?.recommendedDeveloper?.id ? "& assign" : ""}
-              </Button>
-
-              {msg ? (
-                <Typography variant="body2" sx={{ opacity: 0.85, ml: 1 }}>
-                  {msg}
-                </Typography>
-              ) : null}
-            </Box>
-          </Card>
-
-          {suggestion ? (
-            <Card sx={{ p: 2.5, mt: 2.5 }}>
-              <Typography sx={{ fontWeight: 950, mb: 1 }}>
-                Recommendation
-              </Typography>
-
-              {suggestion.recommendedDeveloper ? (
-                <Box>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
-                    <Box>
-                      <Typography sx={{ fontWeight: 950, fontSize: 18 }}>
-                        {suggestion.recommendedDeveloper.name}
-                      </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.75 }}>
-                        {suggestion.recommendedDeveloper.email}
-                      </Typography>
-                    </Box>
-
-                    <Chip label={`Confidence: ${suggestion.confidence}%`} />
-                  </Box>
-
-                  <Typography variant="body2" sx={{ mt: 1.5, opacity: 0.9 }}>
-                    {suggestion.explanation}
-                  </Typography>
-
-                  <Divider sx={{ my: 2, opacity: 0.35 }} />
-
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <Metric label="Skill" value={pct(suggestion.breakdown?.skillScore)} />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Metric label="Workload" value={pct(suggestion.breakdown?.workloadScore)} />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Metric label="Experience" value={pct(suggestion.breakdown?.experienceScore)} />
-                    </Grid>
-                  </Grid>
-
-                  <Divider sx={{ my: 2, opacity: 0.35 }} />
-
-                  <Chips title="Required skills" items={suggestion.requiredSkills} />
-                  <Chips title="Matched" items={suggestion.matchedSkills} />
-                  <Chips title="Missing" items={suggestion.missingSkills} />
-                </Box>
-              ) : (
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  {suggestion.explanation || "No recommendation available."}
-                </Typography>
-              )}
-            </Card>
-          ) : null}
+          <Grid item xs={12} md={6}>
+            <Input
+              select
+              label="Developer"
+              value={selectedDeveloperId}
+              onChange={(e) => setSelectedDeveloperId(e.target.value)}
+            >
+              <MenuItem value="">Select developer</MenuItem>
+              {developers.map((dev) => (
+                <MenuItem key={dev.id} value={String(dev.id)}>
+                  {dev.name}
+                </MenuItem>
+              ))}
+            </Input>
+          </Grid>
         </Grid>
 
-        <Grid item xs={12} lg={5}>
-          <Card sx={{ p: 2.5 }}>
-            <Typography sx={{ fontWeight: 950, mb: 1.5 }}>Created tasks</Typography>
-            {tasks.length === 0 ? (
-              <Typography variant="body2" sx={{ opacity: 0.75 }}>
-                No tasks created yet.
-              </Typography>
-            ) : (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.2 }}>
-                {tasks.map((t) => (
-                  <Box
-                    key={t.id}
-                    sx={{
-                      p: 1.6,
-                      borderRadius: 2.2,
-                      border: "1px solid rgba(255,255,255,0.10)",
-                      background: "rgba(255,255,255,0.04)",
-                    }}
-                  >
-                    <Typography sx={{ fontWeight: 900 }}>{t.title}</Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.75, mt: 0.2 }}>
-                      Priority: {t.priority} • Status: {t.status}
-                      {t.assignedToName ? ` • Assigned: ${t.assignedToName}` : ""}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            )}
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-}
+        <Box sx={{ display: "flex", gap: 1, mt: 1.8, flexWrap: "wrap" }}>
+          <Button
+            tone="soft"
+            loading={loadingAssignAI}
+            disabled={!canAssignAI}
+            onClick={handleAssignWithAI}
+            sx={{ minHeight: 44, px: 2.5, fontWeight: 800 }}
+          >
+            AI Assign
+          </Button>
 
-function Metric({ label, value }) {
-  return (
-    <Box>
-      <Typography variant="caption" sx={{ opacity: 0.7 }}>{label}</Typography>
-      <Typography sx={{ fontWeight: 950, fontSize: 18 }}>{value}</Typography>
-    </Box>
-  );
-}
+          <Button
+            loading={loadingAssignManual}
+            disabled={!canAssignManual}
+            onClick={handleAssignManual}
+            sx={{ minHeight: 44, px: 2.5, fontWeight: 800 }}
+          >
+            Assign Manually
+          </Button>
+        </Box>
 
-function Chips({ title, items }) {
-  const list = Array.isArray(items) ? items : [];
-  return (
-    <Box sx={{ mb: 1.4 }}>
-      <Typography variant="caption" sx={{ opacity: 0.7 }}>{title}</Typography>
-      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 0.6 }}>
-        {list.length === 0 ? (
-          <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            —
+        {msg ? (
+          <Box
+            sx={{
+              mt: 1.6,
+              px: 1.4,
+              py: 0.9,
+              borderRadius: 2,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.05)",
+            }}
+          >
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              {msg}
+            </Typography>
+          </Box>
+        ) : null}
+
+        {suggestion?.recommendedDeveloper ? (
+          <Box
+            sx={{
+              mt: 1.6,
+              p: 1.4,
+              borderRadius: 2,
+              border: "1px solid rgba(59,130,246,0.3)",
+              background: "rgba(59,130,246,0.1)",
+            }}
+          >
+            <Typography sx={{ fontWeight: 900 }}>
+              AI recommendation: {suggestion.recommendedDeveloper.name}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.4 }}>
+              Confidence {suggestion.confidence}% • {suggestion.explanation}
+            </Typography>
+          </Box>
+        ) : null}
+
+        <Divider sx={{ my: 2.2, opacity: 0.35 }} />
+
+        <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Task Queue</Typography>
+
+        {tasks.length === 0 ? (
+          <Typography variant="body2" sx={{ opacity: 0.75 }}>
+            No tasks available.
           </Typography>
         ) : (
-          list.map((x, idx) => <Chip key={`${title}-${idx}`} size="small" label={x} />)
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.2 }}>
+            {tasks.slice(0, 8).map((t) => (
+              <Box
+                key={t.id}
+                sx={{
+                  p: 1.6,
+                  borderRadius: 2.2,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+                  boxShadow: "0 8px 22px rgba(0,0,0,0.14)",
+                }}
+              >
+                <Typography sx={{ fontWeight: 900 }}>{t.title}</Typography>
+                <Typography variant="body2" sx={{ opacity: 0.75, mt: 0.2 }}>
+                  Priority: {t.priority || t.taskPriority || "-"} • Status: {t.status || t.taskStatus || "-"}
+                  {t.assignedToName ? ` • Assigned: ${t.assignedToName}` : " • Unassigned"}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         )}
-      </Box>
+      </Card>
     </Box>
   );
-}
-
-function pct(v) {
-  const n = typeof v === "number" ? v : 0;
-  return `${Math.round(n * 100)}%`;
 }

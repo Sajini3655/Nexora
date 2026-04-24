@@ -105,19 +105,34 @@ export default function AddProject() {
         minHeight: "calc(100vh - 64px)",
         color: "white",
         background:
-          "radial-gradient(circle at top left, #0f1c4d 0%, #020b22 45%, #010614 100%)",
+          "radial-gradient(1100px 500px at 8% -10%, rgba(16,185,129,0.18), transparent 60%), radial-gradient(900px 600px at 95% 0%, rgba(59,130,246,0.2), transparent 62%), linear-gradient(180deg, #061229 0%, #040c1f 45%, #030918 100%)",
         px: { xs: 2, md: 4 },
         py: { xs: 3, md: 5 },
       }}
     >
       <Box sx={{ maxWidth: 1100, mx: "auto" }}>
         <Box sx={{ mb: 5 }}>
+          <Chip
+            label="Project Setup"
+            size="small"
+            sx={{
+              mb: 1.5,
+              color: "#a7f3d0",
+              fontWeight: 700,
+              letterSpacing: 0.3,
+              backgroundColor: "rgba(16,185,129,0.15)",
+              border: "1px solid rgba(16,185,129,0.35)",
+            }}
+          />
+
           <Typography
             variant="h3"
             sx={{
-              fontWeight: 800,
-              letterSpacing: "-0.03em",
-              mb: 1.5,
+              fontWeight: 900,
+              letterSpacing: "-0.035em",
+              mb: 1,
+              lineHeight: 1.05,
+              textWrap: "balance",
             }}
           >
             Add New Project
@@ -125,8 +140,9 @@ export default function AddProject() {
 
           <Typography
             sx={{
-              color: "rgba(231,233,238,0.72)",
-              fontSize: { xs: 16, md: 20 },
+              color: "rgba(231,233,238,0.78)",
+              fontSize: { xs: 16, md: 19 },
+              maxWidth: 720,
             }}
           >
             Create a project and break it down into actionable tasks.
@@ -137,20 +153,40 @@ export default function AddProject() {
           <Box
             sx={{
               border: "1px solid rgba(255,255,255,0.10)",
-              background: "rgba(255,255,255,0.04)",
-              backdropFilter: "blur(14px)",
+              background: "linear-gradient(160deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03))",
+              backdropFilter: "blur(16px)",
               borderRadius: 4,
               p: { xs: 2.5, md: 4 },
-              boxShadow: "0 20px 80px rgba(0,0,0,0.35)",
+              boxShadow: "0 25px 85px rgba(0,0,0,0.4)",
             }}
           >
+            <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 2.5 }}>
+              <Box
+                sx={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#bfdbfe",
+                  border: "1px solid rgba(96,165,250,0.4)",
+                  background: "rgba(59,130,246,0.2)",
+                }}
+              >
+                1
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                Project Details
+              </Typography>
+            </Stack>
+
             <Stack spacing={3}>
               <Input
-                label="Project Name"
                 placeholder="Enter project name"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                InputLabelProps={{ shrink: true }}
                 inputProps={{ autoComplete: "off" }}
                 InputProps={{
                   sx: {
@@ -164,7 +200,6 @@ export default function AddProject() {
               />
 
               <TextField
-                label="Project Description"
                 placeholder="Write a short description about this project"
                 multiline
                 minRows={5}
@@ -172,7 +207,6 @@ export default function AddProject() {
                 value={projectDescription}
                 onChange={(e) => setProjectDescription(e.target.value)}
                 autoComplete="off"
-                InputLabelProps={{ shrink: true }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 2.8,
@@ -187,7 +221,7 @@ export default function AddProject() {
                       borderColor: "rgba(255,255,255,0.22)",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "rgba(124,92,255,0.75)",
+                      borderColor: "rgba(59,130,246,0.82)",
                       borderWidth: 1,
                     },
                     "& textarea::placeholder": {
@@ -206,11 +240,11 @@ export default function AddProject() {
           <Box
             sx={{
               border: "1px solid rgba(255,255,255,0.10)",
-              background: "rgba(255,255,255,0.04)",
-              backdropFilter: "blur(14px)",
+              background: "linear-gradient(160deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03))",
+              backdropFilter: "blur(16px)",
               borderRadius: 4,
               p: { xs: 2.5, md: 4 },
-              boxShadow: "0 20px 80px rgba(0,0,0,0.35)",
+              boxShadow: "0 25px 85px rgba(0,0,0,0.4)",
             }}
           >
             <Stack
@@ -221,10 +255,29 @@ export default function AddProject() {
               sx={{ mb: 3 }}
             >
               <Box>
-                <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>
-                  Tasks
-                </Typography>
-                <Typography sx={{ color: "rgba(231,233,238,0.60)" }}>
+                <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 0.5 }}>
+                  <Box
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "#6ee7b7",
+                      border: "1px solid rgba(16,185,129,0.4)",
+                      background: "rgba(16,185,129,0.16)",
+                    }}
+                  >
+                    2
+                  </Box>
+                  <Typography variant="h4" sx={{ fontWeight: 800 }}>
+                    Tasks
+                  </Typography>
+                </Stack>
+
+                <Typography sx={{ color: "rgba(231,233,238,0.66)" }}>
                   Add the tasks this project should contain.
                 </Typography>
               </Box>
@@ -232,35 +285,60 @@ export default function AddProject() {
               <Chip
                 label={`${tasks.length} ${tasks.length === 1 ? "Task" : "Tasks"}`}
                 sx={{
-                  color: "#cdbdff",
-                  fontWeight: 700,
-                  backgroundColor: "rgba(124,92,255,0.12)",
-                  border: "1px solid rgba(124,92,255,0.24)",
+                  color: "#6ee7b7",
+                  fontWeight: 800,
+                  px: 0.5,
+                  backgroundColor: "rgba(16,185,129,0.12)",
+                  border: "1px solid rgba(16,185,129,0.28)",
                 }}
               />
             </Stack>
 
-            <Stack spacing={2}>
+            <Stack spacing={2.2}>
               {tasks.map((task, index) => (
                 <Box
                   key={index}
                   sx={{
                     borderRadius: 3,
                     border: "1px solid rgba(255,255,255,0.10)",
-                    background: "rgba(0,0,0,0.18)",
+                    background: "linear-gradient(160deg, rgba(8,20,48,0.7), rgba(0,0,0,0.22))",
                     p: { xs: 2, md: 2.5 },
+                    position: "relative",
+                    overflow: "hidden",
                   }}
                 >
-                  <Typography
+                  <Box
                     sx={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "rgba(231,233,238,0.58)",
-                      mb: 2,
+                      position: "absolute",
+                      inset: "0 auto 0 0",
+                      width: 4,
+                      background: "linear-gradient(180deg, #10b981, #60a5fa)",
                     }}
-                  >
-                    Task {index + 1}
-                  </Typography>
+                  />
+
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.8 }}>
+                    <Typography
+                      sx={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: "rgba(231,233,238,0.72)",
+                        ml: 0.2,
+                      }}
+                    >
+                      Task {index + 1}
+                    </Typography>
+
+                    <Chip
+                      size="small"
+                      label={`#${String(index + 1).padStart(2, "0")}`}
+                      sx={{
+                        color: "#bfdbfe",
+                        fontWeight: 700,
+                        backgroundColor: "rgba(59,130,246,0.14)",
+                        border: "1px solid rgba(59,130,246,0.3)",
+                      }}
+                    />
+                  </Stack>
 
                   <Box
                     sx={{
@@ -290,7 +368,7 @@ export default function AddProject() {
                           "& .MuiOutlinedInput-root": {
                             minHeight: 56,
                             borderRadius: 2.5,
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "rgba(255,255,255,0.06)",
                             color: "#fff",
                             "& fieldset": {
                               borderColor: "rgba(255,255,255,0.14)",
@@ -299,7 +377,7 @@ export default function AddProject() {
                               borderColor: "rgba(255,255,255,0.22)",
                             },
                             "&.Mui-focused fieldset": {
-                              borderColor: "rgba(124,92,255,0.75)",
+                              borderColor: "rgba(59,130,246,0.82)",
                             },
                           },
                           "& input": {
@@ -325,7 +403,7 @@ export default function AddProject() {
                         "& .MuiOutlinedInput-root": {
                           minHeight: 56,
                           borderRadius: 2.5,
-                          backgroundColor: "rgba(255,255,255,0.05)",
+                          backgroundColor: "rgba(255,255,255,0.06)",
                           color: "#fff",
                           "& fieldset": {
                             borderColor: "rgba(255,255,255,0.14)",
@@ -334,7 +412,7 @@ export default function AddProject() {
                             borderColor: "rgba(255,255,255,0.22)",
                           },
                           "&.Mui-focused fieldset": {
-                            borderColor: "rgba(124,92,255,0.75)",
+                            borderColor: "rgba(59,130,246,0.82)",
                           },
                         },
                       }}
@@ -371,74 +449,83 @@ export default function AddProject() {
               }}
             />
 
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={2}
-              sx={{ mb: error || success ? 2 : 0 }}
+            <Box
+              sx={{
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: 3,
+                background: "rgba(255,255,255,0.04)",
+                p: 2,
+              }}
             >
-              <Button
-                type="button"
-                onClick={handleAddTask}
-                sx={{
-                  minHeight: 52,
-                  px: 3.5,
-                  borderRadius: 2.5,
-                  fontWeight: 800,
-                }}
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={2}
+                sx={{ mb: error || success ? 2 : 0 }}
               >
-                Add Task
-              </Button>
+                <Button
+                  type="button"
+                  onClick={handleAddTask}
+                  sx={{
+                    minHeight: 52,
+                    px: 3.5,
+                    borderRadius: 2.5,
+                    fontWeight: 800,
+                  }}
+                >
+                  Add Task
+                </Button>
 
-              <Button
-                type="submit"
-                tone="soft"
-                loading={loading}
-                sx={{
-                  minHeight: 52,
-                  px: 3.5,
-                  borderRadius: 2.5,
-                  fontWeight: 800,
-                }}
-              >
-                Create Project
-              </Button>
-            </Stack>
+                <Button
+                  type="submit"
+                  tone="soft"
+                  loading={loading}
+                  sx={{
+                    minHeight: 52,
+                    px: 3.5,
+                    borderRadius: 2.5,
+                    fontWeight: 800,
+                  }}
+                >
+                  Create Project
+                </Button>
+              </Stack>
 
-            {error && (
-              <Box
-                sx={{
-                  mt: 2,
-                  borderRadius: 3,
-                  border: "1px solid rgba(239,68,68,0.24)",
-                  background: "rgba(239,68,68,0.10)",
-                  px: 2,
-                  py: 1.5,
-                  color: "#fca5a5",
-                  fontWeight: 500,
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                }}
-              >
-                {error}
-              </Box>
-            )}
+              {error && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    borderRadius: 3,
+                    border: "1px solid rgba(239,68,68,0.24)",
+                    background: "rgba(239,68,68,0.10)",
+                    px: 2,
+                    py: 1.5,
+                    color: "#fca5a5",
+                    fontWeight: 500,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {error}
+                </Box>
+              )}
 
-            {success && (
-              <Box
-                sx={{
-                  mt: 2,
-                  borderRadius: 3,
-                  border: "1px solid rgba(34,197,94,0.24)",
-                  background: "rgba(34,197,94,0.10)",
-                  px: 2,
-                  py: 1.5,
-                  color: "#86efac",
-                  fontWeight: 500,
-                }}
-              >
-                {success}
-              </Box>
-            )}
+              {success && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    borderRadius: 3,
+                    border: "1px solid rgba(34,197,94,0.24)",
+                    background: "rgba(34,197,94,0.10)",
+                    px: 2,
+                    py: 1.5,
+                    color: "#86efac",
+                    fontWeight: 500,
+                  }}
+                >
+                  {success}
+                </Box>
+              )}
+            </Box>
           </Box>
         </Stack>
       </Box>
