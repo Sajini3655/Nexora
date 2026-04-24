@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Grid, Typography, Chip, MenuItem, Divider } from "@mui/material";
-import PageHeader from "../../components/ui/PageHeader";
-import Card from "../../components/ui/Card";
-import Input from "../../components/ui/Input";
-import Button from "../../components/ui/Button";
+import PageHeader from "../../../components/ui/PageHeader";
+import Card from "../../../components/ui/Card";
+import Input from "../../../components/ui/Input";
+import Button from "../../../components/ui/Button";
 import {
   assignManagerTaskAssignee,
   fetchManagerDevelopers,
   fetchManagerTasks,
   getErrorMessage,
   suggestManagerTaskAssignment,
-} from "../../services/managerService";
+} from "../../../services/managerService";
 
 export default function AIAssignment() {
   const [developers, setDevelopers] = useState([]);

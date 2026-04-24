@@ -14,10 +14,10 @@ import {
 } from "@mui/material";
 
 import SecurityIcon from "@mui/icons-material/Security";
-import PageHeader from "../../components/ui/PageHeader";
-import Card from "../../components/ui/Card";
-import Input from "../../components/ui/Input";
-import Button from "../../components/ui/Button";
+import PageHeader from "../../../components/ui/PageHeader";
+import Card from "../../../components/ui/Card";
+import Input from "../../../components/ui/Input";
+import Button from "../../../components/ui/Button";
 
 /**
  * Demo model

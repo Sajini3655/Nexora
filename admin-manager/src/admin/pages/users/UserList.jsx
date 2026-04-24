@@ -24,7 +24,7 @@ import {
   Trash2,
   UserPlus,
 } from "lucide-react";
-import Input from "../../components/ui/Input";
+import Input from "../../../components/ui/Input";
 import InviteUserDialog from "./InviteUserDialog.jsx";
 import {
   deleteAdminUser,
@@ -32,7 +32,7 @@ import {
   resendInvite,
   updateAdminUserRole,
   updateAdminUserStatus,
-} from "../../services/api";
+} from "../../../services/api";
 
 const ROLES = ["", "ADMIN", "MANAGER", "DEVELOPER", "CLIENT"];
 const STATUS_OPTIONS = [

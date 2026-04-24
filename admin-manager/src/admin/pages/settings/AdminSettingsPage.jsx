@@ -1,6 +1,6 @@
 import React from "react";
 import { Typography } from "@mui/material";
-import Card from "../../components/ui/Card.jsx";
+import Card from "../../../components/ui/Card.jsx";
 
 export default function AdminSettingsPage() {
   return (

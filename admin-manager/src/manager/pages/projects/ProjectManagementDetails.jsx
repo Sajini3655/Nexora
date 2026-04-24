@@ -7,7 +7,7 @@ import {
   CircularProgress
 } from "@mui/material";
 import { useParams } from "react-router-dom";
-import { fetchProjects } from "../../services/managerService";
+import { fetchProjects } from "../../../services/managerService";
 
 export default function ProjectManagementDetails() {
   const { projectId } = useParams();

@@ -3,17 +3,18 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/auth/Login.jsx";
 import Register from "./pages/auth/Register.jsx";
-import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
-import ManagerDashboard from "./pages/dashboard/ManagerDashboard.jsx";
-import ProjectDetails from "./pages/projects/ProjectDetails.jsx";
-import ProjectManagement from "./pages/projects/ProjectManagement.jsx";
-import ProjectManagementDetails from "./pages/projects/ProjectManagementDetails.jsx";
-import AddProject from "./pages/projects/AddProject.jsx";
-import AIAssignment from "./pages/ai/AIAssignment.jsx";
-import UserList from "./pages/users/UserList.jsx";
-import AdminProfile from "./pages/profile/AdminProfile.jsx";
-import AdminSettingsPage from "./pages/settings/AdminSettingsPage.jsx";
-import AccessControl from "./pages/access/AccessControl.jsx";
+import AdminDashboard from "./admin/pages/dashboard/AdminDashboard.jsx";
+import AccessControl from "./admin/pages/access/AccessControl.jsx";
+import AdminProfile from "./admin/pages/profile/AdminProfile.jsx";
+import AdminSettingsPage from "./admin/pages/settings/AdminSettingsPage.jsx";
+import UserList from "./admin/pages/users/UserList.jsx";
+
+import ManagerDashboard from "./manager/pages/dashboard/ManagerDashboard.jsx";
+import AddProject from "./manager/pages/projects/AddProject.jsx";
+import ProjectDetails from "./manager/pages/projects/ProjectDetails.jsx";
+import ProjectManagement from "./manager/pages/projects/ProjectManagement.jsx";
+import ProjectManagementDetails from "./manager/pages/projects/ProjectManagementDetails.jsx";
+import AIAssignment from "./manager/pages/ai/AIAssignment.jsx";
 
 // Developer dashboard (merged from /developer)
 import DevDashboardHome from "./dev/pages/dashboard/DevDashboardHome.jsx";
@@ -27,6 +28,13 @@ import DevChat from "./dev/pages/chat/DevChat.jsx";
 import DevProjectList from "./dev/pages/projects/DevProjectList.jsx";
 import DevProjectView from "./dev/pages/projects/DevProjectView.jsx";
 import DevSettings from "./dev/pages/settings/DevSettings.jsx";
+
+// Client dashboard
+import ClientDashboardHome from "./client/pages/dashboard/ClientDashboardHome.jsx";
+import ClientProjectList from "./client/pages/projects/ClientProjectList.jsx";
+import ClientTicketList from "./client/pages/tickets/ClientTicketList.jsx";
+import ClientProfile from "./client/pages/profile/ClientProfile.jsx";
+import ClientSettings from "./client/pages/settings/ClientSettings.jsx";
 
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
 import Sidebar from "./components/layout/Sidebar.jsx";
@@ -235,6 +243,14 @@ export default function App() {
 
         <Route path="/dev/chat" element={<Navigate to="/dev/chat/P-001" replace />} />
         <Route path="/dev/chat/:projectId" element={<DevChat />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
+        <Route path="/client" element={<ClientDashboardHome />} />
+        <Route path="/client/projects" element={<ClientProjectList />} />
+        <Route path="/client/tickets" element={<ClientTicketList />} />
+        <Route path="/client/profile" element={<ClientProfile />} />
+        <Route path="/client/settings" element={<ClientSettings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
