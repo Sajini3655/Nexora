@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FiHome, FiUser, FiMessageCircle } from "react-icons/fi";
+import { FiHome, FiUser, FiMessageCircle, FiList } from "react-icons/fi";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import {
   Box,
@@ -32,6 +32,9 @@ export default function DevSidebar({ open, onClose }) {
   const menuItems = [
     ...(moduleAccess?.DASHBOARD
       ? [{ name: "Dashboard", icon: <FiHome />, path: "/dev" }]
+      : []),
+    ...(moduleAccess?.TASKS
+      ? [{ name: "Tasks", icon: <FiList />, path: "/dev/tasks" }]
       : []),
     { name: "Profile", icon: <FiUser />, path: "/dev/profile" },
     ...(moduleAccess?.CHAT
