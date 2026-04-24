@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiBell } from "react-icons/fi";
-import { loadProfileFromBackendSafe } from "../../data/profileStore";
+import { loadProfile } from "../../data/profileStore";
 import {
   loadNotifications,
   markAllRead,
@@ -28,7 +28,7 @@ export default function DevTopbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const [profile, setProfile] = useState({ name: "Developer", email: "" });
+  const [profile, setProfile] = useState(() => loadProfile());
   const initials = (profile.name || "U")
     .split(" ")
     .filter(Boolean)
@@ -45,28 +45,11 @@ export default function DevTopbar({ onToggleSidebar }) {
 
   // keep notifications/profile fresh
   useEffect(() => {
-    let active = true;
-
-    const loadProfileData = async () => {
-      try {
-        const data = await loadProfileFromBackendSafe();
-        if (active) setProfile(data);
-      } catch {
-        if (active) setProfile((current) => current);
-      }
-    };
-
-    loadProfileData();
-
     const id = setInterval(() => {
       setNotifs(loadNotifications());
-      loadProfileData();
+      setProfile(loadProfile());
     }, 1200);
-
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
+    return () => clearInterval(id);
   }, []);
 
   const onMarkAll = () => setNotifs(markAllRead());

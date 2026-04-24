@@ -61,8 +61,6 @@ public class DeveloperTaskService {
                 .assignedToId(t.getAssignedTo() == null ? null : t.getAssignedTo().getId())
                 .assignedToName(t.getAssignedTo() == null ? null : t.getAssignedTo().getName())
                 .createdAt(t.getCreatedAt())
-                .projectId(t.getProject() == null ? null : t.getProject().getId())
-                .projectName(t.getProject() == null ? null : t.getProject().getName())
                 .build();
     }
 }

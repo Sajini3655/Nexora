@@ -17,7 +17,6 @@ interface Message {
   senderId?: string;
   senderName?: string;
   createdAt?: string;
-  pending?: boolean;
 }
 
 interface TicketCreated {
@@ -188,20 +187,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           };
 
           setChat((prev) => {
-            const pendingIndex = prev.findIndex(
-              (m) =>
-                m.pending &&
-                m.user === incoming.user &&
-                m.senderId === incoming.senderId &&
-                m.message === incoming.message
-            );
-
-            if (pendingIndex >= 0) {
-              const next = [...prev];
-              next[pendingIndex] = { ...incoming, pending: false };
-              return next;
-            }
-
             const exists = prev.some(
               (m) =>
                 m.message === incoming.message &&
@@ -254,24 +239,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     ]);
   };
 
-  const appendOptimisticMessage = (text: string) => {
-    const createdAt = new Date().toISOString();
-
-    setChat((prev) => [
-      ...prev,
-      {
-        user: "user",
-        message: text,
-        senderId: String(currentUserId),
-        senderName: currentUserName,
-        createdAt,
-        pending: true
-      }
-    ]);
-
-    return createdAt;
-  };
-
   const handleSend = async () => {
     if (
       !input.trim() ||
@@ -287,21 +254,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
     try {
       setErrorMessage("");
-      const text = input.trim();
-      appendOptimisticMessage(text);
 
       stompClientRef.current.publish({
         destination: "/app/chat.send",
         body: JSON.stringify({
           sessionId: Number(sessionId),
           userId: Number(currentUserId),
-          content: text
+          content: input.trim()
         })
       });
 
       setInput("");
     } catch (error: any) {
-      setChat((prev) => prev.filter((m) => !(m.pending && m.senderId === String(currentUserId) && m.message === input.trim())));
       setErrorMessage(error?.message || "Failed to send message.");
     }
   };
