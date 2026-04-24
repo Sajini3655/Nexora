@@ -1,158 +1,180 @@
-import React, { useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
 import DevLayout from "../../components/layout/DevLayout";
-import { clientTickets, aiBlockerTickets } from "../../data/devWorkspaceMock";
-import { loadUserTickets } from "../../data/ticketStore";
-
-function calcSubtaskPct(list) {
-  const total = list.reduce((s, x) => s + x.points, 0);
-  const done = list.filter((x) => x.done).reduce((s, x) => s + x.points, 0);
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-  return { total, done, pct };
-}
-
-function ProgressBar({ pct }) {
-  return (
-    <div className="h-2 bg-white/10 rounded-full mt-1">
-      <div
-        className="h-2 rounded-full"
-        style={{
-          width: `${pct}%`,
-          background:
-            "linear-gradient(135deg, rgba(139,92,246,0.95), rgba(99,102,241,0.9))",
-        }}
-      />
-    </div>
-  );
-}
+import Card from "../../../components/ui/Card.jsx";
+import { fetchDeveloperTicketById, fetchDeveloperTickets } from "../../services/developerApi";
 
 export default function DevTicketView() {
   const { id } = useParams();
+  const [ticket, setTicket] = useState(null);
+  const [related, setRelated] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const allTickets = useMemo(() => {
-    const user = loadUserTickets();
-    return [...user, ...clientTickets, ...aiBlockerTickets];
-  }, []);
+  useEffect(() => {
+    let active = true;
 
-  const ticket = useMemo(() => allTickets.find((t) => t.id === id), [allTickets, id]);
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-  if (!ticket) {
+        const [ticketData, ticketsData] = await Promise.all([
+          fetchDeveloperTicketById(id),
+          fetchDeveloperTickets(),
+        ]);
+
+        if (!active) return;
+
+        setTicket(ticketData);
+        setRelated(Array.isArray(ticketsData) ? ticketsData : []);
+      } catch (err) {
+        if (!active) return;
+        setError(err?.message || "Failed to load ticket details.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const otherTickets = useMemo(() => related.filter((item) => String(item.id) !== String(id)).slice(0, 4), [id, related]);
+
+  if (loading) {
     return (
       <DevLayout>
-        <h2 className="text-2xl font-bold mb-4">Ticket not found</h2>
-        <Link to="/dev" className="btn-outline inline-flex">
-          Back to Dashboard
-        </Link>
+        <Box sx={{ minHeight: "45vh", display: "grid", placeItems: "center" }}>
+          <Stack spacing={2} alignItems="center">
+            <CircularProgress color="primary" />
+            <Typography color="text.secondary">Loading ticket...</Typography>
+          </Stack>
+        </Box>
       </DevLayout>
     );
   }
 
-  const p = calcSubtaskPct(ticket.suggestedSubtasks || []);
+  if (error) {
+    return (
+      <DevLayout>
+        <Alert severity="error" sx={{ borderRadius: 3 }}>
+          {error}
+        </Alert>
+      </DevLayout>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <DevLayout>
+        <Alert severity="warning" sx={{ borderRadius: 3 }}>
+          Ticket not found.
+        </Alert>
+        <Box sx={{ mt: 2 }}>
+          <Link to="/dev" style={{ color: "#c4b5fd", fontWeight: 700 }}>
+            Back to dashboard
+          </Link>
+        </Box>
+      </DevLayout>
+    );
+  }
 
   return (
     <DevLayout>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs text-slate-400">Ticket</p>
-          <h2 className="text-2xl font-bold truncate">{ticket.title}</h2>
-          <p className="text-sm text-slate-300 mt-2">
-            <span className="chip-muted mr-2">{ticket.id}</span>
-            <span className="chip-muted mr-2">Status: {ticket.status}</span>
-            <span className="chip-muted">Severity: {ticket.severity}</span>
-          </p>
-        </div>
-        <Link to="/dev" className="btn-outline">Back</Link>
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap", mb: 3 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+            Ticket details
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }} noWrap>
+            {ticket.title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.5 }}>
+            {ticket.id} • {ticket.status} • {ticket.priority}
+          </Typography>
+        </Box>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        {/* Details */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card p-4">
-            <h3 className="text-lg font-bold mb-2">Details</h3>
-            <p className="text-sm text-slate-200 whitespace-pre-wrap">{ticket.description}</p>
+        <Box component={Link} to="/dev" sx={{ color: "#c4b5fd", fontWeight: 800 }}>
+          Back to dashboard
+        </Box>
+      </Box>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-xs text-slate-400">Created via</p>
-                <p className="font-semibold">{ticket.createdVia}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-xs text-slate-400">Created at</p>
-                <p className="font-semibold">{ticket.createdAt}</p>
-              </div>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1.4fr 0.8fr" }, gap: 3 }}>
+        <Card sx={{ p: 2.5 }}>
+          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: "0.12em" }}>
+            Description
+          </Typography>
+          <Typography variant="body1" sx={{ mt: 1.5, color: "rgba(231,233,238,0.88)", whiteSpace: "pre-wrap" }}>
+            {ticket.description || "No description provided."}
+          </Typography>
+        </Card>
 
-              {ticket.client?.name && (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs text-slate-400">Client</p>
-                  <p className="font-semibold">{ticket.client.name}</p>
-                </div>
-              )}
+        <Card sx={{ p: 2.5 }}>
+          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: "0.12em" }}>
+            Metadata
+          </Typography>
 
-              {ticket.detectedFrom?.reason && (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs text-slate-400">AI Blocker reason</p>
-                  <p className="font-semibold">{ticket.detectedFrom.reason}</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <Stack spacing={1.4} sx={{ mt: 1.5 }}>
+            <Box sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+                Created by
+              </Typography>
+              <Typography sx={{ fontWeight: 800 }}>{ticket.createdByName}</Typography>
+            </Box>
 
-          <div className="glass-card p-4">
-            <h3 className="text-lg font-bold mb-2">Evidence / Source</h3>
+            <Box sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+                Assigned to
+              </Typography>
+              <Typography sx={{ fontWeight: 800 }}>{ticket.assignedToName || "-"}</Typography>
+            </Box>
 
-            {ticket.evidence?.type && (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-xs text-slate-400">Source type</p>
-                <p className="font-semibold">{ticket.evidence.type}</p>
-                <p className="text-sm text-slate-200 mt-2 whitespace-pre-wrap">{ticket.evidence.snippet}</p>
-              </div>
-            )}
+            <Box sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+                Created at
+              </Typography>
+              <Typography sx={{ fontWeight: 800 }}>{ticket.createdAt}</Typography>
+            </Box>
 
-            {ticket.detectedFrom?.summaryId && (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 mt-3">
-                <p className="text-xs text-slate-400">Detected from summary</p>
-                <p className="font-semibold">{ticket.detectedFrom.summaryId}</p>
-                <p className="text-sm text-slate-200 mt-2">
-                  Related messages: {ticket.detectedFrom.relatedMessages?.join(", ")}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+            <Box sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+                Updated at
+              </Typography>
+              <Typography sx={{ fontWeight: 800 }}>{ticket.updatedAt}</Typography>
+            </Box>
+          </Stack>
+        </Card>
+      </Box>
 
-        {/* Subtasks */}
-        <div className="space-y-6">
-          <div className="glass-card p-4">
-            <h3 className="text-lg font-bold mb-2">Breakdown (Subtasks)</h3>
-
-            <div className="text-xs text-slate-400 flex justify-between">
-              <span>Story points</span>
-              <span>
-                {p.done}/{p.total} ({p.pct}%)
-              </span>
-            </div>
-
-            <ProgressBar pct={p.pct} />
-
-            <div className="mt-4 space-y-2">
-              {(ticket.suggestedSubtasks || []).map((s) => (
-                <div key={s.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-semibold">
-                      {s.done ? "✅" : "⬜"} {s.title}
-                    </span>
-                    <span className="text-sm">{s.points} pts</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <p className="text-xs text-slate-400 mt-3">
-              (UI demo) Later you can allow marking subtasks done and update progress.
-            </p>
-          </div>
-        </div>
-      </div>
+      {otherTickets.length > 0 ? (
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 900, mb: 1.5, letterSpacing: -0.3 }}>
+            Other visible tickets
+          </Typography>
+          <Stack spacing={1.2}>
+            {otherTickets.map((item) => (
+              <Card key={item.id} sx={{ p: 2 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  <Box>
+                    <Typography sx={{ fontWeight: 800 }}>{item.title}</Typography>
+                    <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.62)" }}>
+                      {item.id} • {item.status} • {item.priority}
+                    </Typography>
+                  </Box>
+                  <Link to={`/dev/tickets/${item.id}`} style={{ color: "#c4b5fd", fontWeight: 700 }}>
+                    Open
+                  </Link>
+                </Box>
+              </Card>
+            ))}
+          </Stack>
+        </Box>
+      ) : null}
     </DevLayout>
   );
 }

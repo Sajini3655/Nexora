@@ -1,5 +1,6 @@
 package com.admin.service;
 
+import com.admin.dto.TicketDto;
 import com.admin.entity.Role;
 import com.admin.entity.Ticket;
 import com.admin.entity.User;
@@ -21,40 +22,48 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     
-    public List<Ticket> getTicketsForUser(String userEmail) {
+    @Transactional(readOnly = true)
+    public List<TicketDto> getTicketsForUser(String userEmail) {
         User user = getUserByEmail(userEmail);
 
         if (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER) {
-            return ticketRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+            return ticketRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .stream()
+                    .map(this::toDto)
+                    .toList();
         }
 
-        return ticketRepository.findByCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(user.getId(), user.getId());
+        return ticketRepository.findByCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(user.getId(), user.getId())
+                .stream()
+                .map(this::toDto)
+                .toList();
     }
     
-    public Ticket getTicketById(String userEmail, Long id) {
+    @Transactional(readOnly = true)
+    public TicketDto getTicketById(String userEmail, Long id) {
         User user = getUserByEmail(userEmail);
         Ticket ticket = getTicketOrThrow(id);
 
         if (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER) {
-            return ticket;
+            return toDto(ticket);
         }
 
         if (!isTicketVisibleToUser(ticket, user)) {
             throw new ResourceNotFoundException("Ticket not found");
         }
 
-        return ticket;
+        return toDto(ticket);
     }
     
     @Transactional
-    public Ticket createTicket(String userEmail, Ticket ticket) {
+    public TicketDto createTicket(String userEmail, Ticket ticket) {
         User user = getUserByEmail(userEmail);
         ticket.setCreatedBy(user);
-        return ticketRepository.save(ticket);
+        return toDto(ticketRepository.save(ticket));
     }
     
     @Transactional
-    public Ticket updateTicket(String userEmail, Long id, Ticket ticketDetails) {
+    public TicketDto updateTicket(String userEmail, Long id, Ticket ticketDetails) {
         User user = getUserByEmail(userEmail);
         Ticket ticket = getTicketOrThrow(id);
 
@@ -67,7 +76,7 @@ public class TicketService {
         ticket.setStatus(ticketDetails.getStatus());
         ticket.setPriority(ticketDetails.getPriority());
         
-        return ticketRepository.save(ticket);
+        return toDto(ticketRepository.save(ticket));
     }
     
     @Transactional
@@ -94,8 +103,8 @@ public class TicketService {
 
     private boolean isTicketVisibleToUser(Ticket ticket, User user) {
         Long userId = user.getId();
-        return (ticket.getCreatedBy() != null && userId.equals(ticket.getCreatedBy().getId()))
-                || (ticket.getAssignedTo() != null && userId.equals(ticket.getAssignedTo().getId()));
+        return userId.equals(safeUserId(ticket.getCreatedBy()))
+                || userId.equals(safeUserId(ticket.getAssignedTo()));
     }
 
     private boolean canModifyTicket(Ticket ticket, User user) {
@@ -103,6 +112,46 @@ public class TicketService {
             return true;
         }
 
-        return ticket.getCreatedBy() != null && user.getId().equals(ticket.getCreatedBy().getId());
+        return user.getId().equals(safeUserId(ticket.getCreatedBy()));
+    }
+
+    private TicketDto toDto(Ticket ticket) {
+        return TicketDto.builder()
+                .id(ticket.getId())
+                .title(ticket.getTitle())
+                .description(ticket.getDescription())
+                .status(ticket.getStatus())
+                .priority(ticket.getPriority())
+                .createdById(safeUserId(ticket.getCreatedBy()))
+                .createdByName(safeUserName(ticket.getCreatedBy()))
+                .assignedToId(safeUserId(ticket.getAssignedTo()))
+                .assignedToName(safeUserName(ticket.getAssignedTo()))
+                .createdAt(ticket.getCreatedAt())
+                .updatedAt(ticket.getUpdatedAt())
+                .build();
+    }
+
+    private Long safeUserId(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        try {
+            return user.getId();
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private String safeUserName(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        try {
+            return user.getName();
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 }

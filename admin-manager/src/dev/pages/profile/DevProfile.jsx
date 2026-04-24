@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import DevLayout from "../../components/layout/DevLayout";
-import { loadProfile, updateProfile, loadProfileFromBackendSafe, syncProfileToBackend } from "../../data/profileStore";
+import {
+  changeMyPassword,
+  fetchDeveloperProfile,
+  saveDeveloperProfile,
+} from "../../services/developerApi";
 
 function makeSkillId(name) {
   const base = name.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 18);
@@ -8,18 +12,37 @@ function makeSkillId(name) {
 }
 
 export default function DevProfile() {
-  const initial = useMemo(() => loadProfile(), []);
+  const initial = useMemo(
+    () => ({
+      name: "",
+      email: "",
+      phone: "",
+      location: "",
+      bio: "",
+      skills: [],
+      experienceLevel: "JUNIOR",
+      capacityPoints: 20,
+    }),
+    []
+  );
 
   const [profile, setProfile] = useState(initial);
   const [statusMsg, setStatusMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
-  // Try to hydrate from backend (if developer logged in via shared login)
   useEffect(() => {
     (async () => {
-      const merged = await loadProfileFromBackendSafe();
-      setProfile(merged);
+      try {
+        const data = await fetchDeveloperProfile();
+        setProfile({ ...initial, ...data, skills: Array.isArray(data.skills) ? data.skills : [] });
+      } catch (err) {
+        setLoadError(err?.message || "Failed to load profile.");
+      } finally {
+        setLoading(false);
+      }
     })();
-  }, []);
+  }, [initial]);
 
   // skills
   const [newSkill, setNewSkill] = useState("");
@@ -30,24 +53,20 @@ export default function DevProfile() {
   const [confirmPw, setConfirmPw] = useState("");
   const [pwMsg, setPwMsg] = useState("");
 
-  const saveBasic = () => {
-    const next = updateProfile(() => ({ ...profile }));
-    setProfile(next);
+  const saveBasic = async () => {
     setStatusMsg("Saving...");
-    (async () => {
-      try {
-        const synced = await syncProfileToBackend(next);
-        setProfile(synced);
-        setStatusMsg("Profile saved.");
-      } catch {
-        setStatusMsg("Saved locally (backend sync failed).");
-      } finally {
-        setTimeout(() => setStatusMsg(""), 2200);
-      }
-    })();
+    try {
+      const saved = await saveDeveloperProfile(profile);
+      setProfile((current) => ({ ...current, ...saved, skills: Array.isArray(saved.skills) ? saved.skills : current.skills }));
+      setStatusMsg("Profile saved.");
+    } catch (err) {
+      setStatusMsg(err?.message || "Failed to save profile.");
+    } finally {
+      setTimeout(() => setStatusMsg(""), 2200);
+    }
   };
 
-  const addSkill = () => {
+  const addSkill = async () => {
     const name = newSkill.trim();
     if (!name) return;
     if (profile.skills.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
@@ -56,30 +75,39 @@ export default function DevProfile() {
     }
     const skill = { id: makeSkillId(name), name, level: 3 };
     const next = { ...profile, skills: [skill, ...profile.skills] };
-    const saved = updateProfile(() => next);
-    setProfile(saved);
+    setProfile(next);
     setNewSkill("");
-
-    // fire-and-forget sync
-    syncProfileToBackend(saved).catch(() => {});
+    setStatusMsg("Saving...");
+    try {
+      const saved = await saveDeveloperProfile(next);
+      setProfile((current) => ({ ...current, ...saved, skills: Array.isArray(saved.skills) ? saved.skills : current.skills }));
+      setStatusMsg("Skill saved.");
+    } catch (err) {
+      setStatusMsg(err?.message || "Failed to save skill.");
+    } finally {
+      setTimeout(() => setStatusMsg(""), 2200);
+    }
   };
 
-  const removeSkill = (id) => {
+  const removeSkill = async (id) => {
     const next = { ...profile, skills: profile.skills.filter((s) => s.id !== id) };
-    const saved = updateProfile(() => next);
-    setProfile(saved);
-
-    syncProfileToBackend(saved).catch(() => {});
+    setProfile(next);
+    setStatusMsg("Saving...");
+    try {
+      const saved = await saveDeveloperProfile(next);
+      setProfile((current) => ({ ...current, ...saved, skills: Array.isArray(saved.skills) ? saved.skills : current.skills }));
+      setStatusMsg("Skill removed.");
+    } catch (err) {
+      setStatusMsg(err?.message || "Failed to remove skill.");
+    } finally {
+      setTimeout(() => setStatusMsg(""), 2200);
+    }
   };
 
-  const changePassword = () => {
+  const changePassword = async () => {
     setPwMsg("");
     if (!oldPw || !newPw || !confirmPw) {
       setPwMsg("Fill all password fields.");
-      return;
-    }
-    if (oldPw !== profile.password) {
-      setPwMsg("Old password is incorrect.");
       return;
     }
     if (newPw.length < 6) {
@@ -90,14 +118,26 @@ export default function DevProfile() {
       setPwMsg("New password and confirm password do not match.");
       return;
     }
-    const next = { ...profile, password: newPw };
-    const saved = updateProfile(() => next);
-    setProfile(saved);
-    setOldPw("");
-    setNewPw("");
-    setConfirmPw("");
-    setPwMsg("Password updated (UI demo). ");
+    try {
+      await changeMyPassword(oldPw, newPw);
+      setOldPw("");
+      setNewPw("");
+      setConfirmPw("");
+      setPwMsg("Password updated.");
+    } catch (err) {
+      setPwMsg(err?.message || "Failed to change password.");
+    }
   };
+
+  if (loading) {
+    return (
+      <DevLayout>
+        <div className="glass-card p-5">
+          <p className="text-sm text-slate-300">Loading profile...</p>
+        </div>
+      </DevLayout>
+    );
+  }
 
   return (
     <DevLayout>
@@ -105,11 +145,17 @@ export default function DevProfile() {
         <div>
           <h2 className="text-2xl font-bold">Profile</h2>
           <p className="text-sm text-slate-300 mt-1">
-            Basic details, skills and password settings.
+            Basic details, skills and account password.
           </p>
         </div>
         {statusMsg && <span className="chip">{statusMsg}</span>}
       </div>
+
+      {loadError && (
+        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          {loadError}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Basic profile */}
@@ -218,7 +264,7 @@ export default function DevProfile() {
         <div className="lg:col-span-3 glass-card p-5">
           <h3 className="text-lg font-bold mb-3">Change Password</h3>
           <p className="text-xs text-slate-400 mb-4">
-            UI demo only. In a real app this would be handled securely on the server.
+            This updates your account password in the backend.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
