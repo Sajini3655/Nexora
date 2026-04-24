@@ -24,4 +24,7 @@ public class TaskDto {
     private Long assignedToId;
     private String assignedToName;
     private LocalDateTime createdAt;
+
+    private Long projectId;
+    private String projectName;
 }

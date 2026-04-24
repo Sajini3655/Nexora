@@ -25,4 +25,6 @@ public class CreateTaskRequest {
     private Integer estimatedPoints;
 
     private Long assignedToId; // optional
+
+    private Long projectId; // optional but needed to link task to a project
 }
