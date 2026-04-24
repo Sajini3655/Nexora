@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -6,32 +6,82 @@ import {
   Paper,
   Chip,
   Button,
-  LinearProgress
+  LinearProgress,
+  CircularProgress
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { fetchProjects } from "../../services/managerService";
 
 export default function ProjectManagement() {
   const navigate = useNavigate();
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Frontend dummy data
-  const projects = [
-    {
-      id: 1,
-      name: "E-Commerce Platform",
-      description: "Online shopping system with payment integration.",
-      status: "Active",
-      progress: 65,
-      tasks: 8
-    },
-    {
-      id: 2,
-      name: "HR Management System",
-      description: "Employee and payroll management.",
-      status: "Planning",
-      progress: 20,
-      tasks: 5
-    }
-  ];
+  useEffect(() => {
+    let active = true;
+
+    const loadProjects = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const data = await fetchProjects();
+        if (!active) {
+          return;
+        }
+        setProjects(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (!active) {
+          return;
+        }
+        setError(
+          err?.response?.data?.message ||
+            "Failed to load project management data."
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadProjects();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const projectCards = useMemo(() => {
+    return projects.map((project) => {
+      const totalTasks = project.tasks?.length || 0;
+      const doneTasks = (project.tasks || []).filter((task) => task.status === "DONE").length;
+      const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+      let status = "Planning";
+      if (totalTasks > 0) {
+        status = doneTasks === totalTasks ? "Completed" : "Active";
+      }
+
+      return {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status,
+        progress,
+        tasks: totalTasks,
+      };
+    });
+  }, [projects]);
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: "flex", alignItems: "center", gap: 1.5 }}>
+        <CircularProgress size={24} />
+        <Typography>Loading projects...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -40,8 +90,20 @@ export default function ProjectManagement() {
         Project Management
       </Typography>
 
+      {error ? (
+        <Box sx={{ mb: 3, p: 2, borderRadius: 2, border: "1px solid rgba(255,120,120,0.5)", backgroundColor: "rgba(255,120,120,0.08)" }}>
+          <Typography>{error}</Typography>
+        </Box>
+      ) : null}
+
+      {!error && projectCards.length === 0 ? (
+        <Paper sx={{ p: 3, border: "1px solid rgba(255,255,255,0.08)" }}>
+          <Typography>No projects found for this manager.</Typography>
+        </Paper>
+      ) : null}
+
       <Grid container spacing={3}>
-        {projects.map((project) => (
+        {projectCards.map((project) => (
           <Grid item xs={12} md={6} lg={4} key={project.id}>
             <Paper
               sx={{

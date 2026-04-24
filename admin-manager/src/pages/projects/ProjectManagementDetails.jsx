@@ -1,67 +1,90 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Typography,
   Paper,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Chip,
-  OutlinedInput,
-  Divider
+  CircularProgress
 } from "@mui/material";
 import { useParams } from "react-router-dom";
-
-const allDevelopers = ["Alice", "Bob", "Charlie", "David"];
+import { fetchProjects } from "../../services/managerService";
 
 export default function ProjectManagementDetails() {
   const { projectId } = useParams();
-
   const [project, setProject] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // 🔥 Simulate fetch
-    const fetchedProject = {
-      id: projectId,
-      name: "Sample Project",
-      description: "Project description here",
-      developers: [],
-      files: [],
-      tasks: [
-        { id: 1, title: "Frontend Setup", priority: "High", status: "Pending", assignedDevelopers: [] },
-        { id: 2, title: "Backend API", priority: "Medium", status: "Pending", assignedDevelopers: [] }
-      ]
+    let active = true;
+
+    const loadProject = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const data = await fetchProjects();
+        if (!active) {
+          return;
+        }
+
+        const selected = (Array.isArray(data) ? data : []).find(
+          (item) => String(item.id) === String(projectId)
+        );
+
+        if (!selected) {
+          setError("Project not found or not accessible for this manager.");
+          setProject(null);
+          return;
+        }
+
+        setProject(selected);
+      } catch (err) {
+        if (!active) {
+          return;
+        }
+        setError(
+          err?.response?.data?.message ||
+            "Failed to load project details."
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
     };
 
-    setProject(fetchedProject);
+    loadProject();
+
+    return () => {
+      active = false;
+    };
   }, [projectId]);
 
-  if (!project) return <Typography>Loading...</Typography>;
+  const totalTasks = project?.tasks?.length || 0;
+  const doneTasks = useMemo(
+    () => (project?.tasks || []).filter((task) => task.status === "DONE").length,
+    [project]
+  );
+  const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
-  const updateProject = (field, value) => {
-    setProject({ ...project, [field]: value });
-  };
+  if (loading) {
+    return (
+      <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4, display: "flex", alignItems: "center", gap: 1.5 }}>
+        <CircularProgress size={24} />
+        <Typography>Loading project details...</Typography>
+      </Box>
+    );
+  }
 
-  const updateTask = (taskId, field, value) => {
-    setProject({
-      ...project,
-      tasks: project.tasks.map(t =>
-        t.id === taskId ? { ...t, [field]: value } : t
-      )
-    });
-  };
-
-  const handleFileUpload = (e) => {
-    const uploaded = Array.from(e.target.files);
-    updateProject("files", [...project.files, ...uploaded]);
-  };
-
-  const handleSave = () => {
-    console.log(project);
-    alert("Project updated successfully!");
-  };
+  if (error) {
+    return (
+      <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4 }}>
+        <Paper sx={{ p: 3, border: "1px solid rgba(255,120,120,0.5)", backgroundColor: "rgba(255,120,120,0.08)" }}>
+          <Typography>{error}</Typography>
+        </Paper>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4 }}>
@@ -69,106 +92,41 @@ export default function ProjectManagementDetails() {
         Manage: {project.name}
       </Typography>
 
-      {/* ===== Project Developers ===== */}
       <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Assign Developers to Project
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Project Overview
         </Typography>
-
-        <FormControl fullWidth>
-          <InputLabel>Developers</InputLabel>
-          <Select
-            multiple
-            value={project.developers}
-            onChange={(e) => updateProject("developers", e.target.value)}
-            input={<OutlinedInput label="Developers" />}
-            renderValue={(selected) => (
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                {selected.map(dev => <Chip key={dev} label={dev} />)}
-              </Box>
-            )}
-          >
-            {allDevelopers.map(dev => (
-              <MenuItem key={dev} value={dev}>{dev}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Paper>
-
-      {/* ===== Tasks ===== */}
-      <Typography variant="h6" sx={{ mb: 2 }}>Tasks</Typography>
-
-      {project.tasks.map(task => (
-        <Paper key={task.id} sx={{ p: 3, mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            {task.title} ({task.priority})
-          </Typography>
-
-          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-            {/* Status */}
-            <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={task.status}
-                label="Status"
-                onChange={(e) =>
-                  updateTask(task.id, "status", e.target.value)
-                }
-              >
-                <MenuItem value="Pending">Pending</MenuItem>
-                <MenuItem value="In Progress">In Progress</MenuItem>
-                <MenuItem value="Completed">Completed</MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* Assign Developers */}
-            <FormControl sx={{ minWidth: 250 }}>
-              <InputLabel>Assign Developers</InputLabel>
-              <Select
-                multiple
-                value={task.assignedDevelopers}
-                onChange={(e) =>
-                  updateTask(task.id, "assignedDevelopers", e.target.value)
-                }
-                input={<OutlinedInput label="Assign Developers" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {selected.map(dev => <Chip key={dev} label={dev} />)}
-                  </Box>
-                )}
-              >
-                {project.developers.map(dev => (
-                  <MenuItem key={dev} value={dev}>{dev}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-        </Paper>
-      ))}
-
-      {/* ===== Files ===== */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Upload Files
+        <Typography variant="body1" sx={{ mb: 2, opacity: 0.85 }}>
+          {project.description || "No description provided."}
         </Typography>
-
-        <Button variant="outlined" component="label">
-          Upload Files
-          <input type="file" hidden multiple onChange={handleFileUpload} />
-        </Button>
-
-        <Box sx={{ mt: 2 }}>
-          {project.files.map((file, index) => (
-            <Typography key={index}>{file.name}</Typography>
-          ))}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+          <Chip label={`Tasks: ${totalTasks}`} />
+          <Chip color={doneTasks === totalTasks && totalTasks > 0 ? "success" : "primary"} label={`Done: ${doneTasks}`} />
+          <Chip variant="outlined" label={`Progress: ${progress}%`} />
         </Box>
       </Paper>
 
-      <Divider sx={{ mb: 3 }} />
+      <Typography variant="h6" sx={{ mb: 2 }}>Tasks</Typography>
 
-      <Button variant="contained" size="large" onClick={handleSave}>
-        Save Changes
-      </Button>
+      {(project.tasks || []).length === 0 ? (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography>No tasks found in this project.</Typography>
+        </Paper>
+      ) : (project.tasks || []).map((task) => (
+        <Paper key={task.id} sx={{ p: 3, mb: 3 }}>
+          <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 700 }}>
+            {task.title}
+          </Typography>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            <Chip
+              label={`Status: ${task.status || "-"}`}
+              color={task.status === "DONE" ? "success" : "primary"}
+              size="small"
+            />
+            <Chip label={`Priority: ${task.priority || "-"}`} variant="outlined" size="small" />
+          </Box>
+        </Paper>
+      ))}
     </Box>
   );
 }
