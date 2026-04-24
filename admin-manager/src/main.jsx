@@ -1,3 +1,5 @@
+window.global = window;
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
@@ -44,7 +46,6 @@ const theme = createTheme({
       }
     },
 
-    // Keep Paper clean globally (Menus/Popovers shouldn't inherit glass borders)
     MuiPaper: {
       styleOverrides: {
         root: {
@@ -78,7 +79,6 @@ const theme = createTheme({
       }
     },
 
-    // ✅ FIXED: single root override (was duplicated before)
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
@@ -153,4 +153,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </React.StrictMode>
 );
-

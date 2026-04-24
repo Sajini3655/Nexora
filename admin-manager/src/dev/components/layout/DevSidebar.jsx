@@ -2,8 +2,31 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { FiHome, FiUser, FiMessageCircle } from "react-icons/fi";
 import { useAuth } from "../../../context/AuthContext.jsx";
+import {
+  Box,
+  Divider,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Typography
+} from "@mui/material";
 
-export default function DevSidebar({ collapsed }) {
+const drawerWidth = 268;
+
+function SectionLabel({ children }) {
+  return (
+    <Typography
+      variant="caption"
+      sx={{ px: 2, pt: 1.5, pb: 0.75, opacity: 0.65, fontWeight: 800 }}
+    >
+      {children}
+    </Typography>
+  );
+}
+
+export default function DevSidebar({ open, onClose }) {
   const { moduleAccess } = useAuth();
 
   const menuItems = [
@@ -17,66 +40,102 @@ export default function DevSidebar({ collapsed }) {
   ];
 
   return (
-    <aside
-      className={
-        "p-4 pr-0 hidden md:block" +
-        (collapsed ? " w-[88px]" : " w-[280px]")
-      }
+    <Drawer
+      open={open}
+      onClose={onClose}
+      variant="temporary"
+      ModalProps={{ keepMounted: true }}
+      sx={{
+        [`& .MuiDrawer-paper`]: {
+          width: drawerWidth,
+          boxSizing: "border-box",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+          borderRight: "1px solid rgba(255,255,255,0.10)",
+          backdropFilter: "blur(14px)"
+        }
+      }}
     >
-      <div className="glass-panel rounded-3xl h-[calc(100vh-2rem)] p-4 flex flex-col">
-        {/* Brand */}
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-9 h-9 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center">
-            <span
-              className="w-3 h-3 rounded-full"
-              style={{ background: "rgb(168, 85, 247)" }}
-            />
-          </div>
-          {!collapsed && (
-            <div>
-              <p className="font-bold leading-5">Nexora</p>
-              <p className="text-[11px] text-slate-400">Developer</p>
-            </div>
-          )}
-        </div>
+      <Box sx={{ p: 2.2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: 2.2,
+              background:
+                "linear-gradient(135deg, rgba(124,92,255,0.95), rgba(124,92,255,0.35))",
+              boxShadow: "0 14px 40px rgba(124,92,255,0.20)",
+              border: "1px solid rgba(255,255,255,0.18)"
+            }}
+          />
+          <Box>
+            <Typography sx={{ fontWeight: 950, letterSpacing: -0.4 }}>
+              Nexora Dev
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.7 }}>
+              Developer Workspace
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
 
-        <div className="divider my-4" />
+      <Divider />
 
-        {/* Nav */}
-        <nav className="flex flex-col gap-2">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              end={item.path === "/dev"}
-              className={({ isActive }) =>
-                [
-                  "flex items-center gap-3 px-3 py-2 rounded-2xl border transition",
-                  "border-white/0 hover:border-white/10 hover:bg-white/5",
-                  isActive ? "bg-white/10 border-white/10" : "",
-                ].join(" ")
-              }
-              title={collapsed ? item.name : undefined}
-            >
-              <span className="text-slate-200 text-lg">{item.icon}</span>
-              {!collapsed && <span className="text-sm">{item.name}</span>}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="mt-auto">
-          <div className="divider my-4" />
-          <div className="px-2">
-            {!collapsed ? (
-              <p className="text-xs text-slate-400">
-                UI demo • localStorage persistence
-              </p>
-            ) : (
-              <p className="text-xs text-slate-500 text-center">•</p>
+      <SectionLabel>CORE</SectionLabel>
+      <List sx={{ px: 1.2, pb: 1 }}>
+        {menuItems.map((item) => (
+          <NavLink
+            key={item.name}
+            to={item.path}
+            end={item.path === "/dev"}
+            onClick={onClose}
+            style={({ isActive }) => ({ textDecoration: "none" })}
+          >
+            {({ isActive }) => (
+              <ListItemButton
+                selected={isActive}
+                sx={{
+                  borderRadius: 2.2,
+                  mb: 0.6,
+                  position: "relative",
+                  overflow: "hidden",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    left: 0,
+                    top: 8,
+                    bottom: 8,
+                    width: 4,
+                    borderRadius: 99,
+                    background:
+                      "linear-gradient(180deg, rgba(124,92,255,0.95), rgba(124,92,255,0.25))",
+                    opacity: isActive ? 1 : 0
+                  },
+                  "&.Mui-selected": {
+                    background:
+                      "linear-gradient(90deg, rgba(124,92,255,0.22), rgba(124,92,255,0.08))",
+                    border: "1px solid rgba(124,92,255,0.25)"
+                  },
+                  "&:hover": { backgroundColor: "rgba(255,255,255,0.06)" }
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40, opacity: 0.92 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.name}
+                  primaryTypographyProps={{ fontWeight: 800 }}
+                />
+              </ListItemButton>
             )}
-          </div>
-        </div>
-      </div>
-    </aside>
+          </NavLink>
+        ))}
+      </List>
+
+      <Box sx={{ mt: "auto", p: 2, opacity: 0.65, fontSize: 12 }}>
+        Developer Role • Workspace Mode
+      </Box>
+    </Drawer>
   );
 }

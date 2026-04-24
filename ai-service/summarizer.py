@@ -6,6 +6,7 @@ from groq import Groq
 from get_valid_model import get_first_available_model
 
 MODEL = get_first_available_model()
+MODEL = os.getenv("GROQ_MODEL") or MODEL
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     raise ValueError("GROQ_API_KEY environment variable is not set!")

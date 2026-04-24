@@ -1,26 +1,32 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { FiBell, FiChevronDown, FiMenu } from "react-icons/fi";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FiBell } from "react-icons/fi";
 import { loadProfile } from "../../data/profileStore";
 import {
   loadNotifications,
   markAllRead,
-  markRead,
+  markRead
 } from "../../data/notificationStore";
-
-function useOutsideClick(ref, handler) {
-  useEffect(() => {
-    function onDown(e) {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target)) handler();
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [ref, handler]);
-}
+import { useAuth } from "../../../context/AuthContext.jsx";
+import {
+  AppBar,
+  Avatar,
+  Box,
+  Chip,
+  Divider,
+  IconButton,
+  Menu,
+  MenuItem,
+  Toolbar,
+  Typography
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import PersonIcon from "@mui/icons-material/Person";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 export default function DevTopbar({ onToggleSidebar }) {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const [profile, setProfile] = useState(() => loadProfile());
   const initials = (profile.name || "U")
@@ -34,12 +40,8 @@ export default function DevTopbar({ onToggleSidebar }) {
   const unread = notifs.filter((n) => !n.read).length;
 
   const [openNotifs, setOpenNotifs] = useState(false);
-  const [openProfile, setOpenProfile] = useState(false);
-
-  const notifRef = useRef(null);
-  const profRef = useRef(null);
-  useOutsideClick(notifRef, () => setOpenNotifs(false));
-  useOutsideClick(profRef, () => setOpenProfile(false));
+  const [anchorEl, setAnchorEl] = useState(null);
+  const openProfile = Boolean(anchorEl);
 
   // keep notifications/profile fresh
   useEffect(() => {
@@ -54,148 +56,271 @@ export default function DevTopbar({ onToggleSidebar }) {
   const onOpenNotif = (id) => setNotifs(markRead(id));
 
   return (
-    <div className="flex items-center justify-between gap-3">
-      {/* Left */}
-      <div className="flex items-center gap-3 min-w-0">
-        <button
-          type="button"
+    <AppBar
+      position="static"
+      elevation={0}
+      sx={{
+        backdropFilter: "blur(14px)",
+        background:
+          "linear-gradient(180deg, rgba(15,18,35,0.92), rgba(15,18,35,0.55))",
+        borderBottom: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 3,
+        zIndex: (theme) => theme.zIndex.drawer + 1
+      }}
+    >
+      <Toolbar sx={{ minHeight: 72, gap: 1.5 }}>
+        <IconButton
+          edge="start"
+          color="inherit"
           onClick={onToggleSidebar}
-          className="btn-ghost px-3 py-2 rounded-2xl"
-          aria-label="Toggle sidebar"
+          sx={{
+            mr: 1,
+            borderRadius: 2,
+            border: "1px solid rgba(255,255,255,0.10)"
+          }}
         >
-          <FiMenu className="text-lg" />
-        </button>
+          <MenuIcon />
+        </IconButton>
 
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center">
-            <span className="w-3 h-3 rounded-full" style={{ background: "rgb(168, 85, 247)" }} />
-          </div>
-          <div className="min-w-0">
-            <p className="font-bold leading-5 truncate">Nexora</p>
-            <p className="text-[11px] text-slate-400 truncate">Developer Workspace</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right */}
-      <div className="flex items-center gap-2">
-        <span className="chip hidden sm:inline-flex">DEVELOPER</span>
-
-        {/* Notifications */}
-        <div className="relative" ref={notifRef}>
-          <button
-            type="button"
-            onClick={() => {
-              setOpenNotifs((v) => !v);
-              setOpenProfile(false);
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, minWidth: 0 }}>
+          <Box
+            sx={{
+              width: 28,
+              height: 28,
+              borderRadius: 2,
+              background:
+                "linear-gradient(135deg, rgba(124,92,255,0.95), rgba(124,92,255,0.35))",
+              border: "1px solid rgba(255,255,255,0.14)",
+              boxShadow: "0 12px 34px rgba(124,92,255,0.18)"
             }}
-            className="btn-ghost px-3 py-2 rounded-2xl relative"
-            aria-label="Notifications"
-          >
-            <FiBell className="text-lg" />
-            {unread > 0 && (
-              <span className="absolute -top-1 -right-1 text-[10px] bg-violet-500 text-white rounded-full px-1.5 py-0.5 border border-white/10">
-                {unread}
-              </span>
-            )}
-          </button>
+          />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 950, letterSpacing: -0.4 }} noWrap>
+              Nexora
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.7 }} noWrap>
+              Developer Workspace
+            </Typography>
+          </Box>
+        </Box>
 
-          {openNotifs && (
-            <div className="absolute right-0 mt-2 w-96 glass-card overflow-hidden z-50">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                <p className="font-semibold">Notifications</p>
-                <button type="button" onClick={onMarkAll} className="btn-outline px-3 py-1.5 text-xs">
-                  Mark all read
-                </button>
-              </div>
+        <Box sx={{ flexGrow: 1 }} />
 
-              <div className="max-h-80 overflow-auto">
-                {notifs.slice(0, 10).map((n) => (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => onOpenNotif(n.id)}
-                    className={
-                      "w-full text-left px-4 py-3 border-b border-white/10 hover:bg-white/5 " +
-                      (n.read ? "" : "bg-white/5")
-                    }
-                  >
-                    <p className="text-sm font-semibold">{n.title}</p>
-                    <p className="text-xs text-slate-300 mt-1">{n.body}</p>
-                    <p className="text-[11px] text-slate-400 mt-2">{n.createdAt}</p>
-                  </button>
-                ))}
-                {notifs.length === 0 && (
-                  <p className="text-sm text-slate-300 px-4 py-6">No notifications.</p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Profile */}
-        <div className="relative" ref={profRef}>
-          <button
-            type="button"
-            onClick={() => {
-              setOpenProfile((v) => !v);
-              setOpenNotifs(false);
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Chip
+            size="small"
+            label="DEVELOPER"
+            sx={{
+              height: 22,
+              fontWeight: 900,
+              letterSpacing: 0.3,
+              background: "rgba(124,92,255,0.16)",
+              border: "1px solid rgba(124,92,255,0.25)"
             }}
-            className="btn-outline px-3 py-2 rounded-2xl"
-            aria-label="Profile menu"
-          >
-            <span className="w-9 h-9 rounded-full bg-white/10 border border-white/10 text-white flex items-center justify-center text-sm font-bold">
-              {initials || "U"}
-            </span>
-            <div className="hidden md:block text-left">
-              <p className="text-sm font-semibold leading-4 truncate max-w-[160px]">{profile.name}</p>
-              <p className="text-xs text-slate-400">{profile.email}</p>
-            </div>
-            <FiChevronDown className="text-slate-300" />
-          </button>
+          />
 
-          {openProfile && (
-            <div className="absolute right-0 mt-2 w-56 glass-card overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-white/10">
-                <p className="text-sm font-semibold">{profile.name}</p>
-                <p className="text-xs text-slate-400">{profile.email}</p>
-              </div>
-
-              <div className="py-1">
-                <Link
-                  to="/dev/profile"
-                  onClick={() => setOpenProfile(false)}
-                  className="block px-4 py-2 text-sm hover:bg-white/5"
+          <Box sx={{ position: "relative" }}>
+            <IconButton
+              type="button"
+              onClick={() => {
+                setOpenNotifs((v) => !v);
+                setOpenProfile(false);
+              }}
+              aria-label="Notifications"
+              sx={{
+                borderRadius: 2.5,
+                border: "1px solid rgba(255,255,255,0.16)",
+                bgcolor: "rgba(255,255,255,0.04)"
+              }}
+            >
+              <FiBell className="text-lg" />
+              {unread > 0 ? (
+                <Box
+                  component="span"
+                  sx={{
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    px: 0.8,
+                    py: 0.25,
+                    borderRadius: 999,
+                    bgcolor: "#8b5cf6",
+                    color: "white",
+                    fontSize: 10,
+                    lineHeight: 1.2,
+                    border: "1px solid rgba(255,255,255,0.10)"
+                  }}
                 >
-                  Profile
-                </Link>
+                  {unread}
+                </Box>
+              ) : null}
+            </IconButton>
 
-                <button
-                  type="button"
+            {openNotifs ? (
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: 0,
+                  mt: 1,
+                  width: { xs: 320, sm: 384 },
+                  maxHeight: 360,
+                  overflow: "hidden",
+                  borderRadius: 3,
+                  background: "rgba(15,18,35,0.96)",
+                  backdropFilter: "blur(14px)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  boxShadow: "0 24px 80px rgba(0,0,0,0.32)",
+                  zIndex: 50
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 2, py: 1.5, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                  <Typography fontWeight={900}>Notifications</Typography>
+                  <Chip
+                    size="small"
+                    label="Mark all read"
+                    onClick={onMarkAll}
+                    sx={{
+                      height: 22,
+                      fontWeight: 900,
+                      bgcolor: "rgba(124,92,255,0.16)",
+                      border: "1px solid rgba(124,92,255,0.25)"
+                    }}
+                  />
+                </Box>
+
+                <Box sx={{ maxHeight: 280, overflow: "auto" }}>
+                  {notifs.slice(0, 10).map((n) => (
+                    <Box
+                      key={n.id}
+                      component="button"
+                      type="button"
+                      onClick={() => onOpenNotif(n.id)}
+                      sx={{
+                        width: "100%",
+                        textAlign: "left",
+                        px: 2,
+                        py: 1.5,
+                        border: 0,
+                        borderBottom: "1px solid rgba(255,255,255,0.08)",
+                        background: n.read ? "transparent" : "rgba(255,255,255,0.04)",
+                        color: "inherit",
+                        cursor: "pointer",
+                        "&:hover": { background: "rgba(255,255,255,0.06)" }
+                      }}
+                    >
+                      <Typography variant="body2" fontWeight={800}>
+                        {n.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ display: "block", mt: 0.5, color: "rgba(231,233,238,0.7)" }}>
+                        {n.body}
+                      </Typography>
+                      <Typography variant="caption" sx={{ display: "block", mt: 1, color: "rgba(231,233,238,0.55)" }}>
+                        {n.createdAt}
+                      </Typography>
+                    </Box>
+                  ))}
+                  {notifs.length === 0 ? (
+                    <Typography variant="body2" sx={{ px: 2, py: 3, color: "rgba(231,233,238,0.7)" }}>
+                      No notifications.
+                    </Typography>
+                  ) : null}
+                </Box>
+              </Box>
+            ) : null}
+          </Box>
+
+          <Box>
+            <IconButton
+              type="button"
+              onClick={(event) => {
+                setOpenNotifs(false);
+                setAnchorEl(event.currentTarget);
+              }}
+              aria-label="Profile menu"
+              sx={{
+                borderRadius: 2.5,
+                border: "1px solid rgba(255,255,255,0.16)",
+                bgcolor: "rgba(255,255,255,0.04)",
+                px: 0.8
+              }}
+            >
+              <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.main", fontSize: 13, fontWeight: 900 }}>
+                {initials || "U"}
+              </Avatar>
+              <Box sx={{ display: { xs: "none", md: "block" }, textAlign: "left", ml: 1 }}>
+                <Typography variant="body2" fontWeight={800} noWrap sx={{ maxWidth: 160 }}>
+                  {profile.name}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.65)" }} noWrap>
+                  {profile.email}
+                </Typography>
+              </Box>
+            </IconButton>
+
+            <Menu
+              anchorEl={anchorEl}
+              open={openProfile}
+              onClose={() => setAnchorEl(null)}
+              PaperProps={{
+                sx: {
+                  mt: 1,
+                  minWidth: 240,
+                  borderRadius: 3,
+                  background: "rgba(15,18,35,0.96)",
+                  backdropFilter: "blur(14px)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  boxShadow: "0 24px 80px rgba(0,0,0,0.32)",
+                  zIndex: (theme) => theme.zIndex.modal + 1
+                }
+              }}
+            >
+              <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                <Typography variant="body2" fontWeight={900} noWrap>
+                  {profile.name}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.65)" }} noWrap>
+                  {profile.email}
+                </Typography>
+              </Box>
+
+              <Box sx={{ py: 1 }}>
+                <MenuItem
                   onClick={() => {
-                    setOpenProfile(false);
+                    setAnchorEl(null);
+                    navigate("/dev/profile");
+                  }}
+                >
+                  <PersonIcon fontSize="small" style={{ marginRight: 10 }} />
+                  Profile
+                </MenuItem>
+
+                <MenuItem
+                  onClick={() => {
+                    setAnchorEl(null);
                     navigate("/dev");
                   }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5"
                 >
+                  <PersonIcon fontSize="small" style={{ marginRight: 10 }} />
                   Dashboard
-                </button>
+                </MenuItem>
 
-                <button
-                  type="button"
+                <Divider sx={{ my: 0.5 }} />
+
+                <MenuItem
                   onClick={() => {
-                    setOpenProfile(false);
-                    window.alert("Logged out (UI demo)");
+                    setAnchorEl(null);
+                    logout();
+                    navigate("/login");
                   }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5"
                 >
+                  <LogoutIcon fontSize="small" style={{ marginRight: 10 }} />
                   Logout
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+                </MenuItem>
+              </Box>
+            </Menu>
+          </Box>
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 }
