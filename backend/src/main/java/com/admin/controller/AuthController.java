@@ -2,6 +2,7 @@ package com.admin.controller;
 
 import com.admin.dto.AcceptInviteRequest;
 import com.admin.dto.AuthResponse;
+import com.admin.dto.ChangePasswordRequest;
 import com.admin.dto.InviteLookupResponse;
 import com.admin.dto.LoginRequest;
 import com.admin.dto.RegisterRequest;
@@ -72,5 +73,23 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(Map.of("message", "Account activated successfully"));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        String email = authentication.getName();
+        authService.changePassword(email, request);
+
+        auditLogService.log(
+                "CHANGED_PASSWORD",
+                email,
+                email,
+                "User changed password"
+        );
+
+        return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
     }
 }

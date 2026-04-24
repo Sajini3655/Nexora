@@ -11,3 +11,8 @@ export const fetchProjects = async () => {
 };
 
 export const getMyProjects = fetchProjects;
+
+export const fetchManagerTasks = async () => {
+  const response = await api.get("/manager/tasks");
+  return response.data;
+};
