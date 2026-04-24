@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Box, Typography, Paper, LinearProgress, Chip } from "@mui/material";
 import ClientLayout from "../../components/layout/ClientLayout";
 import { fetchClientProjects } from "../../services/clientService";
 
@@ -11,35 +12,59 @@ export default function ClientProjectList() {
 
   return (
     <ClientLayout>
-      <h2 className="text-2xl font-bold mb-4">Client Projects</h2>
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+        Client Projects
+      </Typography>
 
-      <div className="space-y-3">
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {projects.map((p) => (
-          <div key={p.id} className="rounded-2xl border border-white/15 bg-white/5 p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">{p.name}</h3>
-                <p className="text-sm text-slate-300">Manager: {p.manager}</p>
-              </div>
-              <span className="text-xs rounded-full px-3 py-1 bg-white/10 border border-white/20">
-                {p.status}
-              </span>
-            </div>
+          <Paper
+            key={p.id}
+            sx={{
+              background: "rgba(15,20,40,0.6)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              p: 2,
+              borderRadius: "16px",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                background: "rgba(15,20,40,0.8)",
+                borderColor: "rgba(104,81,255,0.3)",
+              },
+            }}
+          >
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, mb: 1.5 }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {p.name}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)" }}>
+                  Manager: {p.manager}
+                </Typography>
+              </Box>
+              <Chip label={p.status} size="small" sx={{ bgcolor: "rgba(104,81,255,0.2)", color: "#e7e9ee" }} />
+            </Box>
 
-            <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${p.progress}%`,
-                  background:
-                    "linear-gradient(90deg, rgba(34,197,94,0.95), rgba(59,130,246,0.95))",
+            <Box>
+              <LinearProgress
+                variant="determinate"
+                value={p.progress}
+                sx={{
+                  height: 6,
+                  borderRadius: 3,
+                  bgcolor: "rgba(255,255,255,0.1)",
+                  "& .MuiLinearProgress-bar": {
+                    background: "linear-gradient(90deg, rgba(34,197,94,0.95), rgba(59,130,246,0.95))",
+                  },
                 }}
               />
-            </div>
-            <p className="mt-2 text-sm text-slate-300">{p.progress}% complete • ETA {p.eta}</p>
-          </div>
+            </Box>
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", mt: 1, display: "block" }}>
+              {p.progress}% complete • ETA {p.eta}
+            </Typography>
+          </Paper>
         ))}
-      </div>
+      </Box>
     </ClientLayout>
   );
 }
