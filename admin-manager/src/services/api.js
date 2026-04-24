@@ -72,4 +72,41 @@ export const deleteAdminUser = async (id) => {
   return response.data;
 };
 
+export const getAccessModules = async () => {
+  const response = await api.get("/admin/access/modules");
+  return response.data;
+};
+
+export const getAccessRoles = async () => {
+  const response = await api.get("/admin/access/roles");
+  return response.data;
+};
+
+export const getAccessRoleMatrix = async () => {
+  const response = await api.get("/admin/access/role-matrix");
+  return response.data;
+};
+
+export const saveAccessRoleMatrix = async (payload) => {
+  const response = await api.put("/admin/access/role-matrix", payload);
+  return response.data;
+};
+
+export const getAccessUsers = async (params) => {
+  const response = await api.get("/admin/access/users", { params });
+  return response.data;
+};
+
+export const getAccessUserOverrides = async (userId) => {
+  const response = await api.get("/admin/access/user-overrides", {
+    params: { userId },
+  });
+  return response.data;
+};
+
+export const saveAccessUserOverrides = async (payload) => {
+  const response = await api.put("/admin/access/user-overrides", payload);
+  return response.data;
+};
+
 export default api;

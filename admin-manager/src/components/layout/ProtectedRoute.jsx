@@ -4,10 +4,32 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 
-export default function ProtectedRoute({ allowedRoles }) {
-  const { user, loading } = useAuth();
+function roleHome(role, moduleAccess = {}) {
+  const r = (role || "").toUpperCase();
+  if (r === "ADMIN") return "/admin";
 
-  if (loading) {
+  if (r === "MANAGER") {
+    if (moduleAccess.DASHBOARD) return "/manager";
+    if (moduleAccess.FILES) return "/manager/projects";
+    if (moduleAccess.TASKS) return "/manager/ai-assignment";
+    return "/users";
+  }
+
+  if (r === "DEVELOPER") {
+    if (moduleAccess.DASHBOARD) return "/dev";
+    if (moduleAccess.TASKS) return "/dev/tasks";
+    if (moduleAccess.CHAT) return "/dev/chat/P-001";
+    if (moduleAccess.FILES) return "/dev/projects";
+    return "/dev/profile";
+  }
+
+  return "/login";
+}
+
+export default function ProtectedRoute({ allowedRoles, requiredModule }) {
+  const { user, loading, moduleAccess, accessLoading } = useAuth();
+
+  if (loading || accessLoading) {
     return (
       <Box sx={{ minHeight: "50vh", display: "grid", placeItems: "center" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -22,6 +44,13 @@ export default function ProtectedRoute({ allowedRoles }) {
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requiredModule && user.role !== "ADMIN") {
+    const allowed = Boolean(moduleAccess?.[requiredModule]);
+    if (!allowed) {
+      return <Navigate to={roleHome(user.role, moduleAccess || {})} replace />;
+    }
   }
 
   return <Outlet />;

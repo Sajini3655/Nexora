@@ -24,6 +24,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByRoleAndEnabled(Role role, Boolean enabled);
 
+    List<User> findByRoleOrderByNameAsc(Role role);
+
     long countByEnabled(Boolean enabled);
 
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
