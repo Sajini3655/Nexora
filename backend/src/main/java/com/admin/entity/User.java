@@ -2,7 +2,6 @@ package com.admin.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,42 +29,29 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = true)
+    @Column
     private String password;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    @Builder.Default
-    private Role role = Role.CLIENT;
+    private Role role;
 
-    @Builder.Default
     @Column(nullable = false)
-    private Boolean enabled = true;
+    @Builder.Default
+    private Boolean enabled = false;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "createdBy")
-    private List<TaskItem> createdTasks;
-
-    @OneToMany(mappedBy = "assignedTo")
-    private List<TaskItem> assignedTasks;
-
     @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (enabled == null) {
+            enabled = false;
+        }
     }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-
-    // Spring Security methods
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -94,6 +80,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return enabled;
+        return Boolean.TRUE.equals(enabled);
     }
 }
