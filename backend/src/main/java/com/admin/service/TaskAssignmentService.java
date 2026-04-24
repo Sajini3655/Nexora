@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 public class TaskAssignmentService {
 
     private final UserRepository userRepository;
-    private final ProjectRepository projectRepository;
     private final DeveloperProfileRepository profileRepository;
     private final DeveloperSkillRepository skillRepository;
     private final TaskRepository taskRepository;
@@ -93,12 +92,6 @@ public class TaskAssignmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
         }
 
-            Project project = null;
-            if (req.getProjectId() != null) {
-                project = projectRepository.findById(req.getProjectId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-            }
-
         TaskItem task = TaskItem.builder()
                 .title(req.getTitle().trim())
                 .description(req.getDescription())
@@ -108,7 +101,6 @@ public class TaskAssignmentService {
                 .estimatedPoints(req.getEstimatedPoints())
                 .createdBy(manager)
                 .assignedTo(assignee)
-                .project(project)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();

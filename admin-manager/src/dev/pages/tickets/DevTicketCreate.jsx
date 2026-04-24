@@ -1,170 +1,118 @@
 import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Alert, Box, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import DevLayout from "../../components/layout/DevLayout";
-import Card from "../../../components/ui/Card.jsx";
-import { createDeveloperTicket, formatPriority } from "../../services/developerApi";
+import { getChatThread } from "../../data/chatStore";
+import { createUserTicket } from "../../data/ticketStore";
+import { pushNotification } from "../../data/notificationStore";
+
+function buildChatDescription(thread) {
+  if (!thread) return "";
+  const lines = (thread.messages || []).slice(-12).map((m) => `- ${m.sender}: ${m.text}`);
+  return `Issue chat: ${thread.title}\n\nRecent messages:\n${lines.join("\n")}`;
+}
 
 export default function DevTicketCreate() {
   const navigate = useNavigate();
   const location = useLocation();
-  const summary = location.state?.summary || null;
 
-  const initialDescription = useMemo(() => {
-    if (!summary) return "";
-    const blockers = Array.isArray(summary.blockers) ? summary.blockers : [];
-    const lines = [summary.summary || ""];
-    if (blockers.length > 0) {
-      lines.push("", "Blockers:", ...blockers.map((item) => `- ${item}`));
-    }
-    return lines.filter(Boolean).join("\n");
-  }, [summary]);
+  const chatId = location.state?.chatId || null;
+  const thread = useMemo(() => (chatId ? getChatThread(chatId) : null), [chatId]);
 
-  const [title, setTitle] = useState(summary?.ticket_message ? summary.ticket_message : "");
-  const [description, setDescription] = useState(initialDescription);
-  const [priority, setPriority] = useState("MEDIUM");
-  const [status, setStatus] = useState("OPEN");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [title, setTitle] = useState(thread ? thread.title : "");
+  const [severity, setSeverity] = useState("Medium");
+  const [description, setDescription] = useState(thread ? buildChatDescription(thread) : "");
+  const [status, setStatus] = useState("Open");
 
-  const handleCreate = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      setMessage("");
+  const create = () => {
+    const t = title.trim();
+    const d = description.trim();
+    if (!t || !d) return;
 
-      const ticket = await createDeveloperTicket({
-        title: title.trim(),
-        description: description.trim(),
-        priority,
-        status,
-      });
+    const ticket = createUserTicket({
+      title: t,
+      severity,
+      status,
+      createdVia: "CHAT_SUMMARY",
+      description: d,
+      detectedFrom: thread
+        ? { reason: `Created from issue-chat: ${thread.title}`, relatedMessages: [] }
+        : null,
+      evidence: thread
+        ? { type: "ISSUE_CHAT", snippet: `Chat thread ${thread.id}: ${thread.title}` }
+        : null,
+    });
 
-      setMessage(`Ticket ${ticket.id} created successfully.`);
-      navigate(`/dev/tickets/${ticket.id}`);
-    } catch (err) {
-      setError(err?.message || "Failed to create ticket.");
-    } finally {
-      setLoading(false);
-    }
+    pushNotification({ title: "Ticket created", body: `${ticket.id}: ${ticket.title}` });
+    navigate(`/dev/tickets/${ticket.id}`);
   };
 
   return (
     <DevLayout>
-      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap", mb: 3 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>
-            Create Ticket
-          </Typography>
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.66)", mt: 0.5 }}>
-            Save the blocker to the backend ticket API.
-          </Typography>
-        </Box>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs text-slate-400">Ticket</p>
+          <h2 className="text-2xl font-bold">Create Ticket</h2>
+          <p className="text-sm text-slate-300 mt-1">
+            {thread ? `From chat: ${thread.title}` : "Manual ticket creation"}
+          </p>
+        </div>
+        <Link to="/dev" className="btn-outline">Back</Link>
+      </div>
 
-        <Box component={Link} to="/dev" sx={{ color: "#c4b5fd", fontWeight: 800 }}>
-          Back to dashboard
-        </Box>
-      </Box>
+      <div className="glass-card p-5 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <label className="text-xs text-slate-400">Title</label>
+            <input
+              className="input mt-1"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ticket title"
+            />
+          </div>
 
-      {summary ? (
-        <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>
-          This form was prefilled from the backend chat summary.
-        </Alert>
-      ) : null}
-
-      {error ? (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
-          {error}
-        </Alert>
-      ) : null}
-
-      {message ? (
-        <Alert severity="success" sx={{ mb: 3, borderRadius: 3 }}>
-          {message}
-        </Alert>
-      ) : null}
-
-      <Card sx={{ p: 2.5 }}>
-        <Stack spacing={2.2}>
-          <TextField
-            label="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            fullWidth
-          />
-
-          <TextField
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            fullWidth
-            multiline
-            minRows={8}
-          />
-
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-            <TextField
-              select
-              label="Priority"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              fullWidth
+          <div>
+            <label className="text-xs text-slate-400">Severity</label>
+            <select
+              className="select mt-1"
+              value={severity}
+              onChange={(e) => setSeverity(e.target.value)}
             >
-              {[
-                "LOW",
-                "MEDIUM",
-                "HIGH",
-              ].map((item) => (
-                <MenuItem key={item} value={item}>
-                  {formatPriority(item)}
-                </MenuItem>
-              ))}
-            </TextField>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
 
-            <TextField
-              select
-              label="Status"
+          <div>
+            <label className="text-xs text-slate-400">Status</label>
+            <select
+              className="select mt-1"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              fullWidth
             >
-              {[
-                "OPEN",
-                "IN_PROGRESS",
-                "DONE",
-              ].map((item) => (
-                <MenuItem key={item} value={item}>
-                  {item.replace(/_/g, " ")}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
+              <option value="Open">Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
 
-          <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
-            <Box
-              component="button"
-              type="button"
-              onClick={handleCreate}
-              disabled={loading || !title.trim() || !description.trim()}
-              sx={{
-                border: 0,
-                borderRadius: 2,
-                px: 2,
-                py: 1.1,
-                cursor: loading || !title.trim() || !description.trim() ? "not-allowed" : "pointer",
-                fontWeight: 800,
-                background: "rgba(124,92,255,0.16)",
-                color: "#e7e9ee",
-                borderColor: "rgba(124,92,255,0.25)",
-                opacity: loading || !title.trim() || !description.trim() ? 0.55 : 1,
-              }}
-            >
-              {loading ? "Creating..." : "Create ticket"}
-            </Box>
-          </Box>
-        </Stack>
-      </Card>
+          <div className="md:col-span-3">
+            <label className="text-xs text-slate-400">Description</label>
+            <textarea
+              className="textarea mt-1"
+              style={{ minHeight: 200 }}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe the issue..."
+            />
+          </div>
+        </div>
+
+        <button type="button" onClick={create} className="mt-4 btn-primary">
+          Create Ticket
+        </button>
+      </div>
     </DevLayout>
   );
 }

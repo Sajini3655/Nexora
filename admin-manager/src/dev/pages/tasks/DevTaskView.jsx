@@ -1,145 +1,223 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
 import DevLayout from "../../components/layout/DevLayout";
-import Card from "../../../components/ui/Card.jsx";
-import { fetchDeveloperTaskById } from "../../services/developerApi";
+import { currentProject } from "../../data/devWorkspaceMock";
+import { loadTasks, updateTask } from "../../data/taskStore";
+import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
+
+function calcPoints(subtasks) {
+  const total = subtasks.reduce((s, x) => s + Number(x.points || 0), 0);
+  const done = subtasks
+    .filter((x) => x.done)
+    .reduce((s, x) => s + Number(x.points || 0), 0);
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  return { total, done, pct };
+}
+
+function makeId(taskId, prefix = "ST") {
+  const rnd =
+    (typeof crypto !== "undefined" && crypto.randomUUID && crypto.randomUUID()) ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${taskId}-${prefix}-${rnd}`;
+}
+
+function ProgressBar({ pct }) {
+  return (
+    <div className="h-2 bg-white/10 rounded-full mt-3">
+      <div
+        className="h-2 rounded-full"
+        style={{
+          width: `${pct}%`,
+          background:
+            "linear-gradient(135deg, rgba(139,92,246,0.95), rgba(99,102,241,0.9))",
+        }}
+      />
+    </div>
+  );
+}
 
 export default function DevTaskView() {
   const { id } = useParams();
-  const [task, setTask] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
+  const [task, setTask] = useState(() => loadTasks().find((t) => String(t.id) === String(id)) || null);
+  const [subtasks, setSubtasks] = useState(() => (task?.subtasks ? task.subtasks : []));
+  const [newTitle, setNewTitle] = useState("");
+  const [newPoints, setNewPoints] = useState("");
+
+  // If user opens a task directly (or list hasn't synced yet), sync from backend then resolve task.
   useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await fetchDeveloperTaskById(id);
-        if (!active) return;
-        setTask(data);
-      } catch (err) {
-        if (!active) return;
-        setError(err?.message || "Failed to load task details.");
-      } finally {
-        if (active) setLoading(false);
-      }
+    let alive = true;
+    const run = async () => {
+      if (task) return;
+      await syncAssignedTasksToLocalStoreSafe();
+      const found = loadTasks().find((t) => String(t.id) === String(id)) || null;
+      if (alive) setTask(found);
     };
-
-    load();
-
+    run();
     return () => {
-      active = false;
+      alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  if (loading) {
-    return (
-      <DevLayout>
-        <Box sx={{ minHeight: "45vh", display: "grid", placeItems: "center" }}>
-          <Stack spacing={2} alignItems="center">
-            <CircularProgress color="primary" />
-            <Typography color="text.secondary">Loading task...</Typography>
-          </Stack>
-        </Box>
-      </DevLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <DevLayout>
-        <Alert severity="error" sx={{ borderRadius: 3 }}>
-          {error}
-        </Alert>
-      </DevLayout>
-    );
-  }
+  // When the task changes, refresh subtask state from local store.
+  useEffect(() => {
+    if (task) setSubtasks(Array.isArray(task.subtasks) ? task.subtasks : []);
+  }, [task?.id]);
 
   if (!task) {
     return (
       <DevLayout>
-        <Alert severity="warning" sx={{ borderRadius: 3 }}>
-          Task not found.
-        </Alert>
-        <Box sx={{ mt: 2 }}>
-          <Link to="/dev/tasks" style={{ color: "#c4b5fd", fontWeight: 700 }}>
-            Back to tasks
-          </Link>
-        </Box>
+        <h2 className="text-2xl font-bold mb-3">Task not found</h2>
+        <Link to={`/dev/project/${currentProject.id}`} className="btn-outline inline-flex">
+          Back to Project Workspace
+        </Link>
       </DevLayout>
     );
   }
 
+  const progress = calcPoints(subtasks);
+
+  const addSubtask = () => {
+    const title = newTitle.trim();
+    const pts = Number(newPoints);
+
+    if (!title) return;
+    if (!Number.isFinite(pts) || pts <= 0) return;
+
+    const st = { id: makeId(task.id, "ST"), title, points: pts, done: false };
+
+    setSubtasks((prev) => {
+      const next = [...prev, st];
+      updateTask(task.id, (t) => ({ ...t, subtasks: next }));
+      return next;
+    });
+    setNewTitle("");
+    setNewPoints("");
+  };
+
+  const toggleDone = (subId) => {
+    setSubtasks((prev) => {
+      const next = prev.map((s) => (s.id === subId ? { ...s, done: !s.done } : s));
+      updateTask(task.id, (t) => ({ ...t, subtasks: next }));
+      return next;
+    });
+  };
+
+  const removeSubtask = (subId) => {
+    setSubtasks((prev) => {
+      const next = prev.filter((s) => s.id !== subId);
+      updateTask(task.id, (t) => ({ ...t, subtasks: next }));
+      return next;
+    });
+  };
+
   return (
     <DevLayout>
-      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap", mb: 3 }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
-            Task details
-          </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }} noWrap>
-            {task.title}
-          </Typography>
-          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.5 }}>
-            {task.id} • Project {task.projectName || task.projectId || "-"}
-          </Typography>
-        </Box>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs text-slate-400">Task Details</p>
+          <h2 className="text-2xl font-bold truncate">{task.title}</h2>
 
-        <Link to={`/dev/project/${task.projectId}`} style={{ color: "#c4b5fd", fontWeight: 700 }}>
-          Back to project
+          <p className="text-sm text-slate-300 mt-2">
+            <span className="chip-muted mr-2">{task.id}</span>
+            <span className="chip-muted mr-2">Status: {task.status}</span>
+            <span className="chip-muted mr-2">Assignee: {task.assignee}</span>
+            <span className="chip-muted mr-2">Due: {task.dueDate}</span>
+            <span className="chip-muted">Priority: {task.priority}</span>
+          </p>
+
+          {task.description && (
+            <p className="text-sm text-slate-200 mt-4">{task.description}</p>
+          )}
+
+          <p className="text-xs text-slate-400 mt-2">
+            Subtasks and story points are saved in your browser (UI demo).
+          </p>
+        </div>
+
+        <Link to={`/dev/project/${currentProject.id}`} className="btn-outline">
+          Back
         </Link>
-      </Box>
+      </div>
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1.4fr 0.8fr" }, gap: 3 }}>
-        <Card sx={{ p: 2.5 }}>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: "0.12em" }}>
-            Description
-          </Typography>
-          <Typography variant="body1" sx={{ mt: 1.5, color: "rgba(231,233,238,0.88)" }}>
-            {task.description || "No description provided."}
-          </Typography>
-        </Card>
+      {/* Progress */}
+      <div className="glass-card p-4 mt-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">Progress (Story Points)</h3>
+          <div className="text-sm font-semibold">
+            {progress.pct}% ({progress.done}/{progress.total})
+          </div>
+        </div>
+        <ProgressBar pct={progress.pct} />
+      </div>
 
-        <Card sx={{ p: 2.5 }}>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: "0.12em" }}>
-            Metadata
-          </Typography>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        {/* Subtasks list */}
+        <div className="lg:col-span-2 glass-card p-4">
+          <h3 className="text-lg font-bold mb-3">Subtasks</h3>
 
-          <Stack spacing={1.4} sx={{ mt: 1.5 }}>
-            <Box sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
-                Status
-              </Typography>
-              <Typography sx={{ fontWeight: 800 }}>{task.status}</Typography>
-            </Box>
+          <div className="space-y-2">
+            {subtasks.map((s) => (
+              <div
+                key={s.id}
+                className="rounded-2xl border border-white/10 bg-white/5 p-3 flex items-start justify-between"
+              >
+                <div className="flex gap-3">
+                  <input
+                    type="checkbox"
+                    checked={!!s.done}
+                    onChange={() => toggleDone(s.id)}
+                    className="mt-1 accent-violet-500"
+                  />
+                  <div>
+                    <p className="font-semibold text-sm">{s.title}</p>
+                    <p className="text-xs text-slate-400">{s.points} story points</p>
+                  </div>
+                </div>
 
-            <Box sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
-                Priority
-              </Typography>
-              <Typography sx={{ fontWeight: 800 }}>{task.priority}</Typography>
-            </Box>
+                <button type="button" onClick={() => removeSubtask(s.id)} className="btn-outline px-3 py-1.5 text-xs">
+                  Remove
+                </button>
+              </div>
+            ))}
 
-            <Box sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,238,0.08)" }}>
-              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
-                Assigned to
-              </Typography>
-              <Typography sx={{ fontWeight: 800 }}>{task.assignedToName || "You"}</Typography>
-            </Box>
+            {subtasks.length === 0 && (
+              <p className="text-sm text-slate-300">No subtasks yet. Add one below.</p>
+            )}
+          </div>
+        </div>
 
-            <Box sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
-                Due date
-              </Typography>
-              <Typography sx={{ fontWeight: 800 }}>{task.dueDate}</Typography>
-            </Box>
-          </Stack>
-        </Card>
-      </Box>
+        {/* Add subtask */}
+        <div className="glass-card p-4">
+          <h3 className="text-lg font-bold mb-3">Create Subtask</h3>
+
+          <label className="text-xs text-slate-400">Title</label>
+          <input
+            className="input mt-1"
+            placeholder="e.g., Create API endpoint"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+
+          <label className="text-xs text-slate-400 mt-3 block">Story Points</label>
+          <input
+            className="input mt-1"
+            placeholder="e.g., 3"
+            value={newPoints}
+            onChange={(e) => setNewPoints(e.target.value)}
+            inputMode="numeric"
+          />
+
+          <button type="button" onClick={addSubtask} className="mt-4 w-full btn-primary">
+            Add Subtask
+          </button>
+
+          <p className="text-xs text-slate-400 mt-3">
+            Story points are used to calculate task progress.
+          </p>
+        </div>
+      </div>
     </DevLayout>
   );
 }
