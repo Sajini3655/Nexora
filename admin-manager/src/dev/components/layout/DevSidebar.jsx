@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FiHome, FiUser, FiMessageCircle } from "react-icons/fi";
+import { FiHome, FiUser, FiMessageCircle, FiList } from "react-icons/fi";
+import { useAuth } from "../../../context/AuthContext.jsx";
 import {
   Box,
   Divider,
@@ -26,10 +27,19 @@ function SectionLabel({ children }) {
 }
 
 export default function DevSidebar({ open, onClose }) {
+  const { moduleAccess } = useAuth();
+
   const menuItems = [
-    { name: "Dashboard", icon: <FiHome />, path: "/dev" },
+    ...(moduleAccess?.DASHBOARD
+      ? [{ name: "Dashboard", icon: <FiHome />, path: "/dev" }]
+      : []),
+    ...(moduleAccess?.TASKS
+      ? [{ name: "Tasks", icon: <FiList />, path: "/dev/tasks" }]
+      : []),
     { name: "Profile", icon: <FiUser />, path: "/dev/profile" },
-    { name: "Chat", icon: <FiMessageCircle />, path: "/dev/chat" }
+    ...(moduleAccess?.CHAT
+      ? [{ name: "Chat", icon: <FiMessageCircle />, path: "/dev/chat" }]
+      : []),
   ];
 
   return (

@@ -184,7 +184,10 @@ export default function AdminDashboard() {
         <SectionCard
           title="User Roles"
           subtitle="Live role counts from the backend"
-          actionLabel="Synced"
+          actionLabel={getFreshnessLabel(
+            systemHealth?.lastCheckedAt,
+            systemHealth?.refreshIntervalSeconds
+          )}
         >
           <Box
             sx={{
@@ -243,7 +246,10 @@ export default function AdminDashboard() {
         <SectionCard
           title="Growth Snapshot"
           subtitle="Registrations for the last 7 days"
-          actionLabel="Live"
+          actionLabel={getFreshnessLabel(
+            systemHealth?.lastCheckedAt,
+            systemHealth?.refreshIntervalSeconds
+          )}
         >
           <Box sx={{ height: 300, width: "100%", minWidth: 0 }}>
             {registrations.length === 0 ? (
@@ -294,7 +300,10 @@ export default function AdminDashboard() {
         <SectionCard
           title="User Overview"
           subtitle="Current account status"
-          actionLabel="Realtime"
+          actionLabel={getFreshnessLabel(
+            systemHealth?.lastCheckedAt,
+            systemHealth?.refreshIntervalSeconds
+          )}
         >
           <Box
             sx={{
@@ -364,10 +373,29 @@ export default function AdminDashboard() {
             <MetricCard
               compact
               title="Database"
-              value={systemHealth?.databaseStatus ?? "-"}
+              value={formatDatabaseValue(
+                systemHealth?.databaseStatus,
+                systemHealth?.databaseLatencyMs
+              )}
               icon={<Database size={20} />}
               badge={systemHealth?.databaseStatus === "OK" ? "LIVE" : "CHECK"}
               good={systemHealth?.databaseStatus === "OK"}
+            />
+            <MetricCard
+              compact
+              title="Mail"
+              value={systemHealth?.mailStatus ?? "-"}
+              icon={<Mail size={20} />}
+              badge={systemHealth?.mailStatus === "OK" ? "LIVE" : "CHECK"}
+              good={systemHealth?.mailStatus === "OK"}
+            />
+            <MetricCard
+              compact
+              title="AI Service"
+              value={systemHealth?.aiServiceStatus ?? "-"}
+              icon={<Activity size={20} />}
+              badge={systemHealth?.aiServiceStatus === "OK" ? "LIVE" : "CHECK"}
+              good={systemHealth?.aiServiceStatus === "OK"}
             />
             <MetricCard
               compact
@@ -389,7 +417,7 @@ export default function AdminDashboard() {
         <SectionCard
           title="Admin Signals"
           subtitle="Quick health summary"
-          actionLabel="Overview"
+          actionLabel={formatLastChecked(systemHealth?.lastCheckedAt)}
         >
           <Stack spacing={2}>
             <MiniSignal
@@ -407,6 +435,14 @@ export default function AdminDashboard() {
             <MiniSignal
               label="Weekly new users"
               value={`${stats?.newUsersThisWeek ?? 0}`}
+            />
+            <MiniSignal
+              label="Mail service"
+              value={`${systemHealth?.mailStatus ?? "UNKNOWN"}`}
+            />
+            <MiniSignal
+              label="AI service"
+              value={`${systemHealth?.aiServiceStatus ?? "UNKNOWN"}`}
             />
           </Stack>
         </SectionCard>
@@ -956,6 +992,39 @@ function formatDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatDatabaseValue(status, latencyMs) {
+  if (!status) return "-";
+  if (latencyMs == null) return status;
+  return `${status} (${latencyMs} ms)`;
+}
+
+function getFreshnessLabel(lastCheckedAt, refreshIntervalSeconds = 10) {
+  if (!lastCheckedAt) return "Not synced";
+
+  const checkedAt = new Date(lastCheckedAt);
+  if (Number.isNaN(checkedAt.getTime())) return "Not synced";
+
+  const ageSeconds = Math.floor((Date.now() - checkedAt.getTime()) / 1000);
+  const staleAfter = Math.max(10, Number(refreshIntervalSeconds || 10) * 2);
+
+  if (ageSeconds <= staleAfter) {
+    return `Live (${ageSeconds}s ago)`;
+  }
+
+  return `Stale (${ageSeconds}s ago)`;
+}
+
+function formatLastChecked(lastCheckedAt) {
+  if (!lastCheckedAt) return "No timestamp";
+  const checkedAt = new Date(lastCheckedAt);
+  if (Number.isNaN(checkedAt.getTime())) return "No timestamp";
+  return `Checked ${checkedAt.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })}`;
 }
 
 const heroChip = {

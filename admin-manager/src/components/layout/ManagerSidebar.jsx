@@ -1,9 +1,11 @@
 import React from "react";
 import { Box, List, ListItemButton, ListItemText } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function ManagerSidebar({ open, onClose }) {
   const navigate = useNavigate();
+  const { moduleAccess } = useAuth();
 
   const handleNavigate = (path) => {
     navigate(path);
@@ -26,21 +28,29 @@ export default function ManagerSidebar({ open, onClose }) {
       }}
     >
       <List>
-        <ListItemButton onClick={() => handleNavigate("/manager")}>
-          <ListItemText primary="Main Dashboard" />
-        </ListItemButton>
+        {moduleAccess?.DASHBOARD ? (
+          <ListItemButton onClick={() => handleNavigate("/manager")}>
+            <ListItemText primary="Main Dashboard" />
+          </ListItemButton>
+        ) : null}
 
-        <ListItemButton onClick={() => handleNavigate("/manager/add-project")}>
-          <ListItemText primary="Add Project" />
-        </ListItemButton>
+        {moduleAccess?.FILES ? (
+          <>
+            <ListItemButton onClick={() => handleNavigate("/manager/add-project")}>
+              <ListItemText primary="Add Project" />
+            </ListItemButton>
 
-        <ListItemButton onClick={() => handleNavigate("/manager/project-management")}>
-          <ListItemText primary="Project Management" />
-        </ListItemButton>
+            <ListItemButton onClick={() => handleNavigate("/manager/project-management")}>
+              <ListItemText primary="Project Management" />
+            </ListItemButton>
+          </>
+        ) : null}
 
-        <ListItemButton onClick={() => handleNavigate("/manager/ai-assignment")}>
-          <ListItemText primary="AI Task Assignment" />
-        </ListItemButton>
+        {moduleAccess?.TASKS ? (
+          <ListItemButton onClick={() => handleNavigate("/manager/ai-assignment")}>
+            <ListItemText primary="AI Task Assignment" />
+          </ListItemButton>
+        ) : null}
       </List>
     </Box>
   );
