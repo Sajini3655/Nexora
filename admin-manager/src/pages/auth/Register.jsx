@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../utils/constants";
 
-const API_BASE = "http://localhost:8081";
+const API_BASE = API_BASE_URL;
 
 export default function Register() {
   const token = useMemo(() => {

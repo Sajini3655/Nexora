@@ -18,7 +18,7 @@ function roleHome(role, moduleAccess = {}) {
   if (r === "DEVELOPER") {
     if (moduleAccess.DASHBOARD) return "/dev";
     if (moduleAccess.TASKS) return "/dev/tasks";
-    if (moduleAccess.CHAT) return "/dev/chat/P-001";
+    if (moduleAccess.CHAT) return "/dev/chat";
     if (moduleAccess.FILES) return "/dev/projects";
     return "/dev/profile";
   }
