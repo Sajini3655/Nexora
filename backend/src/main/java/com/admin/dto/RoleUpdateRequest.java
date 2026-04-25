@@ -1,12 +1,14 @@
 package com.admin.dto;
 
 import com.admin.entity.Role;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.util.Set;
 
 @Data
 public class RoleUpdateRequest {
 
-    @NotNull(message = "Role is required")
     private Role role;
+
+    private Set<Role> roles;
 }

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import useApi from "../hooks/useApi.jsx";
-import { normalizeRole } from "../utils/permissions";
+import { normalizeRole, normalizeRoles } from "../utils/permissions";
 
 const AuthContext = createContext(null);
 
@@ -25,7 +25,18 @@ export function AuthProvider({ children }) {
       setAccessLoading(true);
       const res = await api.get("/auth/me");
       const me = res.data;
-      const normalizedUser = { ...me, role: normalizeRole(me.role) };
+      const mergedRoles = Array.from(
+        new Set([
+          normalizeRole(me.role),
+          ...normalizeRoles(me.roles || []),
+        ].filter(Boolean))
+      );
+
+      const normalizedUser = {
+        ...me,
+        role: normalizeRole(me.role),
+        roles: mergedRoles,
+      };
       setUser(normalizedUser);
 
       try {

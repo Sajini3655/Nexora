@@ -24,12 +24,13 @@ public class TicketService {
     
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final LiveUpdatePublisher liveUpdatePublisher;
     
     @Transactional(readOnly = true)
     public List<TicketDto> getTicketsForUser(String userEmail) {
         User user = getUserByEmail(userEmail);
 
-        List<Ticket> tickets = (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER)
+        List<Ticket> tickets = (user.getAllRoles().contains(Role.ADMIN) || user.getAllRoles().contains(Role.MANAGER))
                 ? ticketRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
                 : ticketRepository.findByCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(user.getId(), user.getId());
 
@@ -41,7 +42,7 @@ public class TicketService {
         User user = getUserByEmail(userEmail);
         Ticket ticket = getTicketOrThrow(id);
 
-        if (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER) {
+        if (user.getAllRoles().contains(Role.ADMIN) || user.getAllRoles().contains(Role.MANAGER)) {
             return toDto(ticket);
         }
 
@@ -56,7 +57,9 @@ public class TicketService {
     public TicketDto createTicket(String userEmail, Ticket ticket) {
         User user = getUserByEmail(userEmail);
         ticket.setCreatedBy(user);
-        return toDto(ticketRepository.save(ticket));
+        TicketDto dto = toDto(ticketRepository.save(ticket));
+        liveUpdatePublisher.publishTicketsChanged("created");
+        return dto;
     }
     
     @Transactional
@@ -73,7 +76,9 @@ public class TicketService {
         ticket.setStatus(ticketDetails.getStatus());
         ticket.setPriority(ticketDetails.getPriority());
         
-        return toDto(ticketRepository.save(ticket));
+        TicketDto dto = toDto(ticketRepository.save(ticket));
+        liveUpdatePublisher.publishTicketsChanged("updated");
+        return dto;
     }
     
     @Transactional
@@ -86,6 +91,7 @@ public class TicketService {
         }
 
         ticketRepository.delete(Objects.requireNonNull(ticket));
+        liveUpdatePublisher.publishTicketsChanged("deleted");
     }
 
     private User getUserByEmail(String email) {
@@ -105,7 +111,7 @@ public class TicketService {
     }
 
     private boolean canModifyTicket(Ticket ticket, User user) {
-        if (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER) {
+        if (user.getAllRoles().contains(Role.ADMIN) || user.getAllRoles().contains(Role.MANAGER)) {
             return true;
         }
 

@@ -20,13 +20,17 @@ public class TaskAssignmentService {
     private final DeveloperProfileRepository profileRepository;
     private final DeveloperSkillRepository skillRepository;
     private final TaskRepository taskRepository;
+    private final LiveUpdatePublisher liveUpdatePublisher;
 
     /**
      * Manager view: list developers with skills + workload.
      */
     @Transactional(readOnly = true)
     public List<DeveloperSummaryDto> listDevelopers() {
-        List<User> devUsers = userRepository.findByRoleAndEnabled(Role.DEVELOPER, true);
+        List<User> devUsers = userRepository.findAll().stream()
+            .filter(user -> Boolean.TRUE.equals(user.getEnabled()))
+            .filter(user -> user.getAllRoles().contains(Role.DEVELOPER))
+            .toList();
 
         return devUsers.stream()
                 .map(this::toDeveloperSummary)
@@ -88,7 +92,7 @@ public class TaskAssignmentService {
 
         User assignee = null;
         if (req.getAssignedToId() != null) {
-            assignee = userRepository.findById(req.getAssignedToId())
+            assignee = userRepository.findById(Objects.requireNonNull(req.getAssignedToId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
         }
 
@@ -105,8 +109,10 @@ public class TaskAssignmentService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        TaskItem saved = taskRepository.save(task);
-        return toTaskDto(saved);
+        TaskItem saved = Objects.requireNonNull(taskRepository.save(task));
+        TaskDto dto = toTaskDto(saved);
+        liveUpdatePublisher.publishTasksChanged("created");
+        return dto;
     }
 
     @Transactional
@@ -114,7 +120,7 @@ public class TaskAssignmentService {
         User manager = userRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
-        TaskItem task = taskRepository.findById(taskId)
+        TaskItem task = taskRepository.findById(Objects.requireNonNull(taskId))
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         if (task.getCreatedBy() == null || task.getCreatedBy().getId() == null
@@ -124,10 +130,10 @@ public class TaskAssignmentService {
 
         User assignee = null;
         if (req != null && req.getAssignedToId() != null) {
-            assignee = userRepository.findById(req.getAssignedToId())
+            assignee = userRepository.findById(Objects.requireNonNull(req.getAssignedToId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
 
-            if (assignee.getRole() != Role.DEVELOPER) {
+            if (!assignee.getAllRoles().contains(Role.DEVELOPER)) {
                 throw new RuntimeException("Assignee must be a developer.");
             }
 
@@ -140,7 +146,9 @@ public class TaskAssignmentService {
         task.setUpdatedAt(LocalDateTime.now());
 
         TaskItem saved = taskRepository.save(task);
-        return toTaskDto(saved);
+        TaskDto dto = toTaskDto(saved);
+        liveUpdatePublisher.publishTasksChanged("assigned");
+        return dto;
     }
 
     @Transactional(readOnly = true)

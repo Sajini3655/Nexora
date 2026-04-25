@@ -10,7 +10,7 @@ import {
   Menu,
   MenuItem,
   Toolbar,
-  Typography
+  Typography,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
@@ -36,91 +36,71 @@ export default function ClientTopbar({ onToggleSidebar }) {
 
   return (
     <AppBar
-      position="static"
+      position="sticky"
       elevation={0}
       sx={{
-        backdropFilter: "blur(14px)",
-        background:
-          "linear-gradient(180deg, rgba(15,18,35,0.92), rgba(15,18,35,0.55))",
-        borderBottom: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: 3
+        top: 0,
+        zIndex: 20,
+        bgcolor: "#07111f",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      <Toolbar sx={{ minHeight: 72, gap: 1.5 }}>
+      <Toolbar sx={{ minHeight: 64, px: { xs: 2, md: 3 } }}>
         <IconButton
-          edge="start"
           color="inherit"
           onClick={onToggleSidebar}
           sx={{
-            mr: 1,
+            mr: 1.5,
+            border: "1px solid rgba(255,255,255,0.10)",
             borderRadius: 2,
-            border: "1px solid rgba(255,255,255,0.10)"
           }}
         >
           <MenuIcon />
         </IconButton>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
-          <Box
-            sx={{
-              width: 28,
-              height: 28,
-              borderRadius: 2,
-              background:
-                "linear-gradient(135deg, rgba(124,92,255,0.95), rgba(124,92,255,0.35))",
-              border: "1px solid rgba(255,255,255,0.14)",
-              boxShadow: "0 12px 34px rgba(124,92,255,0.18)"
-            }}
-          />
-          <Box>
-            <Typography sx={{ fontWeight: 950, letterSpacing: -0.4 }}>
-              Nexora
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.7 }}>
-              Client Workspace
-            </Typography>
-          </Box>
+        <Box>
+          <Typography sx={{ fontWeight: 900, lineHeight: 1 }}>
+            Client Workspace
+          </Typography>
+          <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+            Tickets and workstream updates
+          </Typography>
         </Box>
 
-        <Box sx={{ flexGrow: 1 }} />
+        <Box sx={{ flex: 1 }} />
 
-        <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1.2 }}>
-          <Chip
-            size="small"
-            label="CLIENT"
+        <Chip
+          size="small"
+          label="CLIENT"
+          sx={{
+            display: { xs: "none", sm: "inline-flex" },
+            mr: 1.5,
+            bgcolor: "rgba(124,92,255,0.16)",
+            color: "#ddd6fe",
+            border: "1px solid rgba(124,92,255,0.28)",
+            fontWeight: 800,
+          }}
+        />
+
+        <IconButton
+          onClick={(e) => setAnchorEl(e.currentTarget)}
+          sx={{
+            p: 0.4,
+            border: "1px solid rgba(255,255,255,0.12)",
+          }}
+        >
+          <Avatar
             sx={{
-              height: 22,
+              width: 32,
+              height: 32,
+              bgcolor: "#6d5dfc",
+              fontSize: 13,
               fontWeight: 900,
-              letterSpacing: 0.3,
-              background: "rgba(124,92,255,0.16)",
-              border: "1px solid rgba(124,92,255,0.25)"
-            }}
-          />
-          <Typography variant="body2" sx={{ opacity: 0.85, fontWeight: 800 }}>
-            {displayName}
-          </Typography>
-          <IconButton
-            onClick={(e) => setAnchorEl(e.currentTarget)}
-            sx={{
-              p: 0.6,
-              borderRadius: 3,
-              border: "1px solid rgba(255,255,255,0.16)",
-              backgroundColor: "rgba(255,255,255,0.04)"
             }}
           >
-            <Avatar
-              sx={{
-                width: 32,
-                height: 32,
-                bgcolor: "primary.main",
-                fontSize: 13,
-                fontWeight: 900
-              }}
-            >
-              {initials}
-            </Avatar>
-          </IconButton>
-        </Box>
+            {initials}
+          </Avatar>
+        </IconButton>
 
         <Menu
           anchorEl={anchorEl}
@@ -129,37 +109,22 @@ export default function ClientTopbar({ onToggleSidebar }) {
           PaperProps={{
             sx: {
               mt: 1,
-              minWidth: 240,
-              borderRadius: 3,
-              background: "rgba(15,18,35,0.92)",
-              backdropFilter: "blur(14px)",
-              border: "1px solid rgba(255,255,255,0.12)"
-            }
+              minWidth: 230,
+              borderRadius: 2,
+              bgcolor: "#0f172a",
+              color: "#e5e7eb",
+              border: "1px solid rgba(255,255,255,0.10)",
+            },
           }}
         >
-          <Box sx={{ px: 2, py: 1.6 }}>
-            <Typography fontWeight={950} sx={{ lineHeight: 1.1 }}>
-              {displayName}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.7 }}>
+          <Box sx={{ px: 2, py: 1.5 }}>
+            <Typography fontWeight={900}>{displayName}</Typography>
+            <Typography variant="caption" sx={{ color: "#94a3b8" }}>
               {email}
             </Typography>
-
-            <Box sx={{ mt: 1 }}>
-              <Chip
-                size="small"
-                label="CLIENT"
-                sx={{
-                  height: 22,
-                  fontWeight: 900,
-                  background: "rgba(124,92,255,0.16)",
-                  border: "1px solid rgba(124,92,255,0.25)"
-                }}
-              />
-            </Box>
           </Box>
 
-          <Divider />
+          <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
 
           <MenuItem
             onClick={() => {
@@ -171,12 +136,11 @@ export default function ClientTopbar({ onToggleSidebar }) {
             My Profile
           </MenuItem>
 
-          <Divider />
-
           <MenuItem
             onClick={() => {
               setAnchorEl(null);
               localStorage.removeItem("user");
+              localStorage.removeItem("token");
               navigate("/login");
             }}
           >

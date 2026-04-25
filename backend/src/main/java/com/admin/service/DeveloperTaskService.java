@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,7 +38,7 @@ public class DeveloperTaskService {
         User dev = userRepository.findByEmail(developerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Developer not found"));
 
-        TaskItem task = taskRepository.findById(taskId)
+        TaskItem task = taskRepository.findById(Objects.requireNonNull(taskId))
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         if (task.getAssignedTo() == null || task.getAssignedTo().getId() == null || !task.getAssignedTo().getId().equals(dev.getId())) {
@@ -61,6 +62,8 @@ public class DeveloperTaskService {
                 .assignedToId(t.getAssignedTo() == null ? null : t.getAssignedTo().getId())
                 .assignedToName(t.getAssignedTo() == null ? null : t.getAssignedTo().getName())
                 .createdAt(t.getCreatedAt())
+                .projectId(t.getProject() == null ? null : t.getProject().getId())
+                .projectName(t.getProject() == null ? null : t.getProject().getName())
                 .build();
     }
 }

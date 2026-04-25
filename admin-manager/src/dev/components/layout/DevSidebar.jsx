@@ -1,30 +1,21 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FiHome, FiUser, FiMessageCircle, FiList } from "react-icons/fi";
+import { FiHome, FiMessageCircle, FiFolder } from "react-icons/fi";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import {
   Box,
   Divider,
   Drawer,
+  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Typography
+  Typography,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 
-const drawerWidth = 268;
-
-function SectionLabel({ children }) {
-  return (
-    <Typography
-      variant="caption"
-      sx={{ px: 2, pt: 1.5, pb: 0.75, opacity: 0.65, fontWeight: 800 }}
-    >
-      {children}
-    </Typography>
-  );
-}
+const drawerWidth = 260;
 
 export default function DevSidebar({ open, onClose }) {
   const { moduleAccess } = useAuth();
@@ -33,10 +24,7 @@ export default function DevSidebar({ open, onClose }) {
     ...(moduleAccess?.DASHBOARD
       ? [{ name: "Dashboard", icon: <FiHome />, path: "/dev" }]
       : []),
-    ...(moduleAccess?.TASKS
-      ? [{ name: "Tasks", icon: <FiList />, path: "/dev/tasks" }]
-      : []),
-    { name: "Profile", icon: <FiUser />, path: "/dev/profile" },
+    { name: "Projects", icon: <FiFolder />, path: "/dev/projects" },
     ...(moduleAccess?.CHAT
       ? [{ name: "Chat", icon: <FiMessageCircle />, path: "/dev/chat" }]
       : []),
@@ -49,95 +37,106 @@ export default function DevSidebar({ open, onClose }) {
       variant="temporary"
       ModalProps={{ keepMounted: true }}
       sx={{
-        [`& .MuiDrawer-paper`]: {
+        "& .MuiDrawer-paper": {
           width: drawerWidth,
           boxSizing: "border-box",
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
-          borderRight: "1px solid rgba(255,255,255,0.10)",
-          backdropFilter: "blur(14px)"
-        }
+          bgcolor: "#0b1628",
+          color: "#e5e7eb",
+          borderRight: "1px solid rgba(255,255,255,0.08)",
+        },
       }}
     >
-      <Box sx={{ p: 2.2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
-          <Box
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: 2.2,
-              background:
-                "linear-gradient(135deg, rgba(124,92,255,0.95), rgba(124,92,255,0.35))",
-              boxShadow: "0 14px 40px rgba(124,92,255,0.20)",
-              border: "1px solid rgba(255,255,255,0.18)"
-            }}
-          />
+      <Box sx={{ height: "100%", p: 2, position: "relative" }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 2,
+            px: 0.5,
+            py: 0.5,
+          }}
+        >
           <Box>
-            <Typography sx={{ fontWeight: 950, letterSpacing: -0.4 }}>
-              Nexora Dev
+            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+              Nexora
             </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.7 }}>
+            <Typography variant="caption" sx={{ color: "#94a3b8" }}>
               Developer Workspace
             </Typography>
           </Box>
-        </Box>
-      </Box>
 
-      <Divider />
-
-      <SectionLabel>CORE</SectionLabel>
-      <List sx={{ px: 1.2, pb: 1 }}>
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            end={item.path === "/dev"}
+          <IconButton
             onClick={onClose}
-            style={({ isActive }) => ({ textDecoration: "none" })}
+            size="small"
+            sx={{
+              color: "#cbd5e1",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
           >
-            {({ isActive }) => (
-              <ListItemButton
-                selected={isActive}
-                sx={{
-                  borderRadius: 2.2,
-                  mb: 0.6,
-                  position: "relative",
-                  overflow: "hidden",
-                  "&::before": {
-                    content: '""',
-                    position: "absolute",
-                    left: 0,
-                    top: 8,
-                    bottom: 8,
-                    width: 4,
-                    borderRadius: 99,
-                    background:
-                      "linear-gradient(180deg, rgba(124,92,255,0.95), rgba(124,92,255,0.25))",
-                    opacity: isActive ? 1 : 0
-                  },
-                  "&.Mui-selected": {
-                    background:
-                      "linear-gradient(90deg, rgba(124,92,255,0.22), rgba(124,92,255,0.08))",
-                    border: "1px solid rgba(124,92,255,0.25)"
-                  },
-                  "&:hover": { backgroundColor: "rgba(255,255,255,0.06)" }
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 40, opacity: 0.92 }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.name}
-                  primaryTypographyProps={{ fontWeight: 800 }}
-                />
-              </ListItemButton>
-            )}
-          </NavLink>
-        ))}
-      </List>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
 
-      <Box sx={{ mt: "auto", p: 2, opacity: 0.65, fontSize: 12 }}>
-        Developer Role • Workspace Mode
+        <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.08)" }} />
+
+        <List sx={{ p: 0 }}>
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              end={item.path === "/dev"}
+              onClick={onClose}
+              style={{ textDecoration: "none" }}
+            >
+              {({ isActive }) => (
+                <ListItemButton
+                  selected={isActive}
+                  sx={{
+                    mb: 0.7,
+                    borderRadius: 2,
+                    py: 1.15,
+                    px: 1.4,
+                    color: isActive ? "#ffffff" : "#cbd5e1",
+                    bgcolor: isActive ? "rgba(124,92,255,0.18)" : "transparent",
+                    border: isActive
+                      ? "1px solid rgba(124,92,255,0.35)"
+                      : "1px solid transparent",
+                    "&:hover": {
+                      bgcolor: isActive
+                        ? "rgba(124,92,255,0.24)"
+                        : "rgba(255,255,255,0.05)",
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 36,
+                      color: isActive ? "#ffffff" : "#94a3b8",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+
+                  <ListItemText
+                    primary={item.name}
+                    primaryTypographyProps={{
+                      fontSize: 14,
+                      fontWeight: isActive ? 800 : 600,
+                    }}
+                  />
+                </ListItemButton>
+              )}
+            </NavLink>
+          ))}
+        </List>
+
+        <Box sx={{ position: "absolute", bottom: 18, left: 18, right: 18 }}>
+          <Divider sx={{ mb: 1.5, borderColor: "rgba(255,255,255,0.08)" }} />
+          <Typography variant="caption" sx={{ color: "#64748b" }}>
+            Tasks are available inside projects.
+          </Typography>
+        </Box>
       </Box>
     </Drawer>
   );

@@ -7,16 +7,33 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class UserResponse {
+
     private Long id;
+
     private String name;
+
     private String email;
+
+    /*
+     * Primary role.
+     * Keep this because old working pages may still use user.role.
+     */
     private Role role;
+
+    /*
+     * All roles.
+     * Example: ["CLIENT", "MANAGER"]
+     */
+    private List<Role> roles;
+
     private Boolean enabled;
+
     private LocalDateTime createdAt;
 }

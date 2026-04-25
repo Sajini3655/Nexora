@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { fetchManagerTasks, fetchProjects } from "../../../services/managerService";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
 export default function ProjectManagement() {
   const navigate = useNavigate();
@@ -38,43 +39,35 @@ export default function ProjectManagement() {
     );
   };
 
-  useEffect(() => {
-    let active = true;
-
-    const loadProjects = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const [projectsData, tasksData] = await Promise.all([
-          fetchProjects(),
-          fetchManagerTasks(),
-        ]);
-        if (!active) {
-          return;
-        }
-        setProjects(Array.isArray(projectsData) ? projectsData : []);
-        setTasks(Array.isArray(tasksData) ? tasksData : []);
-      } catch (err) {
-        if (!active) {
-          return;
-        }
-        setError(
-          err?.response?.data?.message ||
-            "Failed to load project management data."
-        );
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadProjects();
-
-    return () => {
-      active = false;
-    };
+  const loadProjects = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const [projectsData, tasksData] = await Promise.all([
+        fetchProjects(),
+        fetchManagerTasks(),
+      ]);
+      setProjects(Array.isArray(projectsData) ? projectsData : []);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          "Failed to load project management data."
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
+
+  const liveTopics = useMemo(
+    () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"],
+    []
+  );
+  useLiveRefresh(liveTopics, loadProjects, { debounceMs: 550 });
 
   const projectCards = useMemo(() => {
     const tasksByProject = new Map();

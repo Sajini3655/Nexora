@@ -10,6 +10,8 @@ import {
   Alert,
   Button as MUIButton,
   Stack,
+  Checkbox,
+  ListItemText,
 } from "@mui/material";
 
 import Input from "../../../components/ui/Input";
@@ -55,7 +57,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("CLIENT");
+  const [roles, setRoles] = useState(["CLIENT"]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [warn, setWarn] = useState("");
@@ -65,13 +67,13 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
   const [copied, setCopied] = useState(false);
 
   const canSubmit = useMemo(() => {
-    return name.trim().length >= 2 && isValidEmail(email) && !!role;
-  }, [name, email, role]);
+    return name.trim().length >= 2 && isValidEmail(email) && roles.length > 0;
+  }, [name, email, roles]);
 
   const reset = () => {
     setName("");
     setEmail("");
-    setRole("CLIENT");
+    setRoles(["CLIENT"]);
     setMsg("");
     setWarn("");
     setErr("");
@@ -106,7 +108,8 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
       const res = await api.post("/admin/users/invite", {
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        role,
+        role: roles[0],
+        roles,
       });
 
       const data = res?.data || {};
@@ -222,14 +225,22 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
 
           <Input
             select
-            label="Role"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
+            label="Roles"
+            value={roles}
+            onChange={(e) => {
+              const value = e.target.value;
+              setRoles(Array.isArray(value) ? value : [value]);
+            }}
             disabled={sent}
+            SelectProps={{
+              multiple: true,
+              renderValue: (selected) => selected.join(", "),
+            }}
           >
             {ROLES.map((r) => (
               <MenuItem key={r} value={r}>
-                {r}
+                <Checkbox checked={roles.includes(r)} size="small" />
+                <ListItemText primary={r} />
               </MenuItem>
             ))}
           </Input>

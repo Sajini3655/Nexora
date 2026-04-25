@@ -1,26 +1,29 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
-  Button,
   Chip,
   CircularProgress,
   LinearProgress,
+  Paper,
   Stack,
   Typography,
 } from "@mui/material";
 import DevLayout from "../../components/layout/DevLayout";
 import TicketWidget from "../../components/tickets/TicketWidget";
-import Card from "../../../components/ui/Card.jsx";
 import { loadTasks } from "../../data/taskStore";
-import { loadProfileFromBackendSafe } from "../../data/profileStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
 import { loadDeveloperTicketsFromBackendSafe } from "../../data/ticketApi";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
 function isCompletedTask(task) {
   const status = String(task?.status || "").toLowerCase();
   return status === "completed" || status === "done";
+}
+
+function isActiveTask(task) {
+  const status = String(task?.status || "").toLowerCase();
+  return status === "assigned" || status === "in progress";
 }
 
 function buildProjectSnapshot(tasks) {
@@ -28,216 +31,311 @@ function buildProjectSnapshot(tasks) {
   const projectId = Number(firstTask.projectId);
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((task) => isCompletedTask(task)).length;
-  const inProgressTasks = tasks.filter((task) => !isCompletedTask(task) && String(task?.status || "").toLowerCase() !== "").length;
+  const activeTasks = tasks.filter((task) => !isCompletedTask(task)).length;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   return {
     id: Number.isFinite(projectId) ? projectId : null,
     name: firstTask.projectName || "Assigned Work",
-    code: Number.isFinite(projectId) ? `#${projectId}` : "Not provided by backend",
+    code: Number.isFinite(projectId) ? `#${projectId}` : "Not provided",
     dueDate: firstTask.dueDate || "-",
     progress,
     totalTasks,
     completedTasks,
-    inProgressTasks,
+    activeTasks,
   };
 }
 
 export default function DevDashboardHome() {
-  const [profile, setProfile] = useState(null);
   const [tasks, setTasks] = useState(() => loadTasks());
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const loadDashboard = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    const loadDashboard = async () => {
-      try {
-        setLoading(true);
-        setError("");
+      const [syncedTasks, syncedTickets] = await Promise.all([
+        syncAssignedTasksToLocalStoreSafe(),
+        loadDeveloperTicketsFromBackendSafe(),
+      ]);
 
-        const [syncedTasks, syncedProfile, syncedTickets] = await Promise.all([
-          syncAssignedTasksToLocalStoreSafe(),
-          loadProfileFromBackendSafe(),
-          loadDeveloperTicketsFromBackendSafe(),
-        ]);
-
-        if (!active) {
-          return;
-        }
-
-        setTasks(Array.isArray(syncedTasks) ? syncedTasks : loadTasks());
-        setProfile(syncedProfile);
-        setTickets(Array.isArray(syncedTickets) ? syncedTickets : []);
-      } catch (err) {
-        if (!active) {
-          return;
-        }
-
-        setError(err?.message || "Failed to load developer dashboard data.");
-        setTasks(loadTasks());
-        setProfile(null);
-        setTickets([]);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadDashboard();
-    const interval = setInterval(loadDashboard, 15000);
-
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
+      setTasks(Array.isArray(syncedTasks) ? syncedTasks : loadTasks());
+      setTickets(Array.isArray(syncedTickets) ? syncedTickets : []);
+    } catch (err) {
+      setError(err?.message || "Failed to load developer dashboard data.");
+      setTasks(loadTasks());
+      setTickets([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const liveTopics = useMemo(
+    () => ["/topic/developer.dashboard", "/topic/tasks", "/topic/tickets"],
+    []
+  );
+
+  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 500 });
+
   const project = useMemo(() => buildProjectSnapshot(tasks), [tasks]);
-  const completedTasks = useMemo(() => tasks.filter((task) => isCompletedTask(task)), [tasks]);
-  const completionRate = useMemo(() => {
-    if (tasks.length === 0) return 0;
-    return Math.round((completedTasks.length / tasks.length) * 100);
-  }, [completedTasks.length, tasks.length]);
-  const chatProjectId = project.id ? String(project.id) : "";
+
+  const stats = useMemo(() => {
+    const completed = tasks.filter((task) => isCompletedTask(task)).length;
+    const active = tasks.filter((task) => isActiveTask(task)).length;
+    const rate = tasks.length === 0 ? 0 : Math.round((completed / tasks.length) * 100);
+
+    return [
+      { title: "Assigned Tasks", value: tasks.length },
+      { title: "Active Tasks", value: active },
+      { title: "Completed", value: completed },
+      { title: "Tickets", value: tickets.length },
+      { title: "Completion", value: `${rate}%` },
+    ];
+  }, [tasks, tickets.length]);
+
+  const recentTasks = tasks.slice(0, 5);
 
   return (
     <DevLayout>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, mb: 3, flexWrap: "wrap" }}>
+      <Stack spacing={3}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: -0.4 }}>
-            Developer Dashboard
+          <Typography variant="h5" sx={{ fontWeight: 900 }}>
+            Dashboard
           </Typography>
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.66)", mt: 0.5 }}>
-            Live overview of your backend-assigned work, profile sync, and chat blockers.
+          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+            Overview of your assigned tasks, tickets, and current work.
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-          <Chip
-            label={profile?.name ? `Signed in as ${profile.name}` : "Developer workspace"}
-            size="small"
-            sx={{
-              bgcolor: "rgba(124,92,255,0.16)",
-              color: "#e7e9ee",
-              border: "1px solid rgba(124,92,255,0.25)",
-              fontWeight: 900,
-              letterSpacing: 0.3,
-            }}
-          />
-          <Chip
-            label={`${project.progress}% synced`}
-            size="small"
-            sx={{
-              bgcolor: "rgba(16,185,129,0.16)",
-              color: "#e7e9ee",
-              border: "1px solid rgba(16,185,129,0.25)",
-              fontWeight: 900,
-              letterSpacing: 0.3,
-            }}
-          />
-        </Stack>
-      </Box>
+        {error ? <Alert severity="warning">{error}</Alert> : null}
 
-      {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
-
-      {loading ? (
-        <Box sx={{ display: "grid", placeItems: "center", minHeight: 240 }}>
-          <CircularProgress sx={{ color: "#6b51ff" }} />
-        </Box>
-      ) : (
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "repeat(3, 1fr)" }, gap: 3 }}>
-          <Box sx={{ gridColumn: { lg: "span 1" } }}>
-            <Card sx={{ p: 2.5, height: "100%" }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, mb: 2 }}>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
-                    Current Project
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 900, mt: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.3 }}>
-                    {project.name}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.5 }}>
-                    ID: <strong>{project.code}</strong> • Due: <strong>{project.dueDate}</strong>
-                  </Typography>
-                </Box>
-
-                <Box sx={{ textAlign: "right", minWidth: "100px" }}>
-                  <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
-                    Progress
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5, letterSpacing: -0.3 }}>
-                    {project.progress}%
-                  </Typography>
-                </Box>
-              </Box>
-
-              <LinearProgress
-                variant="determinate"
-                value={project.progress}
-                sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  bgcolor: "rgba(255,255,255,0.1)",
-                  "& .MuiLinearProgress-bar": {
-                    background: "linear-gradient(135deg, rgba(139,92,246,0.95), rgba(99,102,241,0.9))",
-                  },
-                }}
-              />
-
-              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)", mt: 1, display: "block" }}>
-                {project.totalTasks} assigned tasks • {project.completedTasks} completed • {project.inProgressTasks} in progress
-              </Typography>
-
-              <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                <Button component={Link} to="/dev/tasks" variant="contained" sx={{ borderRadius: 999, fontWeight: 800 }}>
-                  Open tasks
-                </Button>
-                <Button
-                  component={Link}
-                  to={chatProjectId ? `/dev/chat/${chatProjectId}` : "/dev/chat"}
-                  variant="outlined"
-                  sx={{ borderRadius: 999, fontWeight: 800, color: "#e7e9ee", borderColor: "rgba(255,255,255,0.16)" }}
-                >
-                  Open chat
-                </Button>
-              </Box>
-            </Card>
+        {loading ? (
+          <Box sx={{ display: "grid", placeItems: "center", minHeight: 260 }}>
+            <CircularProgress sx={{ color: "#6d5dfc" }} />
           </Box>
+        ) : (
+          <>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "repeat(2, 1fr)",
+                  lg: "repeat(5, 1fr)",
+                },
+                gap: 2,
+              }}
+            >
+              {stats.map((stat) => (
+                <StatCard key={stat.title} title={stat.title} value={stat.value} />
+              ))}
+            </Box>
 
-          <Box sx={{ gridColumn: { lg: "span 2" }, display: "flex", flexDirection: "column", gap: 3 }}>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2 }}>
-              <Card sx={{ p: 2.25 }}>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Assigned tasks</Typography>
-                <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>{tasks.length}</Typography>
-              </Card>
-              <Card sx={{ p: 2.25 }}>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Completed tasks</Typography>
-                <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>{completedTasks.length}</Typography>
-              </Card>
-              <Card sx={{ p: 2.25 }}>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Completion rate</Typography>
-                <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>{completionRate}%</Typography>
-              </Card>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", lg: "0.8fr 1.2fr" },
+                gap: 2,
+              }}
+            >
+              <Panel title="Current Work">
+                <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+                  {project.name}
+                </Typography>
+
+                <Typography sx={{ color: "#94a3b8", fontSize: 13, mt: 0.5 }}>
+                  ID: {project.code} • Due: {project.dueDate}
+                </Typography>
+
+                <Box sx={{ mt: 2 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 0.8,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                      Progress
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                      {project.progress}%
+                    </Typography>
+                  </Box>
+
+                  <LinearProgress
+                    variant="determinate"
+                    value={project.progress}
+                    sx={{
+                      height: 7,
+                      borderRadius: 999,
+                      bgcolor: "rgba(255,255,255,0.08)",
+                      "& .MuiLinearProgress-bar": {
+                        bgcolor: "#6d5dfc",
+                      },
+                    }}
+                  />
+                </Box>
+
+                <Typography variant="caption" sx={{ color: "#94a3b8", mt: 1.2, display: "block" }}>
+                  {project.totalTasks} tasks • {project.completedTasks} completed • {project.activeTasks} active
+                </Typography>
+              </Panel>
+
+              <Panel title="Recent Tasks">
+                {recentTasks.length === 0 ? (
+                  <EmptyText>No assigned tasks found.</EmptyText>
+                ) : (
+                  <Box sx={{ overflowX: "auto" }}>
+                    <Box sx={{ minWidth: 650 }}>
+                      <TableHeader />
+
+                      {recentTasks.map((task) => (
+                        <Box
+                          key={task.id}
+                          sx={{
+                            display: "grid",
+                            gridTemplateColumns: "1.3fr 1fr 0.8fr 0.8fr",
+                            gap: 1.5,
+                            alignItems: "center",
+                            py: 1.35,
+                            borderBottom: "1px solid rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
+                            {task.title}
+                          </Typography>
+
+                          <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                            {task.projectName || "Backend Project"}
+                          </Typography>
+
+                          <StatusChip status={task.status || "Assigned"} />
+
+                          <Typography sx={{ color: "#cbd5e1", fontSize: 13 }}>
+                            {task.priority || "Medium"}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </Panel>
             </Box>
 
             <TicketWidget
-              title="Live Backend Tickets"
-              hint="Pulled from the shared backend for your account"
+              title="Tickets"
+              hint="Backend-visible tickets for this developer session"
               tickets={tickets}
             />
-
-            {tickets.length > 0 ? (
-              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
-                Tip: these are the backend-visible tickets for the current developer session.
-              </Typography>
-            ) : null}
-          </Box>
-        </Box>
-      )}
+          </>
+        )}
+      </Stack>
     </DevLayout>
+  );
+}
+
+function StatCard({ title, value }) {
+  return (
+    <Paper
+      sx={{
+        p: 2,
+        borderRadius: 3,
+        bgcolor: "#0b1628",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "none",
+      }}
+    >
+      <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 700 }}>
+        {title}
+      </Typography>
+      <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.8, color: "#f8fafc" }}>
+        {value}
+      </Typography>
+    </Paper>
+  );
+}
+
+function Panel({ title, children }) {
+  return (
+    <Paper
+      sx={{
+        p: 2.2,
+        borderRadius: 3,
+        bgcolor: "#0b1628",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "none",
+      }}
+    >
+      <Box sx={{ mb: 1.5 }}>
+        <Typography sx={{ fontWeight: 900 }}>{title}</Typography>
+      </Box>
+
+      {children}
+    </Paper>
+  );
+}
+
+function TableHeader() {
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "1.3fr 1fr 0.8fr 0.8fr",
+        gap: 1.5,
+        pb: 1,
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+      }}
+    >
+      {["Task", "Project", "Status", "Priority"].map((heading) => (
+        <Typography
+          key={heading}
+          variant="caption"
+          sx={{ color: "#64748b", fontWeight: 900, textTransform: "uppercase" }}
+        >
+          {heading}
+        </Typography>
+      ))}
+    </Box>
+  );
+}
+
+function StatusChip({ status }) {
+  const normalized = String(status || "").toLowerCase();
+
+  const color =
+    normalized === "completed" || normalized === "done"
+      ? "rgba(34,197,94,0.15)"
+      : normalized === "in progress"
+        ? "rgba(245,158,11,0.15)"
+        : "rgba(124,92,255,0.16)";
+
+  return (
+    <Chip
+      size="small"
+      label={status}
+      sx={{
+        bgcolor: color,
+        color: "#e5e7eb",
+        border: "1px solid rgba(255,255,255,0.08)",
+        fontWeight: 700,
+        width: "fit-content",
+      }}
+    />
+  );
+}
+
+function EmptyText({ children }) {
+  return (
+    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+      {children}
+    </Typography>
   );
 }

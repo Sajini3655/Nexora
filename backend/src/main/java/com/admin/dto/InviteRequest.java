@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.Set;
+
 @Data
 public class InviteRequest {
 
@@ -15,5 +17,7 @@ public class InviteRequest {
     @Email
     private String email;
 
-    private Role role;  // this now maps properly
+    private Role role;
+
+    private Set<Role> roles;
 }
