@@ -38,6 +38,14 @@ SeverityPill.propTypes = {
   severity: PropTypes.oneOf(["Low", "Medium", "High"]).isRequired,
 };
 
+function formatCreatedVia(createdVia) {
+  if (createdVia === "BACKEND") return "Backend";
+  if (createdVia === "EMAIL") return "Email";
+  if (createdVia === "DIRECT_MESSAGE") return "Direct message";
+  if (createdVia === "CHAT_SUMMARY") return "Chat summary";
+  return createdVia;
+}
+
 function countByStatus(tickets) {
   const res = { Open: 0, "In Progress": 0, Done: 0 };
   for (const t of tickets) {
@@ -147,7 +155,7 @@ export default function TicketWidget({ title, hint, tickets }) {
                 </Typography>
 
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 1.5 }}>
-                  <Badge>Created via: {t.createdVia}</Badge>
+                  <Badge>Created via: {formatCreatedVia(t.createdVia)}</Badge>
                   {t.client?.name ? <Badge>Client: {t.client.name}</Badge> : null}
                   {t.detectedFrom?.reason ? <Badge>AI Blocker</Badge> : null}
                 </Stack>
@@ -190,11 +198,11 @@ TicketWidget.propTypes = {
       title: PropTypes.string.isRequired,
       status: PropTypes.oneOf(["Open", "In Progress", "Done"]).isRequired,
       severity: PropTypes.oneOf(["Low", "Medium", "High"]).isRequired,
-      createdVia: PropTypes.oneOf(["EMAIL", "DIRECT_MESSAGE", "CHAT_SUMMARY"]).isRequired,
       createdAt: PropTypes.string.isRequired,
       description: PropTypes.string.isRequired,
       client: PropTypes.shape({ name: PropTypes.string }),
       detectedFrom: PropTypes.shape({ reason: PropTypes.string }),
+      createdVia: PropTypes.oneOf(["EMAIL", "DIRECT_MESSAGE", "CHAT_SUMMARY", "BACKEND"]).isRequired,
     })
   ).isRequired,
 };

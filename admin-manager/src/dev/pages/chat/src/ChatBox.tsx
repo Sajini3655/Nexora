@@ -74,6 +74,35 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     return `${WS_URL}?token=${encodeURIComponent(token)}`;
   }, []);
 
+  const appendLocalUserMessage = (text: string) => {
+    const createdAt = new Date().toISOString();
+    setChat((prev) => [
+      ...prev,
+      {
+        user: "user",
+        message: text,
+        senderId: currentUserId,
+        senderName: currentUserName,
+        createdAt,
+      },
+    ]);
+    return createdAt;
+  };
+
+  const isRecentDuplicate = (existing: Message, incoming: Message) => {
+    if (existing.senderId !== incoming.senderId) return false;
+    if (existing.message !== incoming.message) return false;
+
+    const existingTime = existing.createdAt ? new Date(existing.createdAt).getTime() : NaN;
+    const incomingTime = incoming.createdAt ? new Date(incoming.createdAt).getTime() : NaN;
+
+    if (Number.isNaN(existingTime) || Number.isNaN(incomingTime)) {
+      return true;
+    }
+
+    return Math.abs(incomingTime - existingTime) < 8000;
+  };
+
   useEffect(() => {
     chatWindowRef.current?.scrollTo({
       top: chatWindowRef.current.scrollHeight,
@@ -187,12 +216,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           };
 
           setChat((prev) => {
-            const exists = prev.some(
-              (m) =>
-                m.message === incoming.message &&
-                m.senderId === incoming.senderId &&
-                m.createdAt === incoming.createdAt
-            );
+            const exists = prev.some((m) => isRecentDuplicate(m, incoming));
 
             if (exists) return prev;
             return [...prev, incoming];
@@ -252,8 +276,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       return;
     }
 
+    let localCreatedAt = "";
+
     try {
       setErrorMessage("");
+
+      localCreatedAt = appendLocalUserMessage(input.trim());
 
       stompClientRef.current.publish({
         destination: "/app/chat.send",
@@ -266,6 +294,17 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
       setInput("");
     } catch (error: any) {
+      setChat((prev) =>
+        prev.filter(
+          (m) =>
+            !(
+              m.user === "user" &&
+              m.senderId === currentUserId &&
+              m.message === input.trim() &&
+              m.createdAt === localCreatedAt
+            )
+        )
+      );
       setErrorMessage(error?.message || "Failed to send message.");
     }
   };

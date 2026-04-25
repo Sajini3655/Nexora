@@ -1,223 +1,170 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
 import DevLayout from "../../components/layout/DevLayout";
-import { currentProject } from "../../data/devWorkspaceMock";
-import { loadTasks, updateTask } from "../../data/taskStore";
-import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
+import Card from "../../../components/ui/Card.jsx";
+import { loadTasks } from "../../data/taskStore";
+import { fetchAssignedTaskByIdFromBackend, syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
 
-function calcPoints(subtasks) {
-  const total = subtasks.reduce((s, x) => s + Number(x.points || 0), 0);
-  const done = subtasks
-    .filter((x) => x.done)
-    .reduce((s, x) => s + Number(x.points || 0), 0);
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-  return { total, done, pct };
+function getTaskStatus(task) {
+  return String(task?.status || "Assigned");
 }
 
-function makeId(taskId, prefix = "ST") {
-  const rnd =
-    (typeof crypto !== "undefined" && crypto.randomUUID && crypto.randomUUID()) ||
-    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `${taskId}-${prefix}-${rnd}`;
+function getProgress(task) {
+  const subtasks = Array.isArray(task?.subtasks) ? task.subtasks : [];
+  const total = subtasks.reduce((sum, subtask) => sum + Number(subtask.points || 0), 0);
+  const done = subtasks.filter((subtask) => subtask.done).reduce((sum, subtask) => sum + Number(subtask.points || 0), 0);
+  return total === 0 ? 0 : Math.round((done / total) * 100);
 }
 
-function ProgressBar({ pct }) {
-  return (
-    <div className="h-2 bg-white/10 rounded-full mt-3">
-      <div
-        className="h-2 rounded-full"
-        style={{
-          width: `${pct}%`,
-          background:
-            "linear-gradient(135deg, rgba(139,92,246,0.95), rgba(99,102,241,0.9))",
-        }}
-      />
-    </div>
-  );
+function statusChipColor(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "completed" || normalized === "done") return "success";
+  if (normalized === "in progress") return "warning";
+  return "default";
 }
 
 export default function DevTaskView() {
   const { id } = useParams();
+  const [task, setTask] = useState(() => loadTasks().find((item) => String(item.id) === String(id)) || null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [task, setTask] = useState(() => loadTasks().find((t) => String(t.id) === String(id)) || null);
-  const [subtasks, setSubtasks] = useState(() => (task?.subtasks ? task.subtasks : []));
-  const [newTitle, setNewTitle] = useState("");
-  const [newPoints, setNewPoints] = useState("");
-
-  // If user opens a task directly (or list hasn't synced yet), sync from backend then resolve task.
   useEffect(() => {
-    let alive = true;
-    const run = async () => {
-      if (task) return;
-      await syncAssignedTasksToLocalStoreSafe();
-      const found = loadTasks().find((t) => String(t.id) === String(id)) || null;
-      if (alive) setTask(found);
+    let active = true;
+
+    const loadTask = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const backendTask = await fetchAssignedTaskByIdFromBackend(id);
+        if (!active) return;
+        setTask(backendTask);
+      } catch {
+        try {
+          await syncAssignedTasksToLocalStoreSafe();
+          const found = loadTasks().find((item) => String(item.id) === String(id)) || null;
+          if (!active) return;
+          setTask(found);
+        } catch (err) {
+          if (!active) return;
+          setError(err?.message || "Failed to load task details.");
+          setTask(null);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
     };
-    run();
+
+    loadTask();
     return () => {
-      alive = false;
+      active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // When the task changes, refresh subtask state from local store.
-  useEffect(() => {
-    if (task) setSubtasks(Array.isArray(task.subtasks) ? task.subtasks : []);
-  }, [task?.id]);
+  const progress = useMemo(() => getProgress(task), [task]);
 
-  if (!task) {
+  if (loading) {
     return (
       <DevLayout>
-        <h2 className="text-2xl font-bold mb-3">Task not found</h2>
-        <Link to={`/dev/project/${currentProject.id}`} className="btn-outline inline-flex">
-          Back to Project Workspace
-        </Link>
+        <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
+          <CircularProgress sx={{ color: "#6b51ff" }} />
+        </Box>
       </DevLayout>
     );
   }
 
-  const progress = calcPoints(subtasks);
-
-  const addSubtask = () => {
-    const title = newTitle.trim();
-    const pts = Number(newPoints);
-
-    if (!title) return;
-    if (!Number.isFinite(pts) || pts <= 0) return;
-
-    const st = { id: makeId(task.id, "ST"), title, points: pts, done: false };
-
-    setSubtasks((prev) => {
-      const next = [...prev, st];
-      updateTask(task.id, (t) => ({ ...t, subtasks: next }));
-      return next;
-    });
-    setNewTitle("");
-    setNewPoints("");
-  };
-
-  const toggleDone = (subId) => {
-    setSubtasks((prev) => {
-      const next = prev.map((s) => (s.id === subId ? { ...s, done: !s.done } : s));
-      updateTask(task.id, (t) => ({ ...t, subtasks: next }));
-      return next;
-    });
-  };
-
-  const removeSubtask = (subId) => {
-    setSubtasks((prev) => {
-      const next = prev.filter((s) => s.id !== subId);
-      updateTask(task.id, (t) => ({ ...t, subtasks: next }));
-      return next;
-    });
-  };
+  if (!task) {
+    return (
+      <DevLayout>
+        {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
+        <Card sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 900 }}>Task not found</Typography>
+          <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.72)" }}>
+            The backend did not return task <strong>{id}</strong> for the current developer.
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Chip component={Link} clickable to="/dev/tasks" label="Back to tasks" />
+          </Box>
+        </Card>
+      </DevLayout>
+    );
+  }
 
   return (
     <DevLayout>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs text-slate-400">Task Details</p>
-          <h2 className="text-2xl font-bold truncate">{task.title}</h2>
+      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap", mb: 3 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>
+            {task.projectName || "Backend Task"}
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>
+            {task.title}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.75, color: "rgba(231,233,238,0.72)" }}>
+            ID {task.id} • Due {task.dueDate || "-"} • Assignee {task.assignedToName || task.assignee || "You"}
+          </Typography>
+        </Box>
 
-          <p className="text-sm text-slate-300 mt-2">
-            <span className="chip-muted mr-2">{task.id}</span>
-            <span className="chip-muted mr-2">Status: {task.status}</span>
-            <span className="chip-muted mr-2">Assignee: {task.assignee}</span>
-            <span className="chip-muted mr-2">Due: {task.dueDate}</span>
-            <span className="chip-muted">Priority: {task.priority}</span>
-          </p>
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          <Chip label={getTaskStatus(task)} color={statusChipColor(task.status)} />
+          <Chip label={task.priority || "Medium"} variant="outlined" />
+          <Chip component={Link} clickable to="/dev/tasks" label="Back" />
+        </Box>
+      </Box>
 
-          {task.description && (
-            <p className="text-sm text-slate-200 mt-4">{task.description}</p>
-          )}
+      {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
 
-          <p className="text-xs text-slate-400 mt-2">
-            Subtasks and story points are saved in your browser (UI demo).
-          </p>
-        </div>
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} md={7}>
+          <Card sx={{ p: 3, height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
+              Description
+            </Typography>
+            <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.82)", whiteSpace: "pre-wrap" }}>
+              {task.description || "No description provided by the backend."}
+            </Typography>
 
-        <Link to={`/dev/project/${currentProject.id}`} className="btn-outline">
-          Back
-        </Link>
-      </div>
+            <Box sx={{ mt: 3, display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 2 }}>
+              <Metric label="Progress" value={`${progress}%`} />
+              <Metric label="Created" value={task.createdAt || "-"} />
+              <Metric label="Project" value={task.projectName || "-"} />
+            </Box>
+          </Card>
+        </Grid>
 
-      {/* Progress */}
-      <div className="glass-card p-4 mt-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">Progress (Story Points)</h3>
-          <div className="text-sm font-semibold">
-            {progress.pct}% ({progress.done}/{progress.total})
-          </div>
-        </div>
-        <ProgressBar pct={progress.pct} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        {/* Subtasks list */}
-        <div className="lg:col-span-2 glass-card p-4">
-          <h3 className="text-lg font-bold mb-3">Subtasks</h3>
-
-          <div className="space-y-2">
-            {subtasks.map((s) => (
-              <div
-                key={s.id}
-                className="rounded-2xl border border-white/10 bg-white/5 p-3 flex items-start justify-between"
-              >
-                <div className="flex gap-3">
-                  <input
-                    type="checkbox"
-                    checked={!!s.done}
-                    onChange={() => toggleDone(s.id)}
-                    className="mt-1 accent-violet-500"
-                  />
-                  <div>
-                    <p className="font-semibold text-sm">{s.title}</p>
-                    <p className="text-xs text-slate-400">{s.points} story points</p>
-                  </div>
-                </div>
-
-                <button type="button" onClick={() => removeSubtask(s.id)} className="btn-outline px-3 py-1.5 text-xs">
-                  Remove
-                </button>
-              </div>
-            ))}
-
-            {subtasks.length === 0 && (
-              <p className="text-sm text-slate-300">No subtasks yet. Add one below.</p>
-            )}
-          </div>
-        </div>
-
-        {/* Add subtask */}
-        <div className="glass-card p-4">
-          <h3 className="text-lg font-bold mb-3">Create Subtask</h3>
-
-          <label className="text-xs text-slate-400">Title</label>
-          <input
-            className="input mt-1"
-            placeholder="e.g., Create API endpoint"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-          />
-
-          <label className="text-xs text-slate-400 mt-3 block">Story Points</label>
-          <input
-            className="input mt-1"
-            placeholder="e.g., 3"
-            value={newPoints}
-            onChange={(e) => setNewPoints(e.target.value)}
-            inputMode="numeric"
-          />
-
-          <button type="button" onClick={addSubtask} className="mt-4 w-full btn-primary">
-            Add Subtask
-          </button>
-
-          <p className="text-xs text-slate-400 mt-3">
-            Story points are used to calculate task progress.
-          </p>
-        </div>
-      </div>
+        <Grid item xs={12} md={5}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
+              Backend Task Info
+            </Typography>
+            <StackedInfo label="Assigned to" value={task.assignedToName || task.assignee || "You"} />
+            <StackedInfo label="Assigned to id" value={task.assignedToId || "-"} />
+            <StackedInfo label="Project id" value={task.projectId || "-"} />
+            <StackedInfo label="Priority" value={task.priority || "Medium"} />
+            <StackedInfo label="Status" value={getTaskStatus(task)} />
+          </Card>
+        </Grid>
+      </Grid>
     </DevLayout>
+  );
+}
+
+function Metric({ label, value }) {
+  return (
+    <Box sx={{ p: 2, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{label}</Typography>
+      <Typography variant="body1" sx={{ mt: 0.5, fontWeight: 800 }}>{value}</Typography>
+    </Box>
+  );
+}
+
+function StackedInfo({ label, value }) {
+  return (
+    <Box sx={{ mb: 1.5 }}>
+      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{label}</Typography>
+      <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 700 }}>{String(value)}</Typography>
+    </Box>
   );
 }
