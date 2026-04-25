@@ -49,7 +49,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
             SELECT * FROM users u
             WHERE (:q IS NULL OR LOWER(u.name) LIKE CONCAT('%', LOWER(:q), '%')
                OR LOWER(u.email) LIKE CONCAT('%', LOWER(:q), '%'))
-              AND (:role IS NULL OR u.role = :role)
+                            AND (
+                                :role IS NULL
+                                OR u.role = :role
+                                OR EXISTS (
+                                        SELECT 1
+                                        FROM user_roles ur
+                                        WHERE ur.user_id = u.id
+                                            AND ur.role = :role
+                                )
+                            )
               AND (:enabled IS NULL OR u.enabled = :enabled)
             ORDER BY u.created_at DESC
             LIMIT :size OFFSET :offset
@@ -69,7 +78,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
             SELECT COUNT(*) FROM users u
             WHERE (:q IS NULL OR LOWER(u.name) LIKE CONCAT('%', LOWER(:q), '%')
                OR LOWER(u.email) LIKE CONCAT('%', LOWER(:q), '%'))
-              AND (:role IS NULL OR u.role = :role)
+                            AND (
+                                :role IS NULL
+                                OR u.role = :role
+                                OR EXISTS (
+                                        SELECT 1
+                                        FROM user_roles ur
+                                        WHERE ur.user_id = u.id
+                                            AND ur.role = :role
+                                )
+                            )
               AND (:enabled IS NULL OR u.enabled = :enabled)
         """,
         nativeQuery = true

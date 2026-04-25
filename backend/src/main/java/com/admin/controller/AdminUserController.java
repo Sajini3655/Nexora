@@ -62,7 +62,7 @@ public class AdminUserController {
             @PathVariable("id") Long id,
             @Valid @RequestBody RoleUpdateRequest request
     ) {
-        String message = userService.updateUserRole(id, request.getRole());
+        String message = userService.updateUserRole(id, request.getRole(), request.getRoles());
         return ResponseEntity.ok(Map.of("message", message));
     }
 

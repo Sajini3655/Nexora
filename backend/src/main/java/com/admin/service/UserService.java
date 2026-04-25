@@ -23,9 +23,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -40,6 +43,7 @@ public class UserService {
     private final TicketRepository ticketRepository;
     private final DeveloperProfileRepository developerProfileRepository;
     private final ProjectRepository projectRepository;
+    private final LiveUpdatePublisher liveUpdatePublisher;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -95,6 +99,9 @@ public class UserService {
             throw new RuntimeException("Name must be at least 2 characters long.");
         }
 
+        Set<Role> normalizedRoles = normalizeRoles(request.getRole(), request.getRoles());
+        Role primaryRole = normalizedRoles.iterator().next();
+
         User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
 
         if (user != null && Boolean.TRUE.equals(user.getEnabled())) {
@@ -105,14 +112,18 @@ public class UserService {
             user = User.builder()
                     .name(name)
                     .email(email)
-                    .role(request.getRole())
+                    .role(primaryRole)
+                    .additionalRoles(new LinkedHashSet<>(normalizedRoles))
                     .enabled(false)
                     .build();
         } else {
             user.setName(name);
-            user.setRole(request.getRole());
+            user.setRole(primaryRole);
+            user.setAdditionalRoles(new LinkedHashSet<>(normalizedRoles));
             user.setEnabled(false);
         }
+
+        user.getAdditionalRoles().remove(user.getRole());
 
         user = userRepository.save(user);
 
@@ -161,6 +172,8 @@ public class UserService {
         response.put("message", "Invite created successfully.");
         response.put("inviteUrl", inviteUrl);
         response.put("emailStatus", "PENDING");
+
+        liveUpdatePublisher.publishUsersChanged("invited");
 
         return response;
     }
@@ -222,6 +235,8 @@ public class UserService {
         response.put("inviteUrl", inviteUrl);
         response.put("emailStatus", "PENDING");
 
+        liveUpdatePublisher.publishUsersChanged("invite-resent");
+
         return response;
     }
 
@@ -245,18 +260,25 @@ public class UserService {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        liveUpdatePublisher.publishUsersChanged("status-updated");
     }
 
     @Transactional
-    public String updateUserRole(Long userId, Role role) {
+    public String updateUserRole(Long userId, Role role, Set<Role> roles) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        Set<Role> normalizedRoles = normalizeRoles(role, roles);
+        Role newPrimaryRole = normalizedRoles.iterator().next();
+
         Role oldRole = user.getRole();
-        user.setRole(role);
+        user.setRole(newPrimaryRole);
+        user.setAdditionalRoles(new LinkedHashSet<>(normalizedRoles));
+        user.getAdditionalRoles().remove(user.getRole());
         userRepository.save(user);
 
-        if (role == Role.DEVELOPER) {
+        if (normalizedRoles.contains(Role.DEVELOPER)) {
             DeveloperProfile existingProfile = developerProfileRepository.findByUser_Id(userId).orElse(null);
 
             if (existingProfile == null) {
@@ -281,11 +303,13 @@ public class UserService {
                     "UPDATED_ROLE",
                     actorEmail,
                     targetEmail,
-                    "Changed role from " + oldRole + " to " + role
+                    "Changed role from " + oldRole + " to " + normalizedRoles
             );
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        liveUpdatePublisher.publishUsersChanged("role-updated");
 
         return "User role updated successfully.";
     }
@@ -334,6 +358,8 @@ public class UserService {
                 e.printStackTrace();
             }
 
+            liveUpdatePublisher.publishUsersChanged("disabled");
+
             return "User has related records. Disabled instead of deleted.";
         }
 
@@ -351,18 +377,40 @@ public class UserService {
             e.printStackTrace();
         }
 
+        liveUpdatePublisher.publishUsersChanged("deleted");
+
         return "User deleted successfully.";
     }
 
     private UserResponse toUserResponse(User user) {
+        List<Role> roles = new ArrayList<>(user.getAllRoles());
         return UserResponse.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .roles(roles)
                 .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    private Set<Role> normalizeRoles(Role role, Set<Role> roles) {
+        LinkedHashSet<Role> normalized = new LinkedHashSet<>();
+
+        if (role != null) {
+            normalized.add(role);
+        }
+
+        if (roles != null) {
+            roles.stream().filter(r -> r != null).forEach(normalized::add);
+        }
+
+        if (normalized.isEmpty()) {
+            normalized.add(Role.CLIENT);
+        }
+
+        return normalized;
     }
 
     private String getCurrentActorEmail() {

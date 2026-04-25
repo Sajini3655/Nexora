@@ -8,7 +8,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -36,6 +37,13 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    @Builder.Default
+    private Set<Role> additionalRoles = new LinkedHashSet<>();
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean enabled = false;
@@ -55,7 +63,20 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        return getAllRoles().stream()
+                .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                .toList();
+    }
+
+    public Set<Role> getAllRoles() {
+        Set<Role> all = new LinkedHashSet<>();
+        if (role != null) {
+            all.add(role);
+        }
+        if (additionalRoles != null) {
+            all.addAll(additionalRoles);
+        }
+        return all;
     }
 
     @Override

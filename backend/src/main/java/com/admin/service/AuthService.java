@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.time.Instant;
 
 @Service
@@ -185,6 +186,7 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .roles(new ArrayList<>(user.getAllRoles()))
                 .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();

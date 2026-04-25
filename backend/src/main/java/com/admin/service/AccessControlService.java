@@ -210,8 +210,9 @@ public class AccessControlService {
         private Map<String, Boolean> getEffectiveAccessForUser(User user) {
 
         Map<String, Boolean> effective = new LinkedHashMap<>();
+            Set<Role> userRoles = user.getAllRoles();
 
-        if (user.getRole() == Role.ADMIN) {
+            if (userRoles.contains(Role.ADMIN)) {
             for (AccessModule module : AccessModule.values()) {
                 effective.put(module.name(), true);
             }
@@ -219,13 +220,22 @@ public class AccessControlService {
         }
 
         Map<String, Map<String, Boolean>> roleMatrix = getRoleMatrix();
-        Map<String, Boolean> roleAccess = roleMatrix.getOrDefault(user.getRole().name(), Map.of());
 
         for (AccessModule module : AccessModule.values()) {
-            effective.put(module.name(), Boolean.TRUE.equals(roleAccess.get(module.name())));
+                boolean allowed = false;
+
+                for (Role role : userRoles) {
+                    Map<String, Boolean> roleAccess = roleMatrix.getOrDefault(role.name(), Map.of());
+                    if (Boolean.TRUE.equals(roleAccess.get(module.name()))) {
+                        allowed = true;
+                        break;
+                    }
+                }
+
+                effective.put(module.name(), allowed);
         }
 
-        if (!MANAGED_ROLES.contains(user.getRole())) {
+            if (userRoles.stream().noneMatch(MANAGED_ROLES::contains)) {
             return effective;
         }
 

@@ -25,6 +25,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+        private final LiveUpdatePublisher liveUpdatePublisher;
 
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request, Authentication authentication) {
@@ -50,7 +51,9 @@ public class ProjectService {
         project.getTasks().addAll(taskItems);
 
         Project savedProject = projectRepository.save(project);
-        return mapToResponse(savedProject);
+                liveUpdatePublisher.publishProjectsChanged("created");
+                liveUpdatePublisher.publishTasksChanged("created");
+                return mapToResponse(savedProject);
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +72,7 @@ public class ProjectService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
 
-        if (user.getRole() != Role.MANAGER) {
+        if (!user.getAllRoles().contains(Role.MANAGER)) {
             throw new AccessDeniedException("Only managers can perform this action");
         }
 
