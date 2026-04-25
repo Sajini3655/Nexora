@@ -3,10 +3,11 @@
 
 // In the combined project, we also sync the developer profile (especially skills)
 // to the shared backend so the Manager "AI Task Assignment" can use it.
+import { API_BASE_URL } from "../../utils/constants";
 
 const STORAGE_KEY = "nexora_dev_profile_v1";
 
-const API_BASE = "http://localhost:8081/api";
+const API_BASE = `${API_BASE_URL}/api`;
 
 const defaultProfile = {
   name: "You",

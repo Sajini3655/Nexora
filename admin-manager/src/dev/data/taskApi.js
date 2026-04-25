@@ -3,8 +3,9 @@
 // This enables: Manager assigns a task -> Developer sees it in their dashboard.
 
 import { loadTasks, saveTasks } from "./taskStore";
+import { API_BASE_URL } from "../../utils/constants";
 
-const API_BASE = "http://localhost:8081/api";
+const API_BASE = `${API_BASE_URL}/api`;
 
 function getToken() {
   if (typeof window === "undefined") return null;
@@ -40,6 +41,7 @@ function titleCaseEnum(v) {
 function mapBackendStatusToUi(status) {
   const s = String(status || "").toUpperCase();
   if (s === "DONE") return "Completed";
+  if (s === "IN_PROGRESS" || s === "INPROGRESS") return "In Progress";
   return "Assigned"; // TODO / IN_PROGRESS
 }
 
@@ -54,6 +56,9 @@ function mapBackendTaskToUi(taskDto, existingUiTask) {
     dueDate: taskDto.dueDate || "-",
     priority: titleCaseEnum(taskDto.priority),
     storyPoints: taskDto.estimatedPoints ?? 1,
+    projectId: taskDto.projectId ?? existingUiTask?.projectId ?? null,
+    projectName: taskDto.projectName ?? existingUiTask?.projectName ?? "",
+    createdAt: taskDto.createdAt ?? existingUiTask?.createdAt ?? null,
     // Keep existing subtasks (UI-only) so progress stays.
     subtasks: Array.isArray(existingUiTask?.subtasks) ? existingUiTask.subtasks : [],
   };

@@ -1,155 +1,131 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Alert, Box, Chip, CircularProgress, Grid, TextField, Typography } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 import DevLayout from "../../components/layout/DevLayout";
+import Card from "../../../components/ui/Card.jsx";
+import { loadTasks } from "../../data/taskStore";
+import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
 
-const mockProjects = [
-  {
-    id: "p-101",
-    name: "Developer Dashboard UI",
-    manager: "Nimal Perera",
-    progress: 72,
-    devTaskCount: 8,
-    status: "Active",
-  },
-  {
-    id: "p-102",
-    name: "Auth + Roles (UI Prep)",
-    manager: "Kasun Silva",
-    progress: 35,
-    devTaskCount: 4,
-    status: "Active",
-  },
-  {
-    id: "p-103",
-    name: "Notifications + Chat UX",
-    manager: "Amaya Fernando",
-    progress: 10,
-    devTaskCount: 3,
-    status: "Planning",
-  },
-];
+function buildProjects(tasks) {
+  const groups = new Map();
 
-const cycleStatus = (s) => {
-  const order = ["Active", "Planning", "On Hold"];
-  const i = order.indexOf(s);
-  return order[(i + 1) % order.length];
-};
+  tasks.forEach((task) => {
+    const key = String(task.projectId || task.projectName || "project-unknown");
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push(task);
+  });
 
-const pillClasses = (status) => {
-  const base =
-    "cursor-pointer select-none px-3 py-1 rounded-full text-xs font-medium border transition";
-  if (status === "Active")
-    return `${base} bg-green-50 text-green-700 border-green-200 hover:bg-green-100`;
-  if (status === "On Hold")
-    return `${base} bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100`;
-  return `${base} bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100`;
-};
+  return [...groups.entries()].map(([key, list]) => {
+    const total = list.length;
+    const done = list.filter((task) => String(task.status).toLowerCase() === "completed" || String(task.status).toLowerCase() === "done").length;
+    const progress = total === 0 ? 0 : Math.round((done / total) * 100);
+    return {
+      id: String(list[0]?.projectId || key),
+      name: list[0]?.projectName || `Project ${key}`,
+      manager: "Backend",
+      progress,
+      taskCount: total,
+      status: progress === 100 ? "Completed" : progress > 0 ? "Active" : "Planning",
+      description: list[0]?.description || "Backend-derived project grouped from assigned tasks.",
+    };
+  });
+}
 
-// Professional progress: ring + badge (no bars)
-const ProgressRing = ({ value = 0 }) => {
-  const v = Math.max(0, Math.min(100, Number(value) || 0));
-  const r = 8;
-  const c = 2 * Math.PI * r;
-  const dash = (v / 100) * c;
-
-  return (
-    <div className="flex items-center gap-2" title={`Progress: ${v}%`}>
-      <svg width="18" height="18" viewBox="0 0 20 20" className="shrink-0 text-gray-900">
-        <circle cx="10" cy="10" r={r} fill="none" stroke="rgb(229 231 235)" strokeWidth="2" />
-        <circle
-          cx="10"
-          cy="10"
-          r={r}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${c}`}
-          transform="rotate(-90 10 10)"
-        />
-      </svg>
-
-      <div className="text-xs font-medium tabular-nums px-2 py-1 rounded border border-gray-200 bg-gray-50 text-gray-700">
-        {v}%
-      </div>
-    </div>
-  );
-};
-
-const DevProjectList = () => {
-  const [projects, setProjects] = useState(mockProjects);
-  const [search, setSearch] = useState("");
+export default function DevProjectList() {
   const navigate = useNavigate();
+  const [tasks, setTasks] = useState(() => loadTasks());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
+  useEffect(() => {
+    let active = true;
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const synced = await syncAssignedTasksToLocalStoreSafe();
+        if (!active) return;
+        setTasks(Array.isArray(synced) ? synced : loadTasks());
+      } catch (err) {
+        if (!active) return;
+        setError(err?.message || "Failed to load projects.");
+        setTasks(loadTasks());
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const projects = useMemo(() => buildProjects(tasks), [tasks]);
   const filteredProjects = useMemo(() => {
-    const q = search.toLowerCase();
-    return projects.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.manager.toLowerCase().includes(q)
-    );
+    const q = search.trim().toLowerCase();
+    return projects.filter((project) => `${project.name} ${project.manager} ${project.id}`.toLowerCase().includes(q));
   }, [projects, search]);
-
-  const toggleStatus = (id) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: cycleStatus(p.status) } : p))
-    );
-  };
 
   return (
     <DevLayout>
-      <div>
-        {/* EXACT same baseline as Tasks */}
-        <h2 className="text-2xl font-bold mb-4">Projects</h2>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>
+          Projects
+        </Typography>
+        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.66)", mt: 0.5 }}>
+          Projects are grouped from backend tasks assigned to you.
+        </Typography>
+      </Box>
 
-        <input
-          className="mb-4 p-2 border rounded w-full"
-          placeholder="Search projects or manager..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
 
-        <ul className="space-y-2">
-          {filteredProjects.map((p) => (
-            <li
-              key={p.id}
-              className="p-3 bg-white rounded shadow flex justify-between items-center"
-            >
-              <div className="min-w-0">
-                <div className="font-medium truncate">{p.name}</div>
-                <div className="text-sm text-gray-500">
-                  {p.manager} • {p.devTaskCount} tasks
-                </div>
-              </div>
+      <TextField
+        fullWidth
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search projects or ids..."
+        sx={{ mb: 3 }}
+        InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, opacity: 0.7 }} /> }}
+      />
 
-              <div className="flex items-center gap-3 shrink-0">
-                <ProgressRing value={p.progress} />
-
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className={pillClasses(p.status)}
-                  onClick={() => toggleStatus(p.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") toggleStatus(p.id);
-                  }}
-                  title="Click to change status (UI only)"
-                >
-                  {p.status}
-                </div>
-
-                <button
-                  type="button"
-                  className="text-blue-600"
-                  onClick={() => navigate(`/dev/projects/${p.id}`)}
-                >
-                  View
-                </button>
-              </div>
-            </li>
+      {loading ? (
+        <Box sx={{ display: "grid", placeItems: "center", minHeight: 240 }}>
+          <CircularProgress sx={{ color: "#6b51ff" }} />
+        </Box>
+      ) : (
+        <Grid container spacing={2}>
+          {filteredProjects.map((project) => (
+            <Grid item xs={12} md={6} lg={4} key={project.id}>
+              <Card sx={{ p: 2.5, height: "100%", cursor: "pointer", transition: "transform 180ms ease", "&:hover": { transform: "translateY(-2px)" } }} onClick={() => navigate(`/dev/projects/${project.id}`)}>
+                <Chip label={project.status} size="small" sx={{ mb: 1.5 }} />
+                <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
+                  {project.name}
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.76)" }}>
+                  {project.description}
+                </Typography>
+                <Box sx={{ mt: 2, display: "flex", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
+                  <Typography variant="caption">Tasks: {project.taskCount}</Typography>
+                  <Typography variant="caption">Progress: {project.progress}%</Typography>
+                </Box>
+              </Card>
+            </Grid>
           ))}
-        </ul>
-      </div>
+
+          {filteredProjects.length === 0 ? (
+            <Grid item xs={12}>
+              <Card sx={{ p: 3, textAlign: "center" }}>
+                <Typography variant="body1">No backend projects found.</Typography>
+              </Card>
+            </Grid>
+          ) : null}
+        </Grid>
+      )}
     </DevLayout>
   );
-};
-
-export default DevProjectList;
+}
