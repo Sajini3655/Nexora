@@ -47,6 +47,19 @@ function mapBackendStatusToUi(status) {
 
 function mapBackendTaskToUi(taskDto, existingUiTask) {
   const id = String(taskDto.id);
+  const projectId =
+    taskDto.projectId ??
+    taskDto.project_id ??
+    taskDto.project?.id ??
+    existingUiTask?.projectId ??
+    null;
+  const projectName =
+    taskDto.projectName ??
+    taskDto.project_name ??
+    taskDto.project?.name ??
+    existingUiTask?.projectName ??
+    "";
+
   return {
     id,
     title: taskDto.title,
@@ -56,8 +69,8 @@ function mapBackendTaskToUi(taskDto, existingUiTask) {
     dueDate: taskDto.dueDate || "-",
     priority: titleCaseEnum(taskDto.priority),
     storyPoints: taskDto.estimatedPoints ?? 1,
-    projectId: taskDto.projectId ?? existingUiTask?.projectId ?? null,
-    projectName: taskDto.projectName ?? existingUiTask?.projectName ?? "",
+    projectId,
+    projectName,
     createdAt: taskDto.createdAt ?? existingUiTask?.createdAt ?? null,
     // Keep existing subtasks (UI-only) so progress stays.
     subtasks: Array.isArray(existingUiTask?.subtasks) ? existingUiTask.subtasks : [],
@@ -87,12 +100,9 @@ export async function syncAssignedTasksToLocalStoreSafe() {
       ? backendTasks.map((t) => mapBackendTaskToUi(t, byId.get(String(t.id))))
       : [];
 
-    const backendIds = new Set(mappedFromBackend.map((t) => String(t.id)));
-    const localOnly = existing.filter((t) => !backendIds.has(String(t.id)));
-
-    const merged = [...mappedFromBackend, ...localOnly];
-    saveTasks(merged);
-    return merged;
+    // Backend is the source of truth; do not merge stale local-only tasks.
+    saveTasks(mappedFromBackend);
+    return mappedFromBackend;
   } catch {
     return loadTasks();
   }

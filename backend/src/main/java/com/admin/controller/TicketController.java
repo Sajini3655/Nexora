@@ -1,5 +1,6 @@
 package com.admin.controller;
 
+import com.admin.dto.TicketDto;
 import com.admin.entity.Ticket;
 import com.admin.service.TicketService;
 import lombok.RequiredArgsConstructor;
@@ -20,22 +21,22 @@ public class TicketController {
     private final TicketService ticketService;
 
     @GetMapping
-    public ResponseEntity<List<Ticket>> getAllTickets(Authentication authentication) {
+    public ResponseEntity<List<TicketDto>> getAllTickets(Authentication authentication) {
         return ResponseEntity.ok(ticketService.getTicketsForUser(authentication.getName()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Ticket> getTicketById(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<TicketDto> getTicketById(@PathVariable Long id, Authentication authentication) {
         return ResponseEntity.ok(ticketService.getTicketById(authentication.getName(), id));
     }
 
     @PostMapping
-    public ResponseEntity<Ticket> createTicket(@RequestBody Ticket ticket, Authentication authentication) {
+    public ResponseEntity<TicketDto> createTicket(@RequestBody Ticket ticket, Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(authentication.getName(), ticket));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Ticket> updateTicket(@PathVariable Long id, @RequestBody Ticket ticket, Authentication authentication) {
+    public ResponseEntity<TicketDto> updateTicket(@PathVariable Long id, @RequestBody Ticket ticket, Authentication authentication) {
         return ResponseEntity.ok(ticketService.updateTicket(authentication.getName(), id, ticket));
     }
 

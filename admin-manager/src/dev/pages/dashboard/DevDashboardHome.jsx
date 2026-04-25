@@ -33,8 +33,8 @@ function buildProjectSnapshot(tasks) {
 
   return {
     id: Number.isFinite(projectId) ? projectId : null,
-    name: firstTask.projectName || "Developer Project",
-    code: Number.isFinite(projectId) ? `#${projectId}` : "Backend sync pending",
+    name: firstTask.projectName || "Assigned Work",
+    code: Number.isFinite(projectId) ? `#${projectId}` : "Not provided by backend",
     dueDate: firstTask.dueDate || "-",
     progress,
     totalTasks,

@@ -1,22 +1,55 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Paper, LinearProgress, Chip } from "@mui/material";
+import { Alert, Box, Chip, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import ClientLayout from "../../components/layout/ClientLayout";
 import { fetchClientProjects } from "../../services/clientService";
 
 export default function ClientProjectList() {
   const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchClientProjects().then(setProjects);
+    let active = true;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const rows = await fetchClientProjects();
+        if (!active) return;
+        setProjects(Array.isArray(rows) ? rows : []);
+      } catch (err) {
+        if (!active) return;
+        setError(err?.message || "Failed to load workstreams.");
+        setProjects([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
     <ClientLayout>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-        Client Projects
-      </Typography>
+      <Box sx={{ mb: 2.5 }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: -0.4 }}>
+          Client Workstreams
+        </Typography>
+        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.66)" }}>
+          Workstreams are grouped from your live support tickets.
+        </Typography>
+      </Box>
 
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      {error ? <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert> : null}
+
+      {loading ? null : null}
+
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
         {projects.map((p) => (
           <Paper
             key={p.id}
@@ -24,8 +57,8 @@ export default function ClientProjectList() {
               background: "rgba(15,20,40,0.6)",
               backdropFilter: "blur(10px)",
               border: "1px solid rgba(255,255,255,0.08)",
-              p: 2,
-              borderRadius: "16px",
+              p: 2.25,
+              borderRadius: "18px",
               transition: "all 0.3s ease",
               "&:hover": {
                 background: "rgba(15,20,40,0.8)",
@@ -40,6 +73,9 @@ export default function ClientProjectList() {
                 </Typography>
                 <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)" }}>
                   Manager: {p.manager}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.48)", display: "block", mt: 0.5 }}>
+                  {p.tickets?.length || 0} live tickets
                 </Typography>
               </Box>
               <Chip label={p.status} size="small" sx={{ bgcolor: "rgba(104,81,255,0.2)", color: "#e7e9ee" }} />
@@ -62,6 +98,11 @@ export default function ClientProjectList() {
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", mt: 1, display: "block" }}>
               {p.progress}% complete • ETA {p.eta}
             </Typography>
+
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1.25 }}>
+              <Chip size="small" label={`Done ${p.progress}%`} sx={{ bgcolor: "rgba(16,185,129,0.14)", color: "#e7e9ee" }} />
+              <Chip size="small" label={p.tickets?.length || 0 ? `${p.tickets.length} tickets` : "No tickets"} sx={{ bgcolor: "rgba(255,255,255,0.06)", color: "#e7e9ee" }} />
+            </Stack>
           </Paper>
         ))}
       </Box>
