@@ -1,7 +1,6 @@
 // src/data/chatStore.js
 // Multi-thread chat (issue-based) stored in localStorage for UI demo.
-
-import { chatMessages as seedMessages } from "./devWorkspaceMock";
+// Note: Now uses backend for primary chat data. localStorage as fallback.
 
 const STORAGE_KEY = "nexora_dev_chat_threads_v1";
 
@@ -38,23 +37,8 @@ function makeId(prefix) {
 }
 
 function seedThreads() {
-  // Seed a single "General" thread from existing mock messages.
-  return [
-    {
-      id: "CHAT-1",
-      title: "General",
-      status: "Open", // Open | Closed
-      createdAt: nowStamp(),
-      createdBy: "You",
-      messages: seedMessages.map((m) => ({
-        id: `MSG-${m.id}`,
-        sender: m.sender,
-        role: m.role,
-        text: m.text,
-        ts: m.ts,
-      })),
-    },
-  ];
+  // Return empty array - chat threads come from backend now
+  return [];
 }
 
 export function loadChatThreads() {

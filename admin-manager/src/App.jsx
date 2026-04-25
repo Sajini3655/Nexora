@@ -259,7 +259,7 @@ export default function App() {
 
       <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="CHAT" />}>
 
-        <Route path="/dev/chat" element={<Navigate to="/dev/chat/P-001" replace />} />
+        <Route path="/dev/chat" element={<DevChat />} />
         <Route path="/dev/chat/:projectId" element={<DevChat />} />
       </Route>
 

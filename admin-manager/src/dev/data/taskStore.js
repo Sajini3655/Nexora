@@ -1,7 +1,6 @@
 // src/data/taskStore.js
 // UI-only persistence for tasks (keeps subtasks/story points after navigation)
-
-import { tasks as seedTasks } from "./devWorkspaceMock";
+// Note: Now uses backend sync instead of mock data. localStorage as fallback.
 
 const STORAGE_KEY = "nexora_dev_tasks_v1";
 
@@ -29,7 +28,8 @@ function ensureSubtaskIds(tasks) {
 export function loadTasks() {
   const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
   const parsed = raw ? safeParse(raw) : null;
-  const base = Array.isArray(parsed) ? parsed : seedTasks;
+  // Use backend sync instead of mock data - return empty array if no localStorage
+  const base = Array.isArray(parsed) ? parsed : [];
   return ensureSubtaskIds(base);
 }
 

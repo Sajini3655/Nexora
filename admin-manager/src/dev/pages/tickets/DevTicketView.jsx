@@ -1,158 +1,160 @@
-import React, { useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
 import DevLayout from "../../components/layout/DevLayout";
-import { clientTickets, aiBlockerTickets } from "../../data/devWorkspaceMock";
+import Card from "../../../components/ui/Card.jsx";
 import { loadUserTickets } from "../../data/ticketStore";
+import { fetchDeveloperTicketByIdFromBackend, loadDeveloperTicketByIdFromBackendSafe } from "../../data/ticketApi";
 
 function calcSubtaskPct(list) {
-  const total = list.reduce((s, x) => s + x.points, 0);
-  const done = list.filter((x) => x.done).reduce((s, x) => s + x.points, 0);
+  const total = list.reduce((s, x) => s + Number(x.points || 0), 0);
+  const done = list.filter((x) => x.done).reduce((s, x) => s + Number(x.points || 0), 0);
   const pct = total === 0 ? 0 : Math.round((done / total) * 100);
   return { total, done, pct };
 }
 
 function ProgressBar({ pct }) {
   return (
-    <div className="h-2 bg-white/10 rounded-full mt-1">
-      <div
-        className="h-2 rounded-full"
-        style={{
-          width: `${pct}%`,
-          background:
-            "linear-gradient(135deg, rgba(139,92,246,0.95), rgba(99,102,241,0.9))",
-        }}
-      />
-    </div>
+    <Box sx={{ height: 8, bgcolor: "rgba(255,255,255,0.08)", borderRadius: 999, mt: 1 }}>
+      <Box sx={{ height: 8, borderRadius: 999, width: `${pct}%`, background: "linear-gradient(135deg, rgba(139,92,246,0.95), rgba(99,102,241,0.9))" }} />
+    </Box>
   );
 }
 
 export default function DevTicketView() {
   const { id } = useParams();
+  const [ticket, setTicket] = useState(() => loadUserTickets().find((item) => String(item.id) === String(id)) || null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const allTickets = useMemo(() => {
-    const user = loadUserTickets();
-    return [...user, ...clientTickets, ...aiBlockerTickets];
-  }, []);
+  useEffect(() => {
+    let active = true;
 
-  const ticket = useMemo(() => allTickets.find((t) => t.id === id), [allTickets, id]);
+    const loadTicket = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const backendTicket = await fetchDeveloperTicketByIdFromBackend(id);
+        if (!active) return;
+        setTicket(backendTicket);
+      } catch {
+        try {
+          const fallback = await loadDeveloperTicketByIdFromBackendSafe(id);
+          const local = fallback || loadUserTickets().find((item) => String(item.id) === String(id)) || null;
+          if (!active) return;
+          setTicket(local);
+        } catch (err) {
+          if (!active) return;
+          setError(err?.message || "Failed to load ticket.");
+          setTicket(null);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-  if (!ticket) {
+    loadTicket();
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const p = useMemo(() => calcSubtaskPct(ticket?.suggestedSubtasks || []), [ticket]);
+
+  if (loading) {
     return (
       <DevLayout>
-        <h2 className="text-2xl font-bold mb-4">Ticket not found</h2>
-        <Link to="/dev" className="btn-outline inline-flex">
-          Back to Dashboard
-        </Link>
+        <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
+          <CircularProgress sx={{ color: "#6b51ff" }} />
+        </Box>
       </DevLayout>
     );
   }
 
-  const p = calcSubtaskPct(ticket.suggestedSubtasks || []);
+  if (!ticket) {
+    return (
+      <DevLayout>
+        {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
+        <Card sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 900 }}>Ticket not found</Typography>
+          <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.72)" }}>
+            No backend or local ticket matched <strong>{id}</strong>.
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Chip component={Link} clickable to="/dev" label="Back to dashboard" />
+          </Box>
+        </Card>
+      </DevLayout>
+    );
+  }
 
   return (
     <DevLayout>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs text-slate-400">Ticket</p>
-          <h2 className="text-2xl font-bold truncate">{ticket.title}</h2>
-          <p className="text-sm text-slate-300 mt-2">
-            <span className="chip-muted mr-2">{ticket.id}</span>
-            <span className="chip-muted mr-2">Status: {ticket.status}</span>
-            <span className="chip-muted">Severity: {ticket.severity}</span>
-          </p>
-        </div>
-        <Link to="/dev" className="btn-outline">Back</Link>
-      </div>
+      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mb: 3 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>Ticket</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>{ticket.title}</Typography>
+          <Typography variant="body2" sx={{ mt: 0.75, color: "rgba(231,233,238,0.72)" }}>
+            <Chip label={ticket.id} size="small" sx={{ mr: 1 }} />
+            <Chip label={ticket.status} size="small" sx={{ mr: 1 }} />
+            <Chip label={ticket.severity} size="small" />
+          </Typography>
+        </Box>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        {/* Details */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card p-4">
-            <h3 className="text-lg font-bold mb-2">Details</h3>
-            <p className="text-sm text-slate-200 whitespace-pre-wrap">{ticket.description}</p>
+        <Chip component={Link} clickable to="/dev" label="Back" />
+      </Box>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-xs text-slate-400">Created via</p>
-                <p className="font-semibold">{ticket.createdVia}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-xs text-slate-400">Created at</p>
-                <p className="font-semibold">{ticket.createdAt}</p>
-              </div>
+      {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
 
-              {ticket.client?.name && (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs text-slate-400">Client</p>
-                  <p className="font-semibold">{ticket.client.name}</p>
-                </div>
-              )}
+      <Grid container spacing={2.5}>
+        <Grid item xs={12} md={8}>
+          <Card sx={{ p: 3, height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Details</Typography>
+            <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.84)", whiteSpace: "pre-wrap" }}>{ticket.description}</Typography>
 
-              {ticket.detectedFrom?.reason && (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs text-slate-400">AI Blocker reason</p>
-                  <p className="font-semibold">{ticket.detectedFrom.reason}</p>
-                </div>
-              )}
-            </div>
-          </div>
+            <Box sx={{ mt: 3, display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, gap: 2 }}>
+              <Metric label="Created via" value={ticket.createdVia} />
+              <Metric label="Created at" value={ticket.createdAt} />
+              {ticket.client?.name ? <Metric label="Client" value={ticket.client.name} /> : null}
+              {ticket.detectedFrom?.reason ? <Metric label="Source reason" value={ticket.detectedFrom.reason} /> : null}
+            </Box>
+          </Card>
+        </Grid>
 
-          <div className="glass-card p-4">
-            <h3 className="text-lg font-bold mb-2">Evidence / Source</h3>
-
-            {ticket.evidence?.type && (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-xs text-slate-400">Source type</p>
-                <p className="font-semibold">{ticket.evidence.type}</p>
-                <p className="text-sm text-slate-200 mt-2 whitespace-pre-wrap">{ticket.evidence.snippet}</p>
-              </div>
-            )}
-
-            {ticket.detectedFrom?.summaryId && (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 mt-3">
-                <p className="text-xs text-slate-400">Detected from summary</p>
-                <p className="font-semibold">{ticket.detectedFrom.summaryId}</p>
-                <p className="text-sm text-slate-200 mt-2">
-                  Related messages: {ticket.detectedFrom.relatedMessages?.join(", ")}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Subtasks */}
-        <div className="space-y-6">
-          <div className="glass-card p-4">
-            <h3 className="text-lg font-bold mb-2">Breakdown (Subtasks)</h3>
-
-            <div className="text-xs text-slate-400 flex justify-between">
-              <span>Story points</span>
-              <span>
-                {p.done}/{p.total} ({p.pct}%)
-              </span>
-            </div>
-
+        <Grid item xs={12} md={4}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Breakdown</Typography>
+            <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+              Story points {p.done}/{p.total} ({p.pct}%)
+            </Typography>
             <ProgressBar pct={p.pct} />
 
-            <div className="mt-4 space-y-2">
-              {(ticket.suggestedSubtasks || []).map((s) => (
-                <div key={s.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-semibold">
-                      {s.done ? "✅" : "⬜"} {s.title}
-                    </span>
-                    <span className="text-sm">{s.points} pts</span>
-                  </div>
-                </div>
+            <Box sx={{ mt: 2, display: "grid", gap: 1.25 }}>
+              {(ticket.suggestedSubtasks || []).map((subtask) => (
+                <Box key={subtask.id} sx={{ p: 1.5, borderRadius: 2, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                    {subtask.done ? "✓" : "•"} {subtask.title}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{subtask.points} pts</Typography>
+                </Box>
               ))}
-            </div>
 
-            <p className="text-xs text-slate-400 mt-3">
-              (UI demo) Later you can allow marking subtasks done and update progress.
-            </p>
-          </div>
-        </div>
-      </div>
+              {(!ticket.suggestedSubtasks || ticket.suggestedSubtasks.length === 0) ? (
+                <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)" }}>No subtasks available.</Typography>
+              ) : null}
+            </Box>
+          </Card>
+        </Grid>
+      </Grid>
     </DevLayout>
+  );
+}
+
+function Metric({ label, value }) {
+  return (
+    <Box sx={{ p: 2, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{label}</Typography>
+      <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 800 }}>{value}</Typography>
+    </Box>
   );
 }
