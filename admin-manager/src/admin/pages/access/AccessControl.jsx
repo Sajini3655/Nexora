@@ -2,61 +2,26 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
-  Tabs,
-  Tab,
-  Typography,
-  Divider,
-  Grid,
-  Switch,
-  FormControlLabel,
-  MenuItem,
+  Button,
   Chip,
-  Stack
+  CircularProgress,
+  Divider,
+  FormControlLabel,
+  Grid,
+  Paper,
+  Stack,
+  Switch,
+  Typography,
 } from "@mui/material";
-
 import SecurityIcon from "@mui/icons-material/Security";
 import PageHeader from "../../../components/ui/PageHeader";
 import Card from "../../../components/ui/Card";
-import Input from "../../../components/ui/Input";
-import Button from "../../../components/ui/Button";
 import {
   getAccessModules,
-  getAccessRoleMatrix,
   getAccessRoles,
-  getAccessUserOverrides,
-  getAccessUsers,
+  getAccessRoleMatrix,
   saveAccessRoleMatrix,
-  saveAccessUserOverrides,
 } from "../../../services/api";
-
-/**
- * Demo model
- * Later endpoints:
- * - GET /api/access/modules
- * - GET /api/access/roles
- * - GET /api/access/role-matrix
- * - GET /api/access/users?role=CLIENT
- * - GET /api/access/user-overrides?userId=...
- * - PUT /api/access/role-matrix
- * - PUT /api/access/user-overrides
- */
-
-const MODULES = [
-  { key: "DASHBOARD", label: "Dashboard", desc: "Basic overview access" },
-  { key: "TASKS", label: "Tasks", desc: "Task workflows and boards" },
-  { key: "CHAT", label: "Chat", desc: "Messaging and announcements" },
-  { key: "FILES", label: "Files", desc: "Uploads and downloads" },
-  { key: "REPORTS", label: "Reports", desc: "Exports and analytics" }
-];
-
-const ROLES = ["MANAGER", "DEVELOPER", "CLIENT"];
-
-// Demo users for overrides (you can later fetch from /api/users)
-const demoUsers = [
-  { id: 1, name: "Client A", email: "client@nexora.com", role: "CLIENT" },
-  { id: 2, name: "Client B", email: "client2@nexora.com", role: "CLIENT" },
-  { id: 3, name: "Dev B", email: "dev@nexora.com", role: "DEVELOPER" }
-];
 
 function Pill({ label }) {
   return (
@@ -64,162 +29,140 @@ function Pill({ label }) {
       size="small"
       label={label}
       sx={{
-        background: "rgba(124,92,255,0.16)",
-        border: "1px solid rgba(124,92,255,0.25)"
+        fontWeight: 800,
+        color: "#a7f3d0",
+        backgroundColor: "rgba(16,185,129,0.12)",
+        border: "1px solid rgba(16,185,129,0.28)",
       }}
     />
   );
 }
 
+function buildMatrix(roles, modules, backendMatrix) {
+  const matrix = {};
+
+  roles.forEach((role) => {
+    matrix[role] = {};
+
+    modules.forEach((module) => {
+      matrix[role][module.key] = Boolean(backendMatrix?.[role]?.[module.key]);
+    });
+  });
+
+  return matrix;
+}
+
 export default function AccessControl() {
-  const [tab, setTab] = useState(0);
   const [modules, setModules] = useState([]);
   const [roles, setRoles] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [roleAccess, setRoleAccess] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [roleAccess, setRoleAccess] = useState({});
+  const totalEnabled = useMemo(() => {
+    let count = 0;
 
-  // User Overrides state (null=inherit, true=allow, false=deny)
-  const [selectedUserId, setSelectedUserId] = useState(null);
-  const selectedUser = useMemo(
-    () => users.find((u) => u.id === selectedUserId),
-    [users, selectedUserId]
-  );
+    roles.forEach((role) => {
+      modules.forEach((module) => {
+        if (roleAccess?.[role]?.[module.key]) {
+          count += 1;
+        }
+      });
+    });
 
-  const [overrides, setOverrides] = useState({});
+    return count;
+  }, [roles, modules, roleAccess]);
 
-  useEffect(() => {
-    loadAccessData();
-  }, []);
+  const totalPermissions = roles.length * modules.length;
 
-  useEffect(() => {
-    if (!selectedUserId || modules.length === 0) return;
-    loadUserOverrides(selectedUserId);
-  }, [selectedUserId, modules]);
-
-  const loadAccessData = async () => {
-    setLoading(true);
-    setError("");
-
+  const loadAccessControl = async () => {
     try {
-      const [modulesData, rolesData, matrixData, usersData] = await Promise.all([
+      setLoading(true);
+      setError("");
+      setSuccess("");
+
+      const [modulesData, rolesData, matrixData] = await Promise.all([
         getAccessModules(),
         getAccessRoles(),
         getAccessRoleMatrix(),
-        getAccessUsers(),
       ]);
 
-      setModules(modulesData ?? []);
-      setRoles(rolesData ?? []);
-      setRoleAccess(matrixData ?? {});
-      setUsers(usersData ?? []);
+      const safeModules = Array.isArray(modulesData) ? modulesData : [];
+      const safeRoles = Array.isArray(rolesData) ? rolesData : [];
 
-      if (usersData?.length) {
-        setSelectedUserId((prev) => prev ?? usersData[0].id);
-      }
+      setModules(safeModules);
+      setRoles(safeRoles);
+      setRoleAccess(buildMatrix(safeRoles, safeModules, matrixData ?? {}));
     } catch (err) {
       console.error(err);
-      setError("Failed to load access control data.");
+      setError(
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to load access control data."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const loadUserOverrides = async (userId) => {
-    try {
-      const raw = await getAccessUserOverrides(userId);
-      const shaped = {};
-      for (const m of modules) {
-        shaped[m.key] = Object.prototype.hasOwnProperty.call(raw || {}, m.key)
-          ? raw[m.key]
-          : null;
-      }
-      setOverrides(shaped);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load user overrides.");
-    }
-  };
+  useEffect(() => {
+    loadAccessControl();
+  }, []);
 
   const toggleRole = (role, moduleKey) => {
     setRoleAccess((prev) => ({
       ...prev,
-      [role]: { ...prev[role], [moduleKey]: !prev[role][moduleKey] }
+      [role]: {
+        ...(prev?.[role] || {}),
+        [moduleKey]: !Boolean(prev?.[role]?.[moduleKey]),
+      },
     }));
   };
 
-  const setOverride = (userId, moduleKey, value) => {
-    setOverrides((prev) => ({ ...prev, [moduleKey]: value }));
-  };
-
-  const effectiveAccess = (user, moduleKey) => {
-    const o = overrides[moduleKey];
-    if (o === true || o === false) return o;
-    return Boolean(roleAccess[user.role]?.[moduleKey]);
-  };
-
-  const summary = useMemo(() => {
-    // quick premium summary for selected user
-    if (!selectedUser) return { allowed: 0, denied: 0 };
-    let allowed = 0;
-    let denied = 0;
-    for (const m of modules) {
-      effectiveAccess(selectedUser, m.key) ? allowed++ : denied++;
-    }
-    return { allowed, denied };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUserId, roleAccess, overrides, modules, users]);
-
   const handleSave = async () => {
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
     try {
-      await saveAccessRoleMatrix(roleAccess);
+      setSaving(true);
+      setError("");
+      setSuccess("");
 
-      if (selectedUserId) {
-        const saved = await saveAccessUserOverrides({
-          userId: selectedUserId,
-          overrides,
-        });
+      const saved = await saveAccessRoleMatrix(roleAccess);
+      setRoleAccess(buildMatrix(roles, modules, saved ?? roleAccess));
 
-        const shaped = {};
-        for (const m of modules) {
-          shaped[m.key] = Object.prototype.hasOwnProperty.call(saved || {}, m.key)
-            ? saved[m.key]
-            : null;
-        }
-        setOverrides(shaped);
-      }
-
-      setSuccess("Access control changes saved.");
+      setSuccess("Role access matrix saved successfully.");
     } catch (err) {
       console.error(err);
-      setError("Failed to save access control changes.");
+      setError(
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to save role access matrix."
+      );
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <Typography sx={{ opacity: 0.8 }}>Loading access control...</Typography>;
+    return (
+      <Box sx={{ minHeight: 360, display: "grid", placeItems: "center" }}>
+        <Stack spacing={2} alignItems="center">
+          <CircularProgress />
+          <Typography color="text.secondary">
+            Loading access control...
+          </Typography>
+        </Stack>
+      </Box>
+    );
   }
 
   return (
     <Box>
       <PageHeader
         title="Access Control"
-        subtitle="Define module access by role, and override per user (especially for clients)."
-        right={
-          <Button variant="outlined" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        }
+        subtitle="Manage module access by role. User overrides are removed from this page."
+        right={<Pill label="Role Matrix Only" />}
       />
 
       {error ? (
@@ -234,210 +177,139 @@ export default function AccessControl() {
         </Alert>
       ) : null}
 
-      <Card sx={{ p: 2.5 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-          <Tab label="Role Matrix" />
-          <Tab label="User Overrides" />
-        </Tabs>
+      <Card sx={{ p: { xs: 2, md: 2.8 } }}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          alignItems={{ xs: "flex-start", md: "center" }}
+          justifyContent="space-between"
+          spacing={2}
+          sx={{ mb: 2 }}
+        >
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.6 }}>
+              <SecurityIcon />
+              <Typography variant="h5" sx={{ fontWeight: 950 }}>
+                Role Matrix
+              </Typography>
+            </Stack>
 
-        <Divider sx={{ mb: 2 }} />
+            <Typography variant="body2" sx={{ opacity: 0.72 }}>
+              These permissions apply to every user who has that role. Multi-role users get access if any of their roles allow the module.
+            </Typography>
+          </Box>
 
-        {tab === 0 ? (
-          <RoleMatrix
-            modules={modules}
-            roles={roles}
-            roleAccess={roleAccess}
-            onToggleRole={toggleRole}
-          />
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Pill label={`${totalEnabled}/${totalPermissions} enabled`} />
+
+            <Button
+              variant="contained"
+              onClick={handleSave}
+              disabled={saving}
+              sx={{ borderRadius: 999, fontWeight: 900, px: 2.5 }}
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </Stack>
+        </Stack>
+
+        <Divider sx={{ mb: 2.5, borderColor: "rgba(255,255,255,0.08)" }} />
+
+        {modules.length === 0 || roles.length === 0 ? (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              border: "1px solid rgba(255,255,255,0.10)",
+              background: "rgba(255,255,255,0.04)",
+            }}
+          >
+            <Typography>No access modules or roles found.</Typography>
+          </Paper>
         ) : (
-          <UserOverrides
-            users={users}
-            modules={modules}
-            roleAccess={roleAccess}
-            overrides={overrides}
-            selectedUserId={selectedUserId}
-            setSelectedUserId={setSelectedUserId}
-            setOverride={setOverride}
-            summary={summary}
-          />
+          <Grid container spacing={2.5}>
+            {modules.map((module) => (
+              <Grid item xs={12} key={module.key}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.25,
+                    borderRadius: 3.5,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    background:
+                      "linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: { xs: "stretch", md: "center" },
+                      justifyContent: "space-between",
+                      gap: 2,
+                      flexDirection: { xs: "column", md: "row" },
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography sx={{ fontWeight: 950, color: "#fff" }}>
+                        {module.label}
+                      </Typography>
+
+                      <Typography variant="body2" sx={{ opacity: 0.7, mt: 0.35 }}>
+                        {module.desc || module.key}
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1.25,
+                        flexWrap: "wrap",
+                        justifyContent: { xs: "flex-start", md: "flex-end" },
+                      }}
+                    >
+                      {roles.map((role) => {
+                        const enabled = Boolean(roleAccess?.[role]?.[module.key]);
+
+                        return (
+                          <Box
+                            key={`${role}-${module.key}`}
+                            sx={{
+                              px: 1.5,
+                              py: 1,
+                              borderRadius: 999,
+                              border: enabled
+                                ? "1px solid rgba(124,92,255,0.55)"
+                                : "1px solid rgba(255,255,255,0.12)",
+                              background: enabled
+                                ? "rgba(124,92,255,0.18)"
+                                : "rgba(255,255,255,0.04)",
+                            }}
+                          >
+                            <FormControlLabel
+                              sx={{ m: 0 }}
+                              control={
+                                <Switch
+                                  checked={enabled}
+                                  onChange={() => toggleRole(role, module.key)}
+                                />
+                              }
+                              label={
+                                <Typography sx={{ fontWeight: 850, fontSize: 14 }}>
+                                  {role}
+                                </Typography>
+                              }
+                            />
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
         )}
       </Card>
-    </Box>
-  );
-}
-
-function RoleMatrix({ modules, roles, roleAccess, onToggleRole }) {
-  return (
-    <Box>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-        <SecurityIcon />
-        <Typography sx={{ fontWeight: 900 }}>Role Matrix</Typography>
-        <Box sx={{ flexGrow: 1 }} />
-        <Pill label="Role-based defaults" />
-      </Stack>
-
-      <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
-        These are default permissions for each role. Use User Overrides for exceptions.
-      </Typography>
-
-      <Grid container spacing={2.5}>
-        {modules.map((m) => (
-          <Grid item xs={12} key={m.key}>
-            <Card sx={{ p: 2.25 }}>
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontWeight: 900 }}>{m.label}</Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                    {m.desc}
-                  </Typography>
-                </Box>
-
-                <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                  {roles.map((r) => (
-                    <FormControlLabel
-                      key={r}
-                      control={
-                        <Switch
-                          checked={Boolean(roleAccess?.[r]?.[m.key])}
-                          onChange={() => onToggleRole(r, m.key)}
-                        />
-                      }
-                      label={`${r}: ${roleAccess[r][m.key] ? "On" : "Off"}`}
-                      sx={{ m: 0 }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
-}
-
-function UserOverrides({
-  users,
-  modules,
-  roleAccess,
-  overrides,
-  selectedUserId,
-  setSelectedUserId,
-  setOverride,
-  summary
-}) {
-  const selectedUser = users.find((u) => u.id === selectedUserId) || null;
-
-  const effectiveAccess = (user, moduleKey) => {
-    const o = overrides[moduleKey];
-    if (o === true || o === false) return o;
-    return Boolean(roleAccess[user.role]?.[moduleKey]);
-  };
-
-  if (!selectedUser) {
-    return <Typography sx={{ opacity: 0.8 }}>No users available for overrides.</Typography>;
-  }
-
-  return (
-    <Box>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-        <SecurityIcon />
-        <Typography sx={{ fontWeight: 900 }}>User Overrides</Typography>
-        <Box sx={{ flexGrow: 1 }} />
-        <Pill label="Exceptions only" />
-      </Stack>
-
-      <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
-        Choose a user and override access per module. “Inherit” uses role matrix.
-      </Typography>
-
-      <Box sx={{ display: "flex", gap: 1.5, mb: 2, flexWrap: "wrap" }}>
-        <Input
-          select
-          label="Select User"
-          value={selectedUserId ?? ""}
-          onChange={(e) => setSelectedUserId(Number(e.target.value))}
-          sx={{ width: 360 }}
-        >
-          {users.map((u) => (
-            <MenuItem key={u.id} value={u.id}>
-              {u.name} ({u.role})
-            </MenuItem>
-          ))}
-        </Input>
-
-        <Card sx={{ p: 2, flex: 1, minWidth: 260 }}>
-          <Typography sx={{ fontWeight: 900 }}>
-            {selectedUser?.name}
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            {selectedUser?.email} • role: {selectedUser?.role}
-          </Typography>
-
-          <Divider sx={{ my: 1.25 }} />
-
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Chip size="small" label={`Allowed: ${summary.allowed}`} />
-            <Chip size="small" variant="outlined" label={`Denied: ${summary.denied}`} />
-          </Box>
-        </Card>
-      </Box>
-
-      <Divider sx={{ mb: 2 }} />
-
-      <Grid container spacing={2.5}>
-        {modules.map((m) => {
-          const overrideVal = overrides[m.key]; // null/true/false
-          const eff = selectedUser ? effectiveAccess(selectedUser, m.key) : false;
-
-          return (
-            <Grid key={m.key} item xs={12} md={6}>
-              <Card sx={{ p: 2.25 }}>
-                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography sx={{ fontWeight: 900 }}>{m.label}</Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                      Effective: {eff ? "Allowed" : "Denied"}
-                    </Typography>
-                  </Box>
-
-                  <Chip
-                    size="small"
-                    label={overrideVal === null ? "Inherited" : overrideVal ? "Forced Allow" : "Forced Deny"}
-                    variant="outlined"
-                  />
-                </Box>
-
-                <Divider sx={{ my: 1.5 }} />
-
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
-                    variant={overrideVal === null ? "contained" : "outlined"}
-                    onClick={() => setOverride(selectedUserId, m.key, null)}
-                    sx={{ flex: 1 }}
-                  >
-                    Inherit
-                  </Button>
-                  <Button
-                    variant={overrideVal === true ? "contained" : "outlined"}
-                    onClick={() => setOverride(selectedUserId, m.key, true)}
-                    sx={{ flex: 1 }}
-                  >
-                    Allow
-                  </Button>
-                  <Button
-                    variant={overrideVal === false ? "contained" : "outlined"}
-                    onClick={() => setOverride(selectedUserId, m.key, false)}
-                    sx={{ flex: 1 }}
-                  >
-                    Deny
-                  </Button>
-                </Box>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
     </Box>
   );
 }
