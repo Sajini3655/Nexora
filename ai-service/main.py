@@ -161,3 +161,85 @@ async def chat_end(req: Request):
         "ticket_message": ai_result["ticket_message"],
         "ticket_prompt_needed": ai_result["ticket_prompt_needed"]
     })
+
+
+@app.post("/v1/navigate")
+async def nlq_navigate(req: Request):
+    """
+    Convert natural language query to navigation route.
+    
+    Request: {"query": "Go to user dashboard", "available_routes": [...]}
+    Response: {"route": "/admin/dashboard", "confidence": 0.95, "reasoning": "..."}
+    """
+    try:
+        body = await req.json()
+        query = body.get("query")
+        available_routes = body.get("available_routes", [])
+        
+        if not query:
+            return JSONResponse({"error": "Query is required"}, status_code=400)
+        
+        if not available_routes:
+            return JSONResponse({"error": "Available routes are required"}, status_code=400)
+        
+        # Create a prompt to map NLQ to routes
+        routes_json = json.dumps(available_routes, indent=2)
+        system_prompt = f"""You are a navigation assistant. Your job is to convert natural language queries to application routes.
+
+Available routes:
+{routes_json}
+
+Instructions:
+1. Understand the user's intent from the natural language query
+2. Match it to the most appropriate route from the available routes
+3. Return ONLY valid JSON (no markdown, no extra text) with these fields:
+   - route: the path (must be one of the available routes)
+   - confidence: confidence score from 0 to 1
+   - reasoning: brief explanation
+
+Important: Return only valid JSON that can be parsed directly."""
+
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Navigate to: {query}"}
+            ],
+            temperature=0.2,
+            max_tokens=200
+        )
+        
+        # Parse the response
+        response_text = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON from the response
+        try:
+            # Remove markdown code blocks if present
+            response_text = response_text.replace('```json', '').replace('```', '').strip()
+            
+            # Try to parse as JSON
+            result = json.loads(response_text)
+            
+            # Validate the route exists in available routes
+            available_paths = [r["path"] for r in available_routes]
+            if result.get("route") not in available_paths:
+                # Find the closest match
+                result["route"] = available_paths[0] if available_paths else "/"
+                result["confidence"] = 0
+            
+        except json.JSONDecodeError as e:
+            result = {
+                "route": available_routes[0]["path"] if available_routes else "/",
+                "confidence": 0,
+                "reasoning": "Could not parse navigation response"
+            }
+        
+        return JSONResponse(result)
+    
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=3001)

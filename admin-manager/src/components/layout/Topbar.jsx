@@ -19,6 +19,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import { AuthProvider, useAuth } from "../../context/AuthContext.jsx";
  import { useNavigate } from "react-router-dom";
 import { useLayout } from "../../context/LayoutContext";
+import NLQSearchBar from "../NLQSearchBar";
 
 export default function Topbar() {
   const { user, logout } = useAuth();
@@ -44,7 +45,8 @@ export default function Topbar() {
         borderBottom: "1px solid rgba(255,255,255,0.10)"
       }}
     >
-      <Toolbar sx={{ minHeight: 72 }}>
+      <Toolbar sx={{ minHeight: 72, display: "grid", gridTemplateColumns: "1fr minmax(320px, 620px) 1fr", alignItems: "center", gap: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
         {/* Hamburger */}
         <IconButton
           edge="start"
@@ -76,8 +78,13 @@ export default function Topbar() {
             Nexora
           </Typography>
         </Box>
+        </Box>
 
-        <Box sx={{ flexGrow: 1 }} />
+        <Box sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
+          <NLQSearchBar />
+        </Box>
+
+        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
 
         {/* User block */}
         {user ? (
@@ -188,6 +195,7 @@ export default function Topbar() {
             </Menu>
           </Box>
         ) : null}
+        </Box>
       </Toolbar>
     </AppBar>
   );

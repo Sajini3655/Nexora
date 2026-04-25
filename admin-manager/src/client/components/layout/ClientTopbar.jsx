@@ -15,6 +15,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
+import NLQSearchBar from "../../../components/NLQSearchBar";
 
 export default function ClientTopbar({ onToggleSidebar }) {
   const navigate = useNavigate();
@@ -46,7 +47,8 @@ export default function ClientTopbar({ onToggleSidebar }) {
         borderRadius: 3
       }}
     >
-      <Toolbar sx={{ minHeight: 72, gap: 1.5 }}>
+      <Toolbar sx={{ minHeight: 72, gap: 1.5, display: "grid", gridTemplateColumns: "1fr minmax(320px, 620px) 1fr", alignItems: "center" }}>
+        <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
         <IconButton
           edge="start"
           color="inherit"
@@ -81,10 +83,13 @@ export default function ClientTopbar({ onToggleSidebar }) {
             </Typography>
           </Box>
         </Box>
+        </Box>
 
-        <Box sx={{ flexGrow: 1 }} />
+        <Box sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
+          <NLQSearchBar />
+        </Box>
 
-        <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1.2 }}>
+        <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1.2, justifyContent: "flex-end" }}>
           <Chip
             size="small"
             label="CLIENT"
