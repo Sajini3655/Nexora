@@ -11,14 +11,17 @@ This project contains:
 - Backend: `http://localhost:8081`
 - Frontend UI: `http://localhost:5173`
 
-## Run backend (H2 DB – no PostgreSQL needed)
+## Run backend (Supabase Postgres)
 From `backend/`:
 
 ```bash
 mvn spring-boot:run
 ```
 
-- H2 console: `http://localhost:8081/h2`
+- Create `backend/.env` from `backend/.env.example` and set:
+	- `DATABASE_URL`
+	- `DATABASE_USER`
+	- `DATABASE_PASSWORD`
 
 ### Demo users (auto-created on first run)
 - Admin: `admin@nexora.com` / `admin123`
