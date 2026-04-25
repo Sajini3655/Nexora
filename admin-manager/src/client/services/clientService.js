@@ -1,23 +1,274 @@
-import {
-  clientProfile,
-  clientProjects,
-  clientSummary,
-  clientTickets,
-} from "../data/clientMock";
+import { API_BASE_URL } from "../../utils/constants";
 
-// These mocks keep client dashboards functional until dedicated backend APIs are wired.
-export async function fetchClientSummary() {
-  return Promise.resolve(clientSummary);
+const API_BASE = `${API_BASE_URL}/api`;
+
+export const clientTicketCategories = [
+  "Bug / Something not working",
+  "Change Request",
+  "New Feature Request",
+  "Access / Login / Permissions",
+  "Performance / Slow",
+  "Billing / Invoice",
+  "Other",
+];
+
+function readCurrentUser() {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function titleCase(value, fallback = "Medium") {
+  const text = String(value || fallback).toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function getToken() {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem("token");
+}
+
+async function apiFetch(path, options = {}) {
+  const token = getToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Request failed: ${res.status}`);
+  }
+
+  return res;
+}
+
+async function ticketFetch(path = "", options = {}) {
+  const token = getToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}/tickets${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Request failed: ${res.status}`);
+  }
+
+  return res;
+}
+
+function parseTicketTitle(title) {
+  const text = String(title || "").trim();
+  const bracketMatch = text.match(/^\[(.+?)\]\s*(.*)$/);
+  if (bracketMatch) {
+    return {
+      category: bracketMatch[1].trim(),
+      title: (bracketMatch[2] || "").trim() || text,
+    };
+  }
+
+  const colonMatch = text.match(/^(.+?):\s*(.*)$/);
+  if (colonMatch) {
+    return {
+      category: colonMatch[1].trim(),
+      title: (colonMatch[2] || "").trim() || text,
+    };
+  }
+
+  return {
+    category: "General Support",
+    title: text || "Untitled ticket",
+  };
+}
+
+function mapStatus(status) {
+  const value = String(status || "").toUpperCase();
+  if (value === "DONE" || value === "CLOSED" || value === "RESOLVED") return "Done";
+  if (value === "IN_PROGRESS" || value === "INPROGRESS") return "In Progress";
+  return "Open";
+}
+
+function getDateString(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().slice(0, 10);
+}
+
+function toUiProject(row, idx) {
+  const progress = Number(row?.progress ?? row?.completion ?? 0);
+  return {
+    id: String(row?.id ?? row?.project_id ?? `CP-${idx + 1}`),
+    name: row?.name ?? row?.project_name ?? "Support Workstream",
+    manager: row?.manager_name ?? row?.manager ?? "Client Support",
+    progress: Number.isFinite(progress) ? Math.max(0, Math.min(100, progress)) : 0,
+    status: row?.status ?? row?.stage ?? "In Progress",
+    eta: row?.eta ?? row?.due_date ?? "-",
+    tickets: row?.tickets ?? [],
+  };
+}
+
+function toUiTicket(row, idx) {
+  const parsed = parseTicketTitle(row?.title);
+  return {
+    id: String(row?.id ?? row?.ticket_id ?? `CT-${9000 + idx}`),
+    title: parsed.title,
+    category: row?.category ?? parsed.category,
+    priority: titleCase(row?.priority ?? row?.urgency, "Medium"),
+    status: mapStatus(row?.status),
+    updatedAt: getDateString(row?.updatedAt ?? row?.updated_at ?? row?.createdAt ?? row?.created_at),
+    description: row?.description ?? "",
+    createdBy: row?.createdBy?.name ?? null,
+    assignedTo: row?.assignedTo?.name ?? null,
+  };
+}
+
+function toUiProfile(row, user) {
+  return {
+    name: row?.name ?? user?.name ?? "Client User",
+    email: row?.email ?? user?.email ?? "-",
+    company: row?.company ?? user?.company ?? "Client Account",
+    timezone: row?.timezone ?? "-",
+  };
 }
 
 export async function fetchClientProjects() {
-  return Promise.resolve(clientProjects);
+  const tickets = await fetchClientTickets();
+  const grouped = new Map();
+
+  tickets.forEach((ticket) => {
+    const key = ticket.category || "General Support";
+    const existing = grouped.get(key) || {
+      id: key.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      name: key,
+      manager: "Client Support",
+      progress: 0,
+      status: "Open",
+      eta: "-",
+      tickets: [],
+    };
+
+    existing.tickets.push(ticket);
+    grouped.set(key, existing);
+  });
+
+  return Array.from(grouped.values()).map((project) => {
+    const total = project.tickets.length;
+    const done = project.tickets.filter((ticket) => ticket.status === "Done").length;
+    const inProgress = project.tickets.filter((ticket) => ticket.status === "In Progress").length;
+    const latest = project.tickets
+      .map((ticket) => ticket.updatedAt)
+      .find((date) => date && date !== "-") || "-";
+
+    return {
+      ...project,
+      progress: total > 0 ? Math.round((done / total) * 100) : 0,
+      status:
+        done === total && total > 0
+          ? "Resolved"
+          : inProgress > 0
+            ? "In Progress"
+            : "Open",
+      eta: latest,
+    };
+  });
 }
 
 export async function fetchClientTickets() {
-  return Promise.resolve(clientTickets);
+  const res = await ticketFetch("", { method: "GET" });
+  const data = await res.json();
+  return Array.isArray(data) ? data.map(toUiTicket) : [];
 }
 
 export async function fetchClientProfile() {
-  return Promise.resolve(clientProfile);
+  const user = readCurrentUser();
+
+  try {
+    const res = await apiFetch("/auth/me", { method: "GET" });
+    const data = await res.json();
+    return toUiProfile(data, user);
+  } catch {
+    return toUiProfile(null, user);
+  }
+}
+
+export async function fetchClientSummary() {
+  try {
+    const [projects, tickets] = await Promise.all([
+      fetchClientProjects(),
+      fetchClientTickets(),
+    ]);
+
+    const openTickets = tickets.filter((t) => {
+      return t.status === "Open" || t.status === "In Progress";
+    }).length;
+
+    const completedMilestones = tickets.filter((ticket) => ticket.status === "Done").length;
+
+    const nextReview =
+      projects
+        .map((p) => p.eta)
+        .find((eta) => eta && eta !== "-") ||
+      tickets.map((ticket) => ticket.updatedAt).find((date) => date && date !== "-") ||
+      "-";
+
+    return {
+      activeProjects: projects.length,
+      openTickets,
+      completedMilestones,
+      nextReview,
+    };
+  } catch {
+    return {
+      activeProjects: 0,
+      openTickets: 0,
+      completedMilestones: 0,
+      nextReview: "-",
+    };
+  }
+}
+
+export async function createClientTicket(payload) {
+  const category = payload.category || "General Support";
+  const cleanTitle = String(payload.title || "").trim();
+  const prefixedTitle = cleanTitle.startsWith("[")
+    ? cleanTitle
+    : `[${category}] ${cleanTitle}`;
+
+  const insertRow = {
+    title: prefixedTitle,
+    description: payload.description,
+    priority: String(payload.urgency || "Medium").toUpperCase(),
+    status: "Open",
+  };
+
+  const inserted = await ticketFetch("", {
+    method: "POST",
+    body: JSON.stringify(insertRow),
+  });
+
+  const data = await inserted.json();
+  return toUiTicket(data, 0);
 }
