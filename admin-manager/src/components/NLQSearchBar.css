@@ -1,0 +1,147 @@
+.nlq-search-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+}
+
+.nlq-search-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nlq-search-input {
+  flex: 1;
+  padding: 10px 14px;
+  background-color: #ffffff;
+  color: #0f172a;
+  caret-color: #0f172a;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.nlq-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.nlq-search-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.nlq-search-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.nlq-search-button {
+  padding: 10px 14px;
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nlq-search-button:hover:not(:disabled) {
+  background-color: #4338ca;
+}
+
+.nlq-search-button:active:not(:disabled) {
+  background-color: #3730a3;
+}
+
+.nlq-search-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.nlq-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 6px;
+  padding: 8px 12px;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nlq-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.nlq-suggestion-item {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.15s;
+  color: #1f2937;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.nlq-suggestion-item:first-child {
+  border-radius: 5px 5px 0 0;
+}
+
+.nlq-suggestion-item:last-child {
+  border-radius: 0 0 5px 5px;
+}
+
+.nlq-suggestion-item:hover {
+  background-color: #f3f4f6;
+}
+
+.nlq-suggestion-item:active {
+  background-color: #e5e7eb;
+}
+
+/* Scrollbar styling */
+.nlq-suggestions::-webkit-scrollbar {
+  width: 6px;
+}
+
+.nlq-suggestions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nlq-suggestions::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.nlq-suggestions::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

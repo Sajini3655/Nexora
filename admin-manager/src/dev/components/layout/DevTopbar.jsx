@@ -23,6 +23,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
+import NLQSearchBar from "../../../components/NLQSearchBar";
 
 export default function DevTopbar({ onToggleSidebar }) {
   const navigate = useNavigate();
@@ -68,7 +69,8 @@ export default function DevTopbar({ onToggleSidebar }) {
         zIndex: (theme) => theme.zIndex.drawer + 1
       }}
     >
-      <Toolbar sx={{ minHeight: 72, gap: 1.5 }}>
+      <Toolbar sx={{ minHeight: 72, gap: 1.5, display: "grid", gridTemplateColumns: "1fr minmax(320px, 620px) 1fr", alignItems: "center" }}>
+        <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
         <IconButton
           edge="start"
           color="inherit"
@@ -103,10 +105,13 @@ export default function DevTopbar({ onToggleSidebar }) {
             </Typography>
           </Box>
         </Box>
+        </Box>
 
-        <Box sx={{ flexGrow: 1 }} />
+        <Box sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
+          <NLQSearchBar />
+        </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "flex-end" }}>
           <Chip
             size="small"
             label="DEVELOPER"
