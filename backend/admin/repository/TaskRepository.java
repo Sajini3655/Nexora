@@ -18,6 +18,8 @@ public interface TaskRepository extends JpaRepository<TaskItem, Long> {
 
     List<TaskItem> findByAssignedToId(Long userId);
 
+    boolean existsByProject_IdAndAssignedTo_Id(Long projectId, Long assignedToId);
+
     @Query("""
         SELECT COALESCE(SUM(t.estimatedPoints), 0)
         FROM TaskItem t

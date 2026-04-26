@@ -156,15 +156,15 @@ export default function RecentEmailTickets() {
       >
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 850, color: "#f8fafc" }}>
-            Recent Email Tickets
+            Recent Inbound Tickets
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
-            Tickets automatically created from client emails
+            Tickets created from inbound emails and project chat summaries
           </Typography>
         </Box>
 
         <Chip
-          label="EMAIL"
+          label="EMAIL + CHAT"
           size="small"
           sx={{
             bgcolor: "rgba(59,130,246,0.25)",
@@ -221,6 +221,10 @@ export default function RecentEmailTickets() {
 
                   <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
                     From: {ticket.sourceEmail || "Unknown"}
+                  </Typography>
+
+                  <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
+                    Source: {ticket.sourceChannel || "EMAIL"}
                   </Typography>
                 </Box>
 

@@ -37,16 +37,22 @@ public class TicketController {
     public ResponseEntity<List<Map<String, Object>>> getRecentEmailTickets() {
         String sql = """
                 SELECT
-                    id,
-                    COALESCE(title, 'Untitled ticket') AS title,
-                    COALESCE(priority, 'MEDIUM') AS priority,
-                    COALESCE(status, 'OPEN') AS status,
-                    assigned_to AS assigned_to_id,
-                    created_at,
-                    description
-                FROM tickets
-                WHERE description ILIKE '%Source: EMAIL%'
-                ORDER BY created_at DESC NULLS LAST
+                    t.id,
+                    COALESCE(t.title, 'Untitled ticket') AS title,
+                    COALESCE(t.priority, 'MEDIUM') AS priority,
+                    COALESCE(t.status, 'OPEN') AS status,
+                    t.assigned_to AS assigned_to_id,
+                    t.created_at,
+                    t.description,
+                    t.source_channel,
+                    t.source_email,
+                    p.name AS project_name
+                FROM tickets t
+                LEFT JOIN projects p ON p.id = t.project_id
+                WHERE t.description ILIKE '%Source: EMAIL%'
+                   OR UPPER(COALESCE(t.source_channel, '')) = 'EMAIL'
+                   OR UPPER(COALESCE(t.source_channel, '')) = 'CHAT_SUMMARY'
+                ORDER BY t.created_at DESC NULLS LAST
                 LIMIT 5
                 """;
 
@@ -58,11 +64,11 @@ public class TicketController {
             ticket.put("title", rs.getString("title"));
             ticket.put("priority", rs.getString("priority"));
             ticket.put("status", rs.getString("status"));
-            ticket.put("sourceEmail", extractSourceEmail(description));
-            ticket.put("sourceChannel", "EMAIL");
+            ticket.put("sourceEmail", fallbackSourceEmail(rs.getString("source_email"), description));
+            ticket.put("sourceChannel", fallbackSourceChannel(rs.getString("source_channel"), description));
             ticket.put("assignedToId", rs.getObject("assigned_to_id", Long.class));
             ticket.put("createdAt", rs.getObject("created_at"));
-            ticket.put("projectName", "Project");
+            ticket.put("projectName", rs.getString("project_name"));
 
             return ticket;
         });
@@ -70,9 +76,13 @@ public class TicketController {
         return ResponseEntity.ok(result);
     }
 
-    private String extractSourceEmail(String description) {
+    private String fallbackSourceEmail(String sourceEmail, String description) {
+        if (sourceEmail != null && !sourceEmail.isBlank()) {
+            return sourceEmail;
+        }
+
         if (description == null || description.isBlank()) {
-            return "client.test@gmail.com";
+            return "project-chat@nexora.local";
         }
 
         for (String line : description.split("\\R")) {
@@ -84,7 +94,19 @@ public class TicketController {
             }
         }
 
-        return "client.test@gmail.com";
+        return "project-chat@nexora.local";
+    }
+
+    private String fallbackSourceChannel(String sourceChannel, String description) {
+        if (sourceChannel != null && !sourceChannel.isBlank()) {
+            return sourceChannel;
+        }
+
+        if (description != null && description.contains("Source: EMAIL")) {
+            return "EMAIL";
+        }
+
+        return "CHAT_SUMMARY";
     }
 
     @GetMapping("/{id}")
