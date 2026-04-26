@@ -111,16 +111,16 @@ export default function RecentEmailTickets() {
         assignedToId: Number(selectedDeveloperId),
       });
 
+      // Remove assigned ticket from the list and refresh
       setTickets((prev) =>
-        prev.map((ticket) =>
-          ticket.id === ticketId
-            ? {
-                ...ticket,
-                assignedToId: Number(selectedDeveloperId),
-              }
-            : ticket
-        )
+        prev.filter((ticket) => ticket.id !== ticketId)
       );
+      
+      setSelectedDeveloperByTicket((prev) => {
+        const updated = { ...prev };
+        delete updated[ticketId];
+        return updated;
+      });
     } catch (err) {
       const status = err?.response?.status;
       const message =

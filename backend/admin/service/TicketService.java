@@ -38,7 +38,7 @@ public class TicketService {
         if (user.getAllRoles().contains(Role.ADMIN)) {
             tickets = ticketRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
         } else if (user.getAllRoles().contains(Role.MANAGER)) {
-            tickets = ticketRepository.findByProject_Manager_IdOrCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(
+            tickets = ticketRepository.findByProjectManagerIdOrCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(
                     user.getId(),
                     user.getId(),
                     user.getId()
