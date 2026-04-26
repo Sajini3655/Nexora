@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
   LinearProgress,
@@ -105,13 +106,65 @@ export default function DevDashboardHome() {
   return (
     <DevLayout>
       <Stack spacing={3}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 900 }}>
-            Dashboard
-          </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
-            Overview of your assigned tasks, tickets, and current work.
-          </Typography>
+        <Box
+          sx={{
+            p: { xs: 2.5, md: 3 },
+            borderRadius: 4,
+            border: "1px solid rgba(148,163,184,0.16)",
+            background:
+              "linear-gradient(135deg, rgba(109,93,252,0.22) 0%, rgba(15,23,42,0.92) 48%, rgba(8,15,29,0.96) 100%)",
+            boxShadow: "0 26px 80px rgba(0,0,0,0.35)",
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            alignItems={{ xs: "flex-start", md: "center" }}
+            justifyContent="space-between"
+          >
+            <Box sx={{ maxWidth: 760 }}>
+              <Chip
+                size="small"
+                label="Developer Overview"
+                sx={{
+                  mb: 1.2,
+                  bgcolor: "rgba(124,92,255,0.16)",
+                  color: "#ddd6fe",
+                  border: "1px solid rgba(124,92,255,0.24)",
+                  fontWeight: 800,
+                }}
+              />
+              <Typography variant="h4" sx={{ fontWeight: 950, letterSpacing: -0.8 }}>
+                Your work, tickets, and live progress in one place.
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#cbd5e1", mt: 1 }}>
+                A cleaner view of assigned tasks, ticket intake, and project momentum powered by the backend.
+              </Typography>
+            </Box>
+
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              <Button
+                variant="contained"
+                sx={{
+                  bgcolor: "#6d5dfc",
+                  fontWeight: 800,
+                  "&:hover": { bgcolor: "#5a4de0" },
+                }}
+              >
+                Refresh data
+              </Button>
+              <Button
+                variant="outlined"
+                sx={{
+                  color: "#e2e8f0",
+                  borderColor: "rgba(226,232,240,0.18)",
+                  fontWeight: 800,
+                }}
+              >
+                Open tasks
+              </Button>
+            </Stack>
+          </Stack>
         </Box>
 
         {error ? <Alert severity="warning">{error}</Alert> : null}
@@ -246,11 +299,11 @@ function StatCard({ title, value }) {
   return (
     <Paper
       sx={{
-        p: 2,
+        p: 2.2,
         borderRadius: 3,
-        bgcolor: "#0b1628",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "none",
+        bgcolor: "rgba(11,22,40,0.78)",
+        border: "1px solid rgba(148,163,184,0.12)",
+        boxShadow: "0 16px 40px rgba(0,0,0,0.18)",
       }}
     >
       <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 700 }}>
@@ -267,11 +320,11 @@ function Panel({ title, children }) {
   return (
     <Paper
       sx={{
-        p: 2.2,
+        p: 2.4,
         borderRadius: 3,
-        bgcolor: "#0b1628",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "none",
+        bgcolor: "rgba(11,22,40,0.8)",
+        border: "1px solid rgba(148,163,184,0.12)",
+        boxShadow: "0 18px 55px rgba(0,0,0,0.22)",
       }}
     >
       <Box sx={{ mb: 1.5 }}>
