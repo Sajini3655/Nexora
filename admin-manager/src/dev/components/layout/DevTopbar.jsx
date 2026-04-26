@@ -62,11 +62,12 @@ export default function DevTopbar({ onToggleSidebar }) {
       sx={{
         top: 0,
         zIndex: 20,
-        bgcolor: "#07111f",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        bgcolor: "rgba(7, 17, 31, 0.86)",
+        backdropFilter: "blur(18px)",
+        borderBottom: "1px solid rgba(148,163,184,0.12)",
       }}
     >
-      <Toolbar sx={{ minHeight: 64, px: { xs: 2, md: 3 } }}>
+      <Toolbar sx={{ minHeight: 68, px: { xs: 2, md: 3 } }}>
         <IconButton
           color="inherit"
           onClick={onToggleSidebar}
@@ -74,6 +75,7 @@ export default function DevTopbar({ onToggleSidebar }) {
             mr: 1.5,
             border: "1px solid rgba(255,255,255,0.10)",
             borderRadius: 2,
+            bgcolor: "rgba(255,255,255,0.03)",
           }}
         >
           <MenuIcon />
@@ -112,6 +114,7 @@ export default function DevTopbar({ onToggleSidebar }) {
             sx={{
               color: "#e5e7eb",
               border: "1px solid rgba(255,255,255,0.12)",
+              bgcolor: "rgba(255,255,255,0.03)",
             }}
           >
             <FiBell />
@@ -228,6 +231,7 @@ export default function DevTopbar({ onToggleSidebar }) {
           sx={{
             p: 0.4,
             border: "1px solid rgba(255,255,255,0.12)",
+            bgcolor: "rgba(255,255,255,0.03)",
           }}
         >
           <Avatar
@@ -255,6 +259,7 @@ export default function DevTopbar({ onToggleSidebar }) {
               bgcolor: "#0f172a",
               color: "#e5e7eb",
               border: "1px solid rgba(255,255,255,0.10)",
+              boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
             },
           }}
         >

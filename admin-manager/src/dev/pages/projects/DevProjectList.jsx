@@ -73,11 +73,20 @@ export default function DevProjectList() {
 
   return (
     <DevLayout>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>
+      <Box
+        sx={{
+          mb: 3,
+          p: { xs: 2.5, md: 3 },
+          borderRadius: 4,
+          border: "1px solid rgba(148,163,184,0.14)",
+          background:
+            "linear-gradient(135deg, rgba(20,184,166,0.16) 0%, rgba(11,22,40,0.94) 100%)",
+        }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.5 }}>
           Projects
         </Typography>
-        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.66)", mt: 0.5 }}>
+        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.75 }}>
           Projects are grouped from backend tasks assigned to you.
         </Typography>
       </Box>
@@ -89,7 +98,13 @@ export default function DevProjectList() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search projects or ids..."
-        sx={{ mb: 3 }}
+        sx={{
+          mb: 3,
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 3,
+            bgcolor: "rgba(15,23,42,0.72)",
+          },
+        }}
         InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, opacity: 0.7 }} /> }}
       />
 
@@ -101,8 +116,29 @@ export default function DevProjectList() {
         <Grid container spacing={2}>
           {filteredProjects.map((project) => (
             <Grid item xs={12} md={6} lg={4} key={project.id}>
-              <Card sx={{ p: 2.5, height: "100%", cursor: "pointer", transition: "transform 180ms ease", "&:hover": { transform: "translateY(-2px)" } }} onClick={() => navigate(`/dev/projects/${project.id}`)}>
-                <Chip label={project.status} size="small" sx={{ mb: 1.5 }} />
+              <Card
+                sx={{
+                  p: 2.5,
+                  height: "100%",
+                  cursor: "pointer",
+                }}
+                onClick={() => navigate(`/dev/projects/${project.id}`)}
+              >
+                <Chip
+                  label={project.status}
+                  size="small"
+                  sx={{
+                    mb: 1.5,
+                    bgcolor:
+                      project.status === "Completed"
+                        ? "rgba(34,197,94,0.16)"
+                        : project.status === "Active"
+                          ? "rgba(59,130,246,0.16)"
+                          : "rgba(124,92,255,0.16)",
+                    color: "#e5e7eb",
+                    fontWeight: 800,
+                  }}
+                />
                 <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
                   {project.name}
                 </Typography>

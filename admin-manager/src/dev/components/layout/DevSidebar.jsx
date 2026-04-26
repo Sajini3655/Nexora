@@ -40,13 +40,24 @@ export default function DevSidebar({ open, onClose }) {
         "& .MuiDrawer-paper": {
           width: drawerWidth,
           boxSizing: "border-box",
-          bgcolor: "#0b1628",
+          bgcolor: "rgba(7, 17, 31, 0.96)",
           color: "#e5e7eb",
-          borderRight: "1px solid rgba(255,255,255,0.08)",
+          borderRight: "1px solid rgba(148,163,184,0.12)",
+          backdropFilter: "blur(18px)",
         },
       }}
     >
-      <Box sx={{ height: "100%", p: 2, position: "relative" }}>
+      <Box
+        sx={{
+          height: "100%",
+          p: 2,
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          background:
+            "linear-gradient(180deg, rgba(109,93,252,0.14) 0%, rgba(7,17,31,0.02) 24%)",
+        }}
+      >
         <Box
           sx={{
             display: "flex",
@@ -58,7 +69,7 @@ export default function DevSidebar({ open, onClose }) {
           }}
         >
           <Box>
-            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+            <Typography sx={{ fontWeight: 950, fontSize: 19, letterSpacing: -0.3 }}>
               Nexora
             </Typography>
             <Typography variant="caption" sx={{ color: "#94a3b8" }}>
@@ -72,6 +83,7 @@ export default function DevSidebar({ open, onClose }) {
             sx={{
               color: "#cbd5e1",
               border: "1px solid rgba(255,255,255,0.08)",
+              bgcolor: "rgba(255,255,255,0.03)",
             }}
           >
             <CloseIcon fontSize="small" />
@@ -98,9 +110,9 @@ export default function DevSidebar({ open, onClose }) {
                     py: 1.15,
                     px: 1.4,
                     color: isActive ? "#ffffff" : "#cbd5e1",
-                    bgcolor: isActive ? "rgba(124,92,255,0.18)" : "transparent",
+                    bgcolor: isActive ? "rgba(124,92,255,0.2)" : "transparent",
                     border: isActive
-                      ? "1px solid rgba(124,92,255,0.35)"
+                      ? "1px solid rgba(124,92,255,0.42)"
                       : "1px solid transparent",
                     "&:hover": {
                       bgcolor: isActive
@@ -133,7 +145,7 @@ export default function DevSidebar({ open, onClose }) {
 
         <Box sx={{ position: "absolute", bottom: 18, left: 18, right: 18 }}>
           <Divider sx={{ mb: 1.5, borderColor: "rgba(255,255,255,0.08)" }} />
-          <Typography variant="caption" sx={{ color: "#64748b" }}>
+          <Typography variant="caption" sx={{ color: "#94a3b8" }}>
             Tasks are available inside projects.
           </Typography>
         </Box>

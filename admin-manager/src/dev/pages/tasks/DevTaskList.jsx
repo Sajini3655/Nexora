@@ -59,9 +59,20 @@ export default function DevTaskList() {
 
   return (
     <DevLayout>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>Tasks</Typography>
-        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.66)", mt: 0.5 }}>
+      <Box
+        sx={{
+          mb: 3,
+          p: { xs: 2.5, md: 3 },
+          borderRadius: 4,
+          border: "1px solid rgba(148,163,184,0.14)",
+          background:
+            "linear-gradient(135deg, rgba(124,92,255,0.18) 0%, rgba(11,22,40,0.94) 100%)",
+        }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.5 }}>
+          Tasks
+        </Typography>
+        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.75 }}>
           Live tasks assigned to your account from the backend.
         </Typography>
       </Box>
@@ -79,7 +90,13 @@ export default function DevTaskList() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search tasks, project name, or id..."
-        sx={{ mb: 3 }}
+        sx={{
+          mb: 3,
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 3,
+            bgcolor: "rgba(15,23,42,0.72)",
+          },
+        }}
         InputProps={{
           startAdornment: (
             <InputAdornment position="start"><SearchIcon /></InputAdornment>
@@ -92,7 +109,14 @@ export default function DevTaskList() {
       ) : (
         <Box sx={{ display: "grid", gap: 1.5 }}>
           {filteredTasks.map((task) => (
-            <Card key={task.id} sx={{ p: 2.5, cursor: "pointer", transition: "transform 180ms ease", "&:hover": { transform: "translateY(-2px)" } }} onClick={() => navigate(`/dev/tasks/${task.id}`)}>
+            <Card
+              key={task.id}
+              sx={{
+                p: 2.5,
+                cursor: "pointer",
+              }}
+              onClick={() => navigate(`/dev/tasks/${task.id}`)}
+            >
               <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start" }}>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.3 }} noWrap>
