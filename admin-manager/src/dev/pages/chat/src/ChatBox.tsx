@@ -8,7 +8,8 @@ import {
   startSession,
   getMessages,
   endChatAI,
-  saveSummary
+  saveSummary,
+  createProjectTicket,
 } from "./api";
 
 interface Message {
@@ -41,11 +42,118 @@ interface ChatBoxProps {
 
 const WS_URL = "http://localhost:8081/ws";
 
+const BLOCKER_KEYWORDS = [
+  "blocked",
+  "blocker",
+  "blocking",
+  "cannot continue",
+  "can't continue",
+  "stuck",
+  "urgent",
+  "critical",
+  "production down",
+  "server down",
+  "database down",
+  "login broken",
+  "not working",
+  "crash",
+  "error",
+  "failed",
+  "failing",
+  "bug",
+  "issue",
+  "500",
+];
+
+function detectBlockers(messages: Message[]): string[] {
+  const importantMessages = messages
+    .filter((m) => {
+      const message = String(m.message || "").toLowerCase();
+      return BLOCKER_KEYWORDS.some((keyword) =>
+        message.includes(keyword.toLowerCase())
+      );
+    })
+    .slice(-3)
+    .map((m) => String(m.message || "").trim())
+    .filter(Boolean);
+
+  return importantMessages;
+}
+
+function buildLocalSummary(messages: Message[]): string {
+  if (!messages.length) {
+    return "Chat ended. No messages were available to summarize.";
+  }
+
+  const lines = messages.slice(-8).map((m) => {
+    const sender =
+      m.senderName || (m.user === "user" ? "Developer" : "Assistant");
+    const message = String(m.message || "").trim();
+    return `- ${sender}: ${message}`;
+  });
+
+  const blockers = detectBlockers(messages);
+
+  return [
+    "Chat Summary:",
+    ...lines,
+    "",
+    blockers.length > 0
+      ? "Blocker/Risk Detected: The chat contains blocker or issue related messages."
+      : "No major blocker detected from keywords.",
+  ].join("\n");
+}
+
+function normalizeAiResult(data: any, messages: Message[]): ChatEndResult {
+  const fallbackSummary = buildLocalSummary(messages);
+  const fallbackBlockers = detectBlockers(messages);
+
+  const summary =
+    typeof data?.summary === "string" && data.summary.trim()
+      ? data.summary.trim()
+      : fallbackSummary;
+
+  const blockers = Array.isArray(data?.blockers)
+    ? data.blockers
+        .filter((item: any) => typeof item === "string" && item.trim())
+        .map((item: string) => item.trim())
+    : fallbackBlockers;
+
+  return {
+    summary,
+    blockers,
+    tickets_created: Array.isArray(data?.tickets_created)
+      ? data.tickets_created
+      : [],
+    ticket_message:
+      typeof data?.ticket_message === "string"
+        ? data.ticket_message
+        : "Summary generated. You can create a ticket if needed.",
+    ticket_prompt_needed: true,
+  };
+}
+
+function ticketReasonFromSummary(summary: string, blockers: string[]): string {
+  if (blockers.length > 0) {
+    return blockers[0];
+  }
+
+  const cleanSummary = String(summary || "").trim();
+
+  if (!cleanSummary) {
+    return "Ticket requested from ended developer chat.";
+  }
+
+  return cleanSummary.length > 180
+    ? cleanSummary.substring(0, 180) + "..."
+    : cleanSummary;
+}
+
 const ChatBox: React.FC<ChatBoxProps> = ({
   projectId,
   currentUserId,
   currentUserName,
-  onSummary
+  onSummary,
 }) => {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
@@ -76,6 +184,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
   const appendLocalUserMessage = (text: string) => {
     const createdAt = new Date().toISOString();
+
     setChat((prev) => [
       ...prev,
       {
@@ -86,15 +195,32 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         createdAt,
       },
     ]);
+
     return createdAt;
+  };
+
+  const appendAssistantMessage = (text: string) => {
+    setChat((prev) => [
+      ...prev,
+      {
+        user: "assistant",
+        message: text,
+        senderName: "AI Shadow",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
   };
 
   const isRecentDuplicate = (existing: Message, incoming: Message) => {
     if (existing.senderId !== incoming.senderId) return false;
     if (existing.message !== incoming.message) return false;
 
-    const existingTime = existing.createdAt ? new Date(existing.createdAt).getTime() : NaN;
-    const incomingTime = incoming.createdAt ? new Date(incoming.createdAt).getTime() : NaN;
+    const existingTime = existing.createdAt
+      ? new Date(existing.createdAt).getTime()
+      : NaN;
+    const incomingTime = incoming.createdAt
+      ? new Date(incoming.createdAt).getTime()
+      : NaN;
 
     if (Number.isNaN(existingTime) || Number.isNaN(incomingTime)) {
       return true;
@@ -108,7 +234,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       top: chatWindowRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [chat, showTicketPrompt, errorMessage]);
+  }, [chat, showTicketPrompt, errorMessage, summaryData]);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,11 +270,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
         const mappedMessages: Message[] = Array.isArray(storedMessages)
           ? storedMessages.map((m: any) => ({
-              user: String(m.senderId) === String(currentUserId) ? "user" : "assistant",
+              user:
+                String(m.senderId) === String(currentUserId)
+                  ? "user"
+                  : "assistant",
               message: m.content ?? "",
               senderId: String(m.senderId),
               senderName: m.senderName ?? "Unknown",
-              createdAt: m.createdAt
+              createdAt: m.createdAt,
             }))
           : [];
 
@@ -160,11 +289,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           if (session.summary) {
             const endedSummary: ChatEndResult = {
               summary: session.summary,
-              blockers: [],
+              blockers: detectBlockers(mappedMessages),
               tickets_created: [],
               ticket_message: "",
               ticket_prompt_needed: false,
             };
+
             setSummaryData(endedSummary);
             onSummary(endedSummary);
           }
@@ -212,7 +342,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             message: payload.content ?? "",
             senderId: String(payload.senderId),
             senderName: payload.senderName ?? "Unknown",
-            createdAt: payload.createdAt
+            createdAt: payload.createdAt,
           };
 
           setChat((prev) => {
@@ -229,7 +359,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       },
       onWebSocketClose: () => {
         setSocketConnected(false);
-      }
+      },
     });
 
     client.activate();
@@ -237,6 +367,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
     return () => {
       setSocketConnected(false);
+
       if (stompClientRef.current) {
         stompClientRef.current.deactivate();
         stompClientRef.current = null;
@@ -252,17 +383,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     }));
   };
 
-  const appendAssistantMessage = (text: string) => {
-    setChat((prev) => [
-      ...prev,
-      {
-        user: "assistant",
-        message: text,
-        senderName: "AI Shadow"
-      }
-    ]);
-  };
-
   const handleSend = async () => {
     if (
       !input.trim() ||
@@ -276,20 +396,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       return;
     }
 
+    const messageText = input.trim();
     let localCreatedAt = "";
 
     try {
       setErrorMessage("");
 
-      localCreatedAt = appendLocalUserMessage(input.trim());
+      localCreatedAt = appendLocalUserMessage(messageText);
 
       stompClientRef.current.publish({
         destination: "/app/chat.send",
         body: JSON.stringify({
           sessionId: Number(sessionId),
           userId: Number(currentUserId),
-          content: input.trim()
-        })
+          content: messageText,
+        }),
       });
 
       setInput("");
@@ -300,11 +421,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             !(
               m.user === "user" &&
               m.senderId === currentUserId &&
-              m.message === input.trim() &&
+              m.message === messageText &&
               m.createdAt === localCreatedAt
             )
         )
       );
+
       setErrorMessage(error?.message || "Failed to send message.");
     }
   };
@@ -318,31 +440,60 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       setEndingChat(true);
       setErrorMessage("");
 
-      const result = await endChatAI(buildAiMessages(chat), projectId, false);
+      let result: ChatEndResult;
 
-      setSummaryData(result);
-      setChatEnded(true);
+      try {
+        const aiData = await endChatAI(buildAiMessages(chat), projectId, false);
+        result = normalizeAiResult(aiData, chat);
+      } catch {
+        result = normalizeAiResult(null, chat);
+        appendAssistantMessage(
+          "⚠️ AI summary service was unavailable, so a local summary was generated."
+        );
+      }
 
       await saveSummary(sessionId, result.summary);
 
-      if (result.blockers?.length > 0 && result.ticket_prompt_needed) {
-        setShowTicketPrompt(true);
-      } else {
-        if (result.ticket_message) {
-          appendAssistantMessage(`ℹ️ ${result.ticket_message}`);
-        }
-        onSummary(result);
-      }
+      const finalResult: ChatEndResult = {
+        ...result,
+        ticket_prompt_needed: true,
+      };
+
+      setSummaryData(finalResult);
+      setChatEnded(true);
+      setShowTicketPrompt(true);
+      onSummary(finalResult);
+
+      appendAssistantMessage("✅ Chat ended. Summary generated and saved.");
+      appendAssistantMessage("🎫 Do you want to create a ticket from this chat summary?");
     } catch (error: any) {
-      appendAssistantMessage("[Error generating summary]");
-      setErrorMessage(error?.message || "Failed to end chat and generate summary.");
+      const fallbackResult: ChatEndResult = {
+        summary: buildLocalSummary(chat),
+        blockers: detectBlockers(chat),
+        tickets_created: [],
+        ticket_message: "Summary generated locally. You can create a ticket if needed.",
+        ticket_prompt_needed: true,
+      };
+
+      setSummaryData(fallbackResult);
+      setChatEnded(true);
+      setShowTicketPrompt(true);
+      onSummary(fallbackResult);
+
+      appendAssistantMessage("✅ Chat ended. Fallback summary generated.");
+      appendAssistantMessage("🎫 Do you want to create a ticket from this chat summary?");
+
+      setErrorMessage(
+        error?.message ||
+          "Chat ended with fallback summary, but backend save may have failed."
+      );
     } finally {
       setEndingChat(false);
     }
   };
 
   const handleTicketChoice = async (createTickets: boolean) => {
-    if (!summaryData || !sessionId) {
+    if (!summaryData) {
       return;
     }
 
@@ -350,30 +501,51 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       setShowTicketPrompt(false);
       setErrorMessage("");
 
-      if (createTickets) {
-        const finalResult = await endChatAI(buildAiMessages(chat), projectId, true);
-        setSummaryData(finalResult);
+      if (!createTickets) {
+        const skippedResult: ChatEndResult = {
+          ...summaryData,
+          ticket_message: "Ticket creation skipped by user.",
+          ticket_prompt_needed: false,
+        };
 
-        await saveSummary(sessionId, finalResult.summary);
-
-        if (finalResult.tickets_created?.length > 0) {
-          finalResult.tickets_created.forEach((ticket) => {
-            appendAssistantMessage(
-              `✅ Ticket created: ${ticket.ticket_id} for blocker "${ticket.blocker}"`
-            );
-          });
-        } else if (finalResult.ticket_message) {
-          appendAssistantMessage(`ℹ️ ${finalResult.ticket_message}`);
-        }
-
-        onSummary(finalResult);
-      } else {
+        setSummaryData(skippedResult);
+        onSummary(skippedResult);
         appendAssistantMessage("ℹ️ Ticket creation skipped by user.");
-        onSummary(summaryData);
+        return;
       }
+
+      const blockerOrReason = ticketReasonFromSummary(
+        summaryData.summary,
+        summaryData.blockers
+      );
+
+      const created = await createProjectTicket(projectId, blockerOrReason);
+
+      const createdTicket = {
+        ticket_id: String(created?.id ?? "UNKNOWN"),
+        blocker: blockerOrReason,
+      };
+
+      const finalResult: ChatEndResult = {
+        ...summaryData,
+        blockers:
+          summaryData.blockers.length > 0
+            ? summaryData.blockers
+            : [blockerOrReason],
+        tickets_created: [createdTicket],
+        ticket_message: "Created 1 ticket from the chat summary.",
+        ticket_prompt_needed: false,
+      };
+
+      setSummaryData(finalResult);
+      onSummary(finalResult);
+
+      appendAssistantMessage(
+        `✅ Ticket created: ${createdTicket.ticket_id} from this chat summary.`
+      );
     } catch (error: any) {
-      appendAssistantMessage("[Error while processing ticket choice]");
-      setErrorMessage(error?.message || "Failed to process ticket creation choice.");
+      appendAssistantMessage("[Error while creating ticket]");
+      setErrorMessage(error?.message || "Failed to create ticket.");
     }
   };
 
@@ -460,7 +632,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     senderLabel: {
       fontSize: 11,
       opacity: 0.7,
-      marginBottom: 4
+      marginBottom: 4,
     },
     ticketPrompt: {
       marginTop: 12,
@@ -472,7 +644,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       justifyContent: "space-between",
       gap: 12,
       flexWrap: "wrap",
-      border: "1px solid rgba(255,255,255,0.08)"
+      border: "1px solid rgba(255,255,255,0.08)",
     },
     ticketText: {
       color: "#fff",
@@ -493,7 +665,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       fontSize: 12,
       color: "rgba(222,230,255,0.8)",
       display: "flex",
-      justifyContent: "space-between"
+      justifyContent: "space-between",
     },
     loadingText: {
       opacity: 0.7,
@@ -502,7 +674,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     emptyText: {
       opacity: 0.7,
       fontSize: 14,
-    }
+    },
   };
 
   return (
@@ -533,7 +705,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             {showTicketPrompt && (
               <div style={styles.ticketPrompt}>
                 <span style={styles.ticketText}>
-                  🚨 Blocker detected. Do you want to create ticket(s)?
+                  🎫 Do you want to create a ticket from this chat summary?
                 </span>
 
                 <div style={{ display: "flex", gap: 6 }}>
@@ -563,9 +735,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
       <div style={styles.footerInfo}>
         <span>
-          {chatEnded
-            ? "Chat ended. Summary processed."
-            : "Live project discussion"}
+          {chatEnded ? "Chat ended. Summary processed." : "Live project discussion"}
         </span>
         <span>{socketConnected ? "● Live" : "○ Offline"}</span>
       </div>
