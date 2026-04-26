@@ -2,6 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext.jsx'
+import { loadTasks } from '../dev/data/taskStore'
+import { syncAssignedTasksToLocalStoreSafe } from '../dev/data/taskApi'
+import { loadDeveloperTicketsFromBackendSafe } from '../dev/data/ticketApi'
+import { loadUserTickets } from '../dev/data/ticketStore'
+import { fetchClientProjects, fetchClientTickets } from '../client/services/clientService'
+import { fetchProjects as fetchManagerProjects } from '../services/managerService'
 
 const ROUTE_CATALOG = [
   {
@@ -26,12 +32,12 @@ const ROUTE_CATALOG = [
     path: '/users',
     label: 'Users',
     keywords: ['users', 'team', 'members', 'people', 'user management'],
-    roles: ['ADMIN', 'MANAGER']
+    roles: ['ADMIN']
   },
   {
     path: '/profile',
     label: 'Profile',
-    keywords: ['profile', 'account', 'my account', 'me'],
+    keywords: ['profile', 'account', 'my profile'],
     roles: ['ADMIN', 'MANAGER']
   },
   {
@@ -51,7 +57,7 @@ const ROUTE_CATALOG = [
   {
     path: '/manager/project-management',
     label: 'Project Management',
-    keywords: ['project management', 'manage projects', 'projects', 'project list'],
+    keywords: ['project management', 'manage project', 'manage projects', 'projects management', 'project list'],
     roles: ['MANAGER'],
     requiredModule: 'FILES'
   },
@@ -110,8 +116,8 @@ const ROUTE_CATALOG = [
   },
   {
     path: '/client/projects',
-    label: 'Client Projects',
-    keywords: ['client projects', 'projects', 'my projects'],
+    label: 'Client Workstreams',
+    keywords: ['client projects', 'projects', 'my projects', 'workstream', 'workstreams', 'support workstream', 'support workstreams'],
     roles: ['CLIENT']
   },
   {
@@ -156,26 +162,225 @@ function levenshtein(a, b) {
   return dp[s.length][t.length]
 }
 
-function bestFuzzyMatch(query, routes) {
-  const normalized = query.toLowerCase().trim()
+function normalizeText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s/-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function tokenize(value) {
+  const stopWords = new Set(['a', 'an', 'and', 'for', 'go', 'i', 'in', 'is', 'it', 'me', 'my', 'of', 'on', 'open', 'show', 'take', 'to', 'the', 'view'])
+  return normalizeText(value)
+    .split(' ')
+    .map((part) => part.trim())
+    .filter((part) => part && !stopWords.has(part))
+}
+
+function isTypoMatch(a, b) {
+  const left = normalizeText(a)
+  const right = normalizeText(b)
+  if (!left || !right) return false
+  if (left === right) return true
+
+  const maxLen = Math.max(left.length, right.length)
+  if (maxLen <= 2) return false
+
+  const distance = levenshtein(left, right)
+  const allowedDistance = maxLen <= 5 ? 1 : 2
+  if (distance > allowedDistance) return false
+
+  const similarity = 1 - distance / maxLen
+  return similarity >= 0.62
+}
+
+function tokenOverlapScore(queryTokens, candidateTokens) {
+  let exact = 0
+  let typo = 0
+
+  for (const c of candidateTokens) {
+    if (queryTokens.includes(c)) {
+      exact += 1
+      continue
+    }
+
+    if (queryTokens.some((q) => isTypoMatch(q, c))) {
+      typo += 1
+    }
+  }
+
+  return { exact, typo }
+}
+
+function buildDevProjects(tasks) {
+  const groups = new Map()
+
+  tasks.forEach((task) => {
+    const key = String(task?.projectId || task?.projectName || 'project-unknown')
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(task)
+  })
+
+  return [...groups.entries()].map(([key, list]) => ({
+    id: String(list[0]?.projectId || key),
+    name: list[0]?.projectName || `Project ${key}`
+  }))
+}
+
+function extractEntityTarget(rawQuery, intentWords) {
+  const normalized = normalizeText(rawQuery)
+  if (!normalized) return ''
+
+  const escapedIntent = intentWords
+    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|')
+
+  if (!escapedIntent) return normalized
+
+  const intentRegex = new RegExp(`(?:${escapedIntent})\\s+(.+)$`)
+  const match = normalized.match(intentRegex)
+  const base = (match?.[1] || normalized)
+    .replace(/^(for|named|name|called|with|the)\s+/, '')
+    .replace(/\s+(page|screen|view)$/g, '')
+    .trim()
+
+  return base || normalized
+}
+
+function scoreEntityCandidate(query, targetName, candidate) {
+  const normalizedQuery = normalizeText(query)
+  const normalizedTarget = normalizeText(targetName)
+  const rawLabel = candidate?.name || candidate?.title || candidate?.projectName || ''
+  const candidateName = normalizeText(rawLabel)
+  const candidateId = normalizeText(candidate?.id)
+
+  if (!candidateName && !candidateId) return 0
+
+  let score = 0
+
+  if (candidateId && (normalizedQuery.includes(candidateId) || normalizedTarget.includes(candidateId))) {
+    score += 90
+  }
+
+  if (candidateName && (normalizedQuery.includes(candidateName) || normalizedTarget.includes(candidateName))) {
+    score += 120
+  }
+
+  if (candidateName && isTypoMatch(normalizedTarget, candidateName)) {
+    score += 90
+  }
+
+  const queryTokens = tokenize(normalizedTarget || normalizedQuery)
+  const nameTokens = tokenize(candidateName)
+  const { exact, typo } = tokenOverlapScore(queryTokens, nameTokens)
+  score += exact * 24
+  score += typo * 16
+
+  return score
+}
+
+function getBestEntityMatch(query, targetName, candidates) {
   let best = null
-  let bestScore = Number.POSITIVE_INFINITY
+  let bestScore = 0
+
+  for (const candidate of candidates) {
+    const score = scoreEntityCandidate(query, targetName, candidate)
+    if (score > bestScore) {
+      bestScore = score
+      best = candidate
+    }
+  }
+
+  if (!best) return null
+  return bestScore >= 56 ? best : null
+}
+
+function scoreRoute(query, route) {
+  const normalizedQuery = normalizeText(query)
+  const queryTokens = tokenize(query)
+  const routeLabel = normalizeText(route.label)
+  const routeKeywords = route.keywords.map((keyword) => normalizeText(keyword))
+
+  if (!normalizedQuery) return 0
+
+  if (route.path === '/profile') {
+    const profileIntent = queryTokens.some((token) =>
+      ['profile', 'account'].some((target) => isTypoMatch(token, target))
+    )
+    if (!profileIntent) return 0
+  }
+
+  let score = 0
+
+  const hasProjectIntent = queryTokens.some((token) => ['project', 'projects'].some((target) => isTypoMatch(token, target)))
+  const hasManagementIntent = queryTokens.some((token) => ['management', 'manage', 'managment', 'amnagement'].some((target) => isTypoMatch(token, target)))
+  const hasAddIntent = queryTokens.some((token) => ['add', 'new', 'create'].some((target) => isTypoMatch(token, target)))
+  const hasWorkstreamIntent = queryTokens.some((token) => ['workstream', 'workstreams', 'stream', 'streams'].some((target) => isTypoMatch(token, target)))
+
+  if (route.path === '/manager/project-management') {
+    if (hasProjectIntent) score += 18
+    if (hasManagementIntent) score += 28
+    if (hasProjectIntent && hasManagementIntent) score += 24
+  }
+
+  if (route.path === '/manager/add-project') {
+    if (hasAddIntent) score += 26
+    if (hasProjectIntent) score += 8
+    if (hasManagementIntent) score -= 24
+  }
+
+  if (route.path === '/client/projects') {
+    if (hasWorkstreamIntent) score += 34
+    if (hasProjectIntent) score += 12
+    if (hasWorkstreamIntent && hasProjectIntent) score += 20
+  }
+
+  if (normalizedQuery === routeLabel) score += 110
+  else if (isTypoMatch(normalizedQuery, routeLabel)) score += 75
+
+  if (routeLabel.includes(normalizedQuery) || normalizedQuery.includes(routeLabel)) {
+    score += 45
+  }
+
+  for (const keyword of routeKeywords) {
+    if (!keyword) continue
+    if (normalizedQuery === keyword) score += 110
+    else if (isTypoMatch(normalizedQuery, keyword)) score += 85
+    else if (normalizedQuery.includes(keyword) || keyword.includes(normalizedQuery)) score += 40
+
+    const keywordTokens = keyword.split(' ').filter(Boolean)
+    const { exact, typo } = tokenOverlapScore(queryTokens, keywordTokens)
+    score += exact * 14
+    score += typo * 11
+  }
+
+  const combined = [routeLabel, ...routeKeywords].join(' ')
+  const distance = levenshtein(normalizedQuery, combined)
+  const similarity = 1 - distance / Math.max(normalizedQuery.length, combined.length, 1)
+  if (similarity > 0.82) score += 20
+  else if (similarity > 0.7) score += 8
+
+  return score
+}
+
+function bestRouteMatch(query, routes) {
+  let best = null
+  let bestScore = 0
 
   for (const route of routes) {
-    const candidates = [route.label, ...route.keywords]
-    for (const candidate of candidates) {
-      const score = levenshtein(normalized, String(candidate).toLowerCase())
-      if (score < bestScore) {
-        bestScore = score
-        best = route
-      }
+    const score = scoreRoute(query, route)
+    if (score > bestScore) {
+      bestScore = score
+      best = route
     }
   }
 
   if (!best) return null
 
-  const threshold = Math.max(2, Math.floor(normalized.length * 0.35))
-  return bestScore <= threshold ? best : null
+  const normalized = normalizeText(query)
+  const threshold = normalized.length <= 4 ? 46 : normalized.length <= 8 ? 24 : 18
+  return bestScore >= threshold ? { route: best, score: bestScore } : null
 }
 
 function canAccessRoute(route, role, moduleAccess) {
@@ -198,6 +403,93 @@ export const useNLQNavigation = () => {
     return ROUTE_CATALOG.filter((route) => canAccessRoute(route, role, moduleAccess))
   }
 
+  const resolveEntityNavigation = async (query, allowedRoutes) => {
+    const role = (user?.role || '').toUpperCase()
+    const tokens = tokenize(query)
+
+    const hasProjectIntent = tokens.some((token) => ['project', 'projects', 'workstream', 'workstreams'].some((target) => isTypoMatch(token, target)))
+    const hasTaskIntent = tokens.some((token) => ['task', 'tasks'].some((target) => isTypoMatch(token, target)))
+    const hasTicketIntent = tokens.some((token) => ['ticket', 'tickets', 'issue', 'issues'].some((target) => isTypoMatch(token, target)))
+
+    if (role === 'MANAGER') {
+      if (hasProjectIntent && allowedRoutes.some((route) => route.path === '/manager/project-management')) {
+        try {
+          const projects = await fetchManagerProjects()
+          const targetName = extractEntityTarget(query, ['project', 'projects'])
+          const match = getBestEntityMatch(query, targetName, Array.isArray(projects) ? projects : [])
+          if (match?.id) {
+            navigate(`/manager/project-management/${encodeURIComponent(String(match.id))}`)
+            return true
+          }
+        } catch {
+          // Continue with route-level NLQ if project fetch fails
+        }
+      }
+    }
+
+    if (role === 'DEVELOPER') {
+      if (hasProjectIntent && allowedRoutes.some((route) => route.path === '/dev/projects')) {
+        const syncedTasks = await syncAssignedTasksToLocalStoreSafe()
+        const tasks = Array.isArray(syncedTasks) ? syncedTasks : loadTasks()
+        const projects = buildDevProjects(tasks)
+        const targetName = extractEntityTarget(query, ['project', 'projects'])
+        const match = getBestEntityMatch(query, targetName, projects)
+        if (match?.id) {
+          navigate(`/dev/projects/${encodeURIComponent(String(match.id))}`)
+          return true
+        }
+      }
+
+      if (hasTaskIntent && allowedRoutes.some((route) => route.path === '/dev/tasks')) {
+        const syncedTasks = await syncAssignedTasksToLocalStoreSafe()
+        const tasks = Array.isArray(syncedTasks) ? syncedTasks : loadTasks()
+        const targetName = extractEntityTarget(query, ['task', 'tasks'])
+        const match = getBestEntityMatch(query, targetName, tasks)
+        if (match?.id) {
+          navigate(`/dev/tasks/${encodeURIComponent(String(match.id))}`)
+          return true
+        }
+      }
+
+      if (hasTicketIntent && allowedRoutes.some((route) => route.path === '/dev/tasks')) {
+        const backendTickets = await loadDeveloperTicketsFromBackendSafe()
+        const localTickets = loadUserTickets()
+        const tickets = Array.isArray(backendTickets) && backendTickets.length ? backendTickets : localTickets
+        const targetName = extractEntityTarget(query, ['ticket', 'tickets', 'issue', 'issues'])
+        const match = getBestEntityMatch(query, targetName, tickets)
+        if (match?.id) {
+          navigate(`/dev/tickets/${encodeURIComponent(String(match.id))}`)
+          return true
+        }
+      }
+    }
+
+    if (role === 'CLIENT') {
+      if (hasProjectIntent && allowedRoutes.some((route) => route.path === '/client/projects')) {
+        const projects = await fetchClientProjects()
+        const targetName = extractEntityTarget(query, ['project', 'projects', 'workstream', 'workstreams'])
+        const match = getBestEntityMatch(query, targetName, Array.isArray(projects) ? projects : [])
+        if (match?.name) {
+          navigate(`/client/projects?q=${encodeURIComponent(String(match.name))}`)
+          return true
+        }
+      }
+
+      if ((hasTicketIntent || hasTaskIntent) && allowedRoutes.some((route) => route.path === '/client/tickets')) {
+        const tickets = await fetchClientTickets()
+        const targetName = extractEntityTarget(query, ['ticket', 'tickets', 'issue', 'issues', 'task', 'tasks'])
+        const match = getBestEntityMatch(query, targetName, Array.isArray(tickets) ? tickets : [])
+        if (match?.name || match?.title) {
+          const needle = match?.title || match?.name
+          navigate(`/client/tickets?q=${encodeURIComponent(String(needle))}`)
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
   const navigateByQuery = async (query) => {
     if (!query || !query.trim()) {
       setError('Query cannot be empty')
@@ -212,6 +504,16 @@ export const useNLQNavigation = () => {
       setError('No accessible pages available for your role.')
       setIsLoading(false)
       return false
+    }
+
+    try {
+      const entityResolved = await resolveEntityNavigation(query, allowedRoutes)
+      if (entityResolved) {
+        setIsLoading(false)
+        return true
+      }
+    } catch {
+      // Continue with existing route-level NLQ behavior if entity lookup fails.
     }
 
     try {
@@ -239,17 +541,17 @@ export const useNLQNavigation = () => {
       console.warn('AI navigation failed, trying fallback:', err)
     }
 
-    // Fallback to keyword + fuzzy matching
-    const allowedMatch = findRouteByKeyword(query, allowedRoutes) || bestFuzzyMatch(query, allowedRoutes)
+    // Fallback to conservative matching
+    const allowedMatch = findRouteByKeyword(query, allowedRoutes) || bestRouteMatch(query, allowedRoutes)
     if (allowedMatch) {
-      navigate(allowedMatch.path)
+      navigate(allowedMatch.route ? allowedMatch.route.path : allowedMatch.path)
       setIsLoading(false)
       return true
     }
 
     const role = (user?.role || '').toUpperCase()
     const restrictedCatalog = ROUTE_CATALOG.filter((route) => !canAccessRoute(route, role, moduleAccess))
-    const restrictedMatch = findRouteByKeyword(query, restrictedCatalog) || bestFuzzyMatch(query, restrictedCatalog)
+    const restrictedMatch = findRouteByKeyword(query, restrictedCatalog) || bestRouteMatch(query, restrictedCatalog)
     if (restrictedMatch) {
       setError('You do not have access to that page.')
       setIsLoading(false)
@@ -262,11 +564,26 @@ export const useNLQNavigation = () => {
   }
 
   const findRouteByKeyword = (query, routes) => {
-    const normalized = query.toLowerCase().trim()
+    const normalized = normalizeText(query)
+    const tokens = tokenize(query)
     
     for (const route of routes) {
       for (const keyword of route.keywords) {
-        if (keyword.includes(normalized) || normalized.includes(keyword)) {
+        const normalizedKeyword = normalizeText(keyword)
+        const keywordTokens = tokenize(keyword)
+
+        if (!normalizedKeyword) continue
+
+        if (normalized === normalizedKeyword) {
+          return route
+        }
+
+        if (normalized.includes(normalizedKeyword) || normalizedKeyword.includes(normalized)) {
+          return route
+        }
+
+        const { exact, typo } = tokenOverlapScore(tokens, keywordTokens)
+        if (exact >= 2 || (exact >= 1 && typo >= 1) || typo >= 2) {
           return route
         }
       }

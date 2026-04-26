@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -28,12 +29,24 @@ const emptyForm = {
 };
 
 export default function ClientTicketList() {
+  const location = useLocation();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState(emptyForm);
+
+  const searchQuery = new URLSearchParams(location.search).get("q") || "";
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const visibleTickets = useMemo(() => {
+    if (!normalizedQuery) return tickets;
+    return tickets.filter((ticket) => {
+      const haystack = `${ticket.id} ${ticket.title} ${ticket.category || ""} ${ticket.status || ""}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [tickets, normalizedQuery]);
 
   const canCreate = useMemo(() => {
     return Boolean(form.category && form.title.trim() && form.description.trim());
@@ -199,9 +212,9 @@ export default function ClientTicketList() {
             <Box sx={{ display: "grid", placeItems: "center", minHeight: 140 }}>
               <CircularProgress sx={{ color: "#6d5dfc" }} />
             </Box>
-          ) : tickets.length === 0 ? (
+          ) : visibleTickets.length === 0 ? (
             <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-              No tickets found.
+              {searchQuery ? `No ticket matched "${searchQuery}".` : "No tickets found."}
             </Typography>
           ) : (
             <Box sx={{ overflowX: "auto" }}>
@@ -230,7 +243,7 @@ export default function ClientTicketList() {
                   ))}
                 </Box>
 
-                {tickets.map((ticket) => (
+                {visibleTickets.map((ticket) => (
                   <Box
                     key={ticket.id}
                     sx={{

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -13,9 +14,16 @@ import ClientLayout from "../../components/layout/ClientLayout";
 import { fetchClientProjects } from "../../services/clientService";
 
 export default function ClientProjectList() {
+  const location = useLocation();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const searchQuery = new URLSearchParams(location.search).get("q") || "";
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const visibleProjects = normalizedQuery
+    ? projects.filter((project) => `${project.name} ${project.id} ${project.manager}`.toLowerCase().includes(normalizedQuery))
+    : projects;
 
   useEffect(() => {
     let active = true;
@@ -76,7 +84,7 @@ export default function ClientProjectList() {
             </Typography>
           ) : (
             <Stack spacing={1.5}>
-              {projects.map((project) => (
+              {visibleProjects.map((project) => (
                 <Box
                   key={project.id}
                   sx={{
@@ -134,6 +142,12 @@ export default function ClientProjectList() {
                   </Typography>
                 </Box>
               ))}
+
+              {visibleProjects.length === 0 ? (
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                  No workstream matched "{searchQuery}".
+                </Typography>
+              ) : null}
             </Stack>
           )}
         </Paper>

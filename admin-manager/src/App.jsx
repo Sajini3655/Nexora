@@ -139,6 +139,14 @@ export default function App() {
           }
         />
         <Route
+          path="/users"
+          element={
+            <AdminShell>
+              <UserList />
+            </AdminShell>
+          }
+        />
+        <Route
           path="/settings"
           element={
             <AdminShell>
@@ -214,14 +222,6 @@ export default function App() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]} />}>
-        <Route
-          path="/users"
-          element={
-            <RoleShell>
-              <UserList />
-            </RoleShell>
-          }
-        />
         <Route
           path="/profile"
           element={
