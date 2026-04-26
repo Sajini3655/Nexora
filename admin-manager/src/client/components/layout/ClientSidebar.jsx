@@ -4,18 +4,18 @@ import {
   Box,
   Divider,
   Drawer,
+  IconButton,
   List,
   ListItemButton,
   ListItemText,
-  Typography
+  Typography,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 
 const links = [
   { to: "/client", label: "Dashboard" },
-  { to: "/client/projects", label: "Projects" },
   { to: "/client/tickets", label: "Tickets" },
-  { to: "/client/profile", label: "Profile" },
-  { to: "/client/settings", label: "Settings" }
+  { to: "/client/projects", label: "Workstreams" },
 ];
 
 export default function ClientSidebar({ open, onClose }) {
@@ -32,112 +32,91 @@ export default function ClientSidebar({ open, onClose }) {
       ModalProps={{ keepMounted: true }}
       sx={{
         "& .MuiDrawer-paper": {
-          width: 268,
+          width: 260,
           boxSizing: "border-box",
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
-          borderRight: "1px solid rgba(255,255,255,0.10)",
-          backdropFilter: "blur(14px)",
-          color: "#e7e9ee"
-        }
+          bgcolor: "#0b1628",
+          color: "#e5e7eb",
+          borderRight: "1px solid rgba(255,255,255,0.08)",
+        },
       }}
     >
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          p: 2,
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))"
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, px: 0.5 }}>
-          <Box
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: 2.2,
-              background:
-                "linear-gradient(135deg, rgba(124,92,255,0.95), rgba(124,92,255,0.35))",
-              boxShadow: "0 14px 40px rgba(124,92,255,0.20)",
-              border: "1px solid rgba(255,255,255,0.18)"
-            }}
-          />
+      <Box sx={{ height: "100%", p: 2, position: "relative" }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 2,
+            px: 0.5,
+            py: 0.5,
+          }}
+        >
           <Box>
-            <Typography sx={{ fontWeight: 950, letterSpacing: -0.4 }}>
-              Nexora Client
+            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+              Nexora
             </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.7 }}>
-              Projects & Support
+            <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+              Client Workspace
             </Typography>
           </Box>
+
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{
+              color: "#cbd5e1",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </Box>
 
-        <Divider sx={{ my: 1.5, borderColor: "rgba(255,255,255,0.08)" }} />
+        <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.08)" }} />
 
-        <Box component="nav">
-          <List sx={{ p: 0 }}>
-            {links.map((item) => {
-              const isActive = selected(item.to);
+        <List sx={{ p: 0 }}>
+          {links.map((item) => {
+            const active = selected(item.to);
 
-              return (
-                <ListItemButton
-                  key={item.to}
-                  component={Link}
-                  to={item.to}
-                  selected={isActive}
-                  onClick={onClose}
-                  sx={{
-                    borderRadius: 2,
-                    mb: 0.75,
-                    position: "relative",
-                    overflow: "hidden",
-                    border: "1px solid",
-                    borderColor: isActive
-                      ? "rgba(124,92,255,0.22)"
-                      : "rgba(255,255,255,0.04)",
-                    background: isActive
-                      ? "linear-gradient(90deg, rgba(124,92,255,0.22), rgba(124,92,255,0.08))"
-                      : "transparent",
-                    color: isActive ? "#fff" : "rgba(231,233,238,0.92)",
-                    boxShadow: isActive ? "0 12px 30px rgba(124,92,255,0.12)" : "none",
-                    "&:hover": { backgroundColor: "rgba(255,255,255,0.06)" }
+            return (
+              <ListItemButton
+                key={item.to}
+                component={Link}
+                to={item.to}
+                onClick={onClose}
+                sx={{
+                  mb: 0.7,
+                  borderRadius: 2,
+                  py: 1.15,
+                  px: 1.4,
+                  color: active ? "#ffffff" : "#cbd5e1",
+                  bgcolor: active ? "rgba(124,92,255,0.18)" : "transparent",
+                  border: active
+                    ? "1px solid rgba(124,92,255,0.35)"
+                    : "1px solid transparent",
+                  "&:hover": {
+                    bgcolor: active
+                      ? "rgba(124,92,255,0.24)"
+                      : "rgba(255,255,255,0.05)",
+                  },
+                }}
+              >
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontSize: 14,
+                    fontWeight: active ? 800 : 600,
                   }}
-                >
-                  <Box
-                    sx={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 2,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      bgcolor: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      fontSize: 12,
-                      fontWeight: 900,
-                      letterSpacing: 0.2,
-                      mr: 1.5,
-                      flexShrink: 0
-                    }}
-                  >
-                    {item.label.slice(0, 2).toUpperCase()}
-                  </Box>
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{ fontSize: 14, fontWeight: 800 }}
-                  />
-                </ListItemButton>
-              );
-            })}
-          </List>
-        </Box>
+                />
+              </ListItemButton>
+            );
+          })}
+        </List>
 
-        <Box sx={{ mt: "auto", pt: 2 }}>
+        <Box sx={{ position: "absolute", bottom: 18, left: 18, right: 18 }}>
           <Divider sx={{ mb: 1.5, borderColor: "rgba(255,255,255,0.08)" }} />
-          <Typography variant="caption" sx={{ opacity: 0.65 }}>
-            Client Space
+          <Typography variant="caption" sx={{ color: "#64748b" }}>
+            Profile is available from the topbar.
           </Typography>
         </Box>
       </Box>

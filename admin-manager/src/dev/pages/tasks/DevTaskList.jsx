@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Alert, Box, Chip, CircularProgress, Grid, InputAdornment, TextField, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
@@ -6,6 +6,7 @@ import DevLayout from "../../components/layout/DevLayout";
 import Card from "../../../components/ui/Card.jsx";
 import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
 function getProgress(task) {
   const subtasks = Array.isArray(task?.subtasks) ? task.subtasks : [];
@@ -21,29 +22,26 @@ export default function DevTaskList() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    let active = true;
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const synced = await syncAssignedTasksToLocalStoreSafe();
-        if (!active) return;
-        setTasks(Array.isArray(synced) ? synced : loadTasks());
-      } catch (err) {
-        if (!active) return;
-        setError(err?.message || "Failed to load developer tasks.");
-        setTasks(loadTasks());
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    loadData();
-    return () => {
-      active = false;
-    };
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const synced = await syncAssignedTasksToLocalStoreSafe();
+      setTasks(Array.isArray(synced) ? synced : loadTasks());
+    } catch (err) {
+      setError(err?.message || "Failed to load developer tasks.");
+      setTasks(loadTasks());
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const liveTopics = useMemo(() => ["/topic/tasks"], []);
+  useLiveRefresh(liveTopics, loadData, { debounceMs: 400 });
 
   const filteredTasks = useMemo(() => {
     const q = search.trim().toLowerCase();

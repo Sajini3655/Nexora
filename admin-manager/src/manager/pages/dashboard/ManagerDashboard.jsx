@@ -1,5 +1,5 @@
 // src/pages/dashboard/ManagerDashboard.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -13,6 +13,8 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { fetchManagerTasks, fetchProjects } from "../../../services/managerService";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import RecentEmailTickets from "../../components/RecentEmailTickets";
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
@@ -53,46 +55,36 @@ export default function ManagerDashboard() {
   const getProjectDescription = (project) =>
     project?.description ?? project?.projectDescription ?? "No description available.";
 
-  useEffect(() => {
-    let active = true;
+  const loadDashboard = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const [projectData, taskData] = await Promise.all([
+        fetchProjects(),
+        fetchManagerTasks(),
+      ]);
 
-    const loadDashboard = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const [projectData, taskData] = await Promise.all([
-          fetchProjects(),
-          fetchManagerTasks(),
-        ]);
-
-        if (!active) {
-          return;
-        }
-
-        setProjects(Array.isArray(projectData) ? projectData : []);
-        setTasks(Array.isArray(taskData) ? taskData : []);
-      } catch (err) {
-        if (!active) {
-          return;
-        }
-
-        setError(
-          err?.response?.data?.message ||
-            "Failed to load manager dashboard data."
-        );
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadDashboard();
-
-    return () => {
-      active = false;
-    };
+      setProjects(Array.isArray(projectData) ? projectData : []);
+      setTasks(Array.isArray(taskData) ? taskData : []);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          "Failed to load manager dashboard data."
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const liveTopics = useMemo(
+    () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"],
+    []
+  );
+  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 550 });
 
   const tasksByProject = useMemo(() => {
     const grouped = new Map();
@@ -336,6 +328,8 @@ export default function ManagerDashboard() {
         ))}
       </Grid>
 
+      <RecentEmailTickets />
+
       {/* Tasks */}
       <Typography variant="h5" sx={{ mb: 2, fontWeight: 850 }}>Task Focus</Typography>
       <Grid container spacing={2.2}>
@@ -370,3 +364,4 @@ export default function ManagerDashboard() {
     </Box>
   );
 }
+

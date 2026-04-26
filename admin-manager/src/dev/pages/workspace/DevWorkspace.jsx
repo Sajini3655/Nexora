@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Box, CircularProgress, Grid, Typography } from "@mui/material";
 import DevLayout from "../../components/layout/DevLayout";
 import { useNavigate } from "react-router-dom";
 import Card from "../../../components/ui/Card.jsx";
 import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
 export default function DevWorkspace() {
   const navigate = useNavigate();
@@ -12,32 +13,31 @@ export default function DevWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Sync backend tasks on mount and periodically
-  useEffect(() => {
-    let active = true;
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const synced = await syncAssignedTasksToLocalStoreSafe();
-        if (!active) return;
-        setTasks(Array.isArray(synced) ? synced : loadTasks());
-      } catch (err) {
-        if (!active) return;
-        setError(err?.message || "Failed to load backend tasks.");
-        setTasks(loadTasks());
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const synced = await syncAssignedTasksToLocalStoreSafe();
+      setTasks(Array.isArray(synced) ? synced : loadTasks());
+    } catch (err) {
+      setError(err?.message || "Failed to load backend tasks.");
+      setTasks(loadTasks());
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Sync backend tasks on mount, then refresh from live backend events.
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const liveTopics = useMemo(
+    () => ["/topic/developer.workspace", "/topic/tasks"],
+    []
+  );
+
+  useLiveRefresh(liveTopics, loadData, { debounceMs: 450 });
 
   const projectSnapshot = useMemo(() => {
     const firstTask = tasks[0] || {};
