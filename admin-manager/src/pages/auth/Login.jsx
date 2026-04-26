@@ -2,6 +2,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
+import {
+  getDefaultPath,
+  getDefaultRole,
+  getUserRoles,
+  setActiveRole,
+  shouldChooseWorkspace,
+} from "../../utils/roleRouting";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,28 +17,57 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [debug, setDebug] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError("");
+    setDebug("");
     setLoading(true);
 
     try {
       const user = await login({ email, password });
 
-      if (!user) throw new Error("Login failed");
+      console.log("LOGIN USER:", user);
+      console.log("LOGIN TOKEN:", localStorage.getItem("token"));
 
-      // Redirect based on role
-      const role = user.role.toUpperCase();
-      if (role === "ADMIN") navigate("/admin");
-      else if (role === "MANAGER") navigate("/manager");
-      else if (role === "DEVELOPER") navigate("/dev");
-      else if (role === "CLIENT") navigate("/client");
-      else navigate("/login");
+      if (!user) {
+        throw new Error("Login failed. Backend did not return current user.");
+      }
+
+      const roles = getUserRoles(user);
+
+      console.log("LOGIN ROLES:", roles);
+
+      if (!roles.length) {
+        throw new Error("Login succeeded, but this user has no role.");
+      }
+
+      if (shouldChooseWorkspace(user)) {
+        localStorage.removeItem("activeRole");
+        setDebug("Login successful. Opening workspace selector...");
+        navigate("/choose-workspace", { replace: true });
+        return;
+      }
+
+      const role = getDefaultRole(user);
+      const path = getDefaultPath(user);
+
+      setActiveRole(role);
+      setDebug(`Login successful. Opening ${role} workspace...`);
+      navigate(path, { replace: true });
     } catch (err) {
-      setError(err.message || "Login failed");
-      console.error(err);
+      console.error("LOGIN ERROR:", err);
+
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Login failed";
+
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -45,6 +81,12 @@ export default function Login() {
         {error && (
           <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
             {error}
+          </div>
+        )}
+
+        {debug && (
+          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            {debug}
           </div>
         )}
 

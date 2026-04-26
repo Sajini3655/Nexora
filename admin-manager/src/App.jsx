@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/auth/Login.jsx";
 import Register from "./pages/auth/Register.jsx";
+import ChooseWorkspace from "./pages/auth/ChooseWorkspace.jsx";
 import AdminDashboard from "./admin/pages/dashboard/AdminDashboard.jsx";
 import AccessControl from "./admin/pages/access/AccessControl.jsx";
 import AdminProfile from "./admin/pages/profile/AdminProfile.jsx";
@@ -117,6 +118,7 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/choose-workspace" element={<ChooseWorkspace />} />
       <Route path="/auth/accept-invite" element={<Register />} />
 
       <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
@@ -275,3 +277,5 @@ export default function App() {
     </Routes>
   );
 }
+
+

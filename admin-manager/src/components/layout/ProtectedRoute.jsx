@@ -3,6 +3,7 @@ import React from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { hasAnyRole } from "../../utils/permissions";
 
 function roleHome(role, moduleAccess = {}) {
   const r = (role || "").toUpperCase();
@@ -42,7 +43,7 @@ export default function ProtectedRoute({ allowedRoles, requiredModule }) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !hasAnyRole(user, allowedRoles)) {
     return <Navigate to="/login" replace />;
   }
 
