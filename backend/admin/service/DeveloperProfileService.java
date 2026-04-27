@@ -29,11 +29,7 @@ public class DeveloperProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         DeveloperProfile profile = profileRepository.findByUserId(user.getId())
-                .orElseGet(() -> profileRepository.save(DeveloperProfile.builder()
-                        .user(user)
-                        .experienceLevel(ExperienceLevel.JUNIOR)
-                        .capacityPoints(20)
-                        .build()));
+            .orElseGet(() -> profileRepository.save(createDefaultProfile(user)));
 
         List<DeveloperSkill> skills = skillRepository.findByProfileId(profile.getId());
 
@@ -46,11 +42,7 @@ public class DeveloperProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         DeveloperProfile profile = profileRepository.findByUserId(user.getId())
-                .orElseGet(() -> profileRepository.save(DeveloperProfile.builder()
-                        .user(user)
-                        .experienceLevel(ExperienceLevel.JUNIOR)
-                        .capacityPoints(20)
-                        .build()));
+            .orElseGet(() -> profileRepository.save(createDefaultProfile(user)));
 
         // update user name (email stays the login identifier in demo)
         if (req.getName() != null && !req.getName().isBlank()) {
@@ -62,11 +54,20 @@ public class DeveloperProfileService {
 
         profile.setPhone(req.getPhone());
         profile.setLocation(req.getLocation());
+        profile.setSpecialization(trimToNull(req.getSpecialization()));
+        profile.setTimezone(trimToNull(req.getTimezone()));
         profile.setBio(req.getBio());
 
         if (req.getExperienceLevel() != null) profile.setExperienceLevel(req.getExperienceLevel());
+        if (req.getAvailabilityStatus() != null) profile.setAvailabilityStatus(req.getAvailabilityStatus());
         if (req.getCapacityPoints() != null && req.getCapacityPoints() > 0) {
             profile.setCapacityPoints(req.getCapacityPoints());
+        }
+        if (req.getWeeklyCapacityHours() != null && req.getWeeklyCapacityHours() > 0) {
+            profile.setWeeklyCapacityHours(req.getWeeklyCapacityHours());
+        }
+        if (req.getYearsOfExperience() != null && req.getYearsOfExperience() >= 0) {
+            profile.setYearsOfExperience(req.getYearsOfExperience());
         }
 
         // Replace skills
@@ -92,6 +93,25 @@ public class DeveloperProfileService {
         return toDto(user, profile, skills);
     }
 
+    private DeveloperProfile createDefaultProfile(User user) {
+        return DeveloperProfile.builder()
+                .user(user)
+                .experienceLevel(ExperienceLevel.JUNIOR)
+                .availabilityStatus(AvailabilityStatus.AVAILABLE)
+                .capacityPoints(20)
+                .weeklyCapacityHours(40)
+                .yearsOfExperience(1)
+                .specialization("General")
+                .timezone("Asia/Colombo")
+                .build();
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private DeveloperProfileDto toDto(User user, DeveloperProfile profile, List<DeveloperSkill> skills) {
         List<SkillDto> skillDtos = skills.stream()
                 .sorted(Comparator.comparing(DeveloperSkill::getName, String.CASE_INSENSITIVE_ORDER))
@@ -104,9 +124,14 @@ public class DeveloperProfileService {
                 .email(user.getEmail())
                 .phone(profile.getPhone())
                 .location(profile.getLocation())
+                .specialization(profile.getSpecialization())
+                .timezone(profile.getTimezone())
                 .bio(profile.getBio())
                 .experienceLevel(profile.getExperienceLevel())
+                .availabilityStatus(profile.getAvailabilityStatus())
                 .capacityPoints(profile.getCapacityPoints())
+                .weeklyCapacityHours(profile.getWeeklyCapacityHours())
+                .yearsOfExperience(profile.getYearsOfExperience())
                 .skills(skillDtos)
                 .build();
     }

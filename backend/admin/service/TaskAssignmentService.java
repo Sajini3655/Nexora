@@ -68,7 +68,7 @@ public class TaskAssignmentService {
         SuggestAssigneeResponse best = null;
         double bestScore = -1;
         for (DeveloperSummaryDto dev : candidates) {
-            ScoreResult score = scoreDeveloper(dev, extraction, req.getEstimatedPoints());
+                ScoreResult score = scoreDeveloper(dev, extraction, req.getEstimatedPoints(), text);
             if (score.total > bestScore) {
                 bestScore = score.total;
                 best = SuggestAssigneeResponse.builder()
@@ -200,7 +200,12 @@ public class TaskAssignmentService {
                 .orElseGet(() -> DeveloperProfile.builder()
                         .user(devUser)
                         .experienceLevel(ExperienceLevel.JUNIOR)
+                .availabilityStatus(AvailabilityStatus.AVAILABLE)
                         .capacityPoints(20)
+                .weeklyCapacityHours(40)
+                .yearsOfExperience(1)
+                .specialization("General")
+                .timezone("Asia/Colombo")
                         .build());
 
         Integer workload = taskRepository.sumActivePoints(devUser.getId(), COMPLETED_TASK_STATUSES);
@@ -215,8 +220,13 @@ public class TaskAssignmentService {
                 .id(devUser.getId())
                 .name(devUser.getName())
                 .email(devUser.getEmail())
+            .specialization(profile.getSpecialization())
+            .timezone(profile.getTimezone())
                 .experienceLevel(profile.getExperienceLevel() == null ? ExperienceLevel.JUNIOR : profile.getExperienceLevel())
+            .availabilityStatus(profile.getAvailabilityStatus() == null ? AvailabilityStatus.AVAILABLE : profile.getAvailabilityStatus())
                 .capacityPoints(profile.getCapacityPoints() == null ? 20 : profile.getCapacityPoints())
+            .weeklyCapacityHours(profile.getWeeklyCapacityHours() == null ? 40 : profile.getWeeklyCapacityHours())
+            .yearsOfExperience(profile.getYearsOfExperience() == null ? 1 : profile.getYearsOfExperience())
                 .activeWorkloadPoints(workload)
                 .skills(skillDtos)
                 .build();
@@ -323,7 +333,7 @@ public class TaskAssignmentService {
         }
     }
 
-    private ScoreResult scoreDeveloper(DeveloperSummaryDto dev, SkillExtraction extraction, Integer estimatedPoints) {
+    private ScoreResult scoreDeveloper(DeveloperSummaryDto dev, SkillExtraction extraction, Integer estimatedPoints, String taskText) {
         Map<String, Integer> devSkillLevels = new HashMap<>();
         for (SkillDto s : dev.getSkills() == null ? List.<SkillDto>of() : dev.getSkills()) {
             if (s.getName() == null) continue;
@@ -356,15 +366,31 @@ public class TaskAssignmentService {
             case MID -> 0.85;
             case SENIOR -> 1.00;
         };
+        double yearsScore = clamp((dev.getYearsOfExperience() == null ? 1 : dev.getYearsOfExperience()) / 10.0, 0.35, 1.0);
+        double experienceScore = clamp((expValue * 0.7) + (yearsScore * 0.3), 0.6, 1.0);
+
+        double availabilityScore = switch (dev.getAvailabilityStatus() == null ? AvailabilityStatus.AVAILABLE : dev.getAvailabilityStatus()) {
+            case AVAILABLE -> 1.00;
+            case LIMITED -> 0.82;
+            case BUSY -> 0.55;
+            case UNAVAILABLE -> 0.12;
+        };
+        int weeklyHours = dev.getWeeklyCapacityHours() == null ? 40 : dev.getWeeklyCapacityHours();
+        availabilityScore = clamp(availabilityScore * clamp(weeklyHours / 40.0, 0.5, 1.0), 0.1, 1.0);
+
+        double specializationScore = specializationScore(taskText, dev.getSpecialization(), extraction.requiredSkills);
 
         double difficulty = estimateDifficulty(extraction.requiredSkills.size(), estimatedPoints);
-        double experienceScore = 1.0 - Math.min(0.4, Math.abs(expValue - difficulty));
-        experienceScore = clamp(experienceScore, 0.6, 1.0);
 
-        double total = 0.60 * skillScore + 0.25 * workloadScore + 0.15 * experienceScore;
+        double total =
+                0.48 * skillScore +
+                0.18 * workloadScore +
+                0.14 * experienceScore +
+                0.12 * availabilityScore +
+                0.08 * specializationScore;
         total = clamp(total, 0.0, 1.0);
 
-        String explanation = buildExplanation(dev, matched, missing, active, cap);
+        String explanation = buildExplanation(dev, matched, missing, active, cap, availabilityScore, specializationScore, difficulty);
 
         return new ScoreResult(total, skillScore, workloadScore, experienceScore, matched, missing, explanation);
     }
@@ -376,7 +402,26 @@ public class TaskAssignmentService {
         return 0.70;
     }
 
-    private String buildExplanation(DeveloperSummaryDto dev, List<String> matched, List<String> missing, int active, int cap) {
+    private double specializationScore(String taskText, String specialization, List<String> requiredSkills) {
+        if (specialization == null || specialization.isBlank()) return 0.5;
+
+        String normalized = specialization.toLowerCase();
+        String[] tokens = normalized.split("[^a-z0-9]+");
+        for (String token : tokens) {
+            if (token.isBlank()) continue;
+            if (taskText.contains(token)) {
+                return 1.0;
+            }
+            for (String skill : requiredSkills) {
+                if (skill != null && skill.toLowerCase().contains(token)) {
+                    return 1.0;
+                }
+            }
+        }
+        return 0.65;
+    }
+
+    private String buildExplanation(DeveloperSummaryDto dev, List<String> matched, List<String> missing, int active, int cap, double availabilityScore, double specializationScore, double difficulty) {
         StringBuilder sb = new StringBuilder();
         sb.append("Suggested ").append(dev.getName()).append(" because ");
 
@@ -386,7 +431,19 @@ public class TaskAssignmentService {
             sb.append("no strong skill matches were found ");
         }
 
-        sb.append("and current workload is ").append(active).append("/").append(cap).append(" points.");
+        sb.append("current workload is ").append(active).append("/").append(cap).append(" points, ");
+        sb.append("availability is ").append(dev.getAvailabilityStatus() == null ? AvailabilityStatus.AVAILABLE : dev.getAvailabilityStatus()).append(", ");
+        sb.append("and specialization is ").append(dev.getSpecialization() == null || dev.getSpecialization().isBlank() ? "General" : dev.getSpecialization()).append(".");
+
+        if (availabilityScore < 0.7) {
+            sb.append(" Availability is reducing the score.");
+        }
+
+        if (specializationScore >= 0.95) {
+            sb.append(" Specialization aligns with this task.");
+        }
+
+        sb.append(" Estimated difficulty: ").append(String.format(java.util.Locale.US, "%.2f", difficulty)).append(".");
 
         if (!missing.isEmpty() && !missing.contains("General")) {
             sb.append(" Missing skills: ").append(String.join(", ", missing)).append(".");
