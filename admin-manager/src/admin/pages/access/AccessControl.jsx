@@ -146,11 +146,18 @@ function RoleMatrix({ modules, roles, roleAccess, onToggleRole }) {
         <SecurityIcon />
         <Typography sx={{ fontWeight: 900 }}>Role Matrix</Typography>
         <Box sx={{ flexGrow: 1 }} />
-        <Pill label="Role-based defaults" />
+        <Chip
+          size="small"
+          label="Role-based permissions"
+          sx={{
+            background: "rgba(124,92,255,0.16)",
+            border: "1px solid rgba(124,92,255,0.25)"
+          }}
+        />
       </Stack>
 
       <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
-        These are default permissions for each role. Use User Overrides for exceptions.
+        Toggle module access for each role. Changes apply globally to all users with that role.
       </Typography>
 
       <Grid container spacing={2.5}>
