@@ -206,7 +206,7 @@ export default function DevProjectList() {
           ) : null}
         </Grid>
       )}
-    </DevLayout>
+    </>
   );
 }
 
