@@ -86,7 +86,7 @@ function buildLocalSummary(messages: Message[]): string {
   if (!messages.length) return "Chat ended. No messages were available to summarize.";
 
   const lines = messages.slice(-8).map((m) => {
-    const sender = m.senderName || (m.user === "user" ? "Developer" : "Assistant");
+    const sender = m.senderName || (m.user === "me" ? "Developer" : m.user === "assistant" ? "Assistant" : "User");
     const message = String(m.message || "").trim();
     return `- ${sender}: ${message}`;
   });
@@ -371,7 +371,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
   const buildAiMessages = (messages: Message[]) => {
     return messages.map((m) => ({
-      user: m.user,
+      user: m.user === "assistant" ? "assistant" : "user",
       message: m.message,
       type: "normal" as const,
     }));
@@ -413,7 +413,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         prev.filter(
           (m) =>
             !(
-              m.user === "user" &&
+              m.user === "me" &&
               m.senderId === currentUserId &&
               m.message === messageText &&
               m.createdAt === localCreatedAt
