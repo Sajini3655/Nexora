@@ -34,6 +34,15 @@ public class SystemHealthService {
     @Value("${app.ai-service.timeout-ms:2000}")
     private int aiServiceTimeoutMs;
 
+    @Value("${server.port:8081}")
+    private String serverPort;
+
+    @Value("${spring.datasource.url:}")
+    private String datasourceUrl;
+
+    @Value("${spring.mail.host:}")
+    private String mailHost;
+
     public SystemHealthResponse getSystemHealth() {
         long uptimeMillis = ManagementFactory.getRuntimeMXBean().getUptime();
         HealthComponent health = healthEndpoint.health();
@@ -59,7 +68,44 @@ public class SystemHealthService {
                 .overallStatus(overallStatus)
                 .lastCheckedAt(Instant.now().toString())
                 .refreshIntervalSeconds(refreshIntervalSeconds)
+
+                // Messages
+                .apiMessage(apiStatus.equals("OK")
+                        ? "Backend API is responding normally."
+                        : "Backend API is not responding. Check if Spring Boot is running.")
+                .databaseMessage(getDatabaseMessage(databaseStatus, databaseProbeResult.latencyMs()))
+                .mailMessage(mailStatus.equals("OK")
+                        ? "Mail configuration is available."
+                        : "SMTP configuration is missing or invalid.")
+                .aiServiceMessage(getAiServiceMessage(aiServiceStatus))
+
+                // Service details
+                .backendUrl("http://localhost:" + serverPort)
+                .aiServiceUrl(aiServiceHealthUrl)
+                .aiModel(System.getenv("GROQ_MODEL") != null
+                        ? System.getenv("GROQ_MODEL")
+                        : "llama-3.1-70b-versatile")
+                .databaseType(isDatabaseSupabase() ? "Supabase/PostgreSQL" : "PostgreSQL")
+                .mailProvider(mailHost.isEmpty() ? "Not configured" : mailHost)
                 .build();
+    }
+
+    private String getDatabaseMessage(String status, Long latencyMs) {
+        if (status.equals("OK")) {
+            return "Database connection successful" + (latencyMs != null ? " (" + latencyMs + "ms)" : "");
+        }
+        return "Database connection failed. Check credentials and network access.";
+    }
+
+    private String getAiServiceMessage(String status) {
+        if (status.equals("OK")) {
+            return "AI service responded successfully.";
+        }
+        return "AI service is unreachable at " + aiServiceHealthUrl;
+    }
+
+    private boolean isDatabaseSupabase() {
+        return datasourceUrl.contains("supabase");
     }
 
     private String resolveComponentStatus(HealthComponent health, String componentName) {
