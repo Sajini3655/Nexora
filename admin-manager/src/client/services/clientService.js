@@ -272,3 +272,69 @@ export async function createClientTicket(payload) {
   const data = await inserted.json();
   return toUiTicket(data, 0);
 }
+
+export async function updateClientProfile(profileData) {
+  try {
+    const res = await apiFetch("/client/profile", {
+      method: "PUT",
+      body: JSON.stringify(profileData),
+    });
+    const data = await res.json();
+    return toUiProfile(data, null);
+  } catch (error) {
+    throw new Error(error?.message || "Failed to update profile");
+  }
+}
+
+export async function uploadProfilePicture(file) {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = getToken();
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_BASE}/client/profile/picture`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let errorMessage = `Upload failed: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        const text = await res.text().catch(() => "");
+        errorMessage = text || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await res.json();
+    return data.url || data.profilePicture;
+  } catch (error) {
+    throw new Error(error?.message || "Failed to upload profile picture");
+  }
+}
+
+export async function fetchClientHistory() {
+  try {
+    const res = await apiFetch("/client/history", { method: "GET" });
+    const data = await res.json();
+    return {
+      projects: Array.isArray(data?.projects) ? data.projects : [],
+      tickets: Array.isArray(data?.tickets) ? data.tickets : [],
+    };
+  } catch (error) {
+    console.warn("Failed to fetch history:", error);
+    return {
+      projects: [],
+      tickets: [],
+    };
+  }
+}

@@ -34,6 +34,7 @@ import ClientDashboardHome from "./client/pages/dashboard/ClientDashboardHome.js
 import ClientProjectList from "./client/pages/projects/ClientProjectList.jsx";
 import ClientTicketList from "./client/pages/tickets/ClientTicketList.jsx";
 import ClientProfile from "./client/pages/profile/ClientProfile.jsx";
+import ClientHistory from "./client/pages/history/ClientHistory.jsx";
 import ClientSettings from "./client/pages/settings/ClientSettings.jsx";
 
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
@@ -267,6 +268,7 @@ export default function App() {
         <Route path="/client" element={<ClientDashboardHome />} />
         <Route path="/client/projects" element={<ClientProjectList />} />
         <Route path="/client/tickets" element={<ClientTicketList />} />
+        <Route path="/client/history" element={<ClientHistory />} />
         <Route path="/client/profile" element={<ClientProfile />} />
         <Route path="/client/settings" element={<ClientSettings />} />
       </Route>
