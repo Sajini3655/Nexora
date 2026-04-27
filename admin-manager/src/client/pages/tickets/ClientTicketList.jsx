@@ -17,6 +17,7 @@ import {
   fetchClientTickets,
 } from "../../services/clientService";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
 const emptyForm = {
   category: "",

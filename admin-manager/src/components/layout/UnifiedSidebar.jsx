@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Drawer, IconButton, Typography } from "@mui/material";
 import CloseRounded from "@mui/icons-material/CloseRounded";
-import { NavLink } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { layoutGaps } from "../../theme/layoutGaps.js";
 
 export default function UnifiedSidebar({
@@ -12,6 +12,23 @@ export default function UnifiedSidebar({
   width = 292,
 }) {
   const topbarClearance = layoutGaps.topbar.topInset + layoutGaps.topbar.height - 64;
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleItemClick = (to) => {
+    onClose?.();
+    navigate(to);
+  };
+
+  const isActivePath = (item) => {
+    const pathname = location.pathname || "";
+
+    if (item.end) {
+      return pathname === item.to;
+    }
+
+    return pathname === item.to || pathname.startsWith(`${item.to}/`);
+  };
 
   return (
     <Drawer
@@ -86,10 +103,9 @@ export default function UnifiedSidebar({
             {section.items.map((item) => (
               <Box
                 key={item.to}
-                component={NavLink}
-                to={item.to}
-                end={Boolean(item.end)}
-                onClick={onClose}
+                component="button"
+                type="button"
+                onClick={() => handleItemClick(item.to)}
                 sx={{
                   display: "flex",
                   alignItems: "center",
@@ -103,20 +119,27 @@ export default function UnifiedSidebar({
                   fontWeight: 850,
                   border: "1px solid transparent",
                   transition: "all 160ms ease",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  background: "transparent",
+                  appearance: "none",
+                  width: "100%",
                   "& svg": { fontSize: 21, color: "#94a3b8" },
                   "&:hover": {
                     color: "#ffffff",
                     background: "rgba(255,255,255,0.055)",
                     borderColor: "rgba(148,163,184,0.14)",
                   },
-                  "&.active": {
-                    color: "#ffffff",
-                    background:
-                      "linear-gradient(135deg, rgba(124,92,255,0.30), rgba(124,92,255,0.15))",
-                    borderColor: "rgba(167,139,250,0.26)",
-                    boxShadow: "0 12px 30px rgba(124,92,255,0.14)",
-                    "& svg": { color: "#c4b5fd" },
-                  },
+                  ...(isActivePath(item)
+                    ? {
+                        color: "#ffffff",
+                        background:
+                          "linear-gradient(135deg, rgba(124,92,255,0.30), rgba(124,92,255,0.15))",
+                        borderColor: "rgba(167,139,250,0.26)",
+                        boxShadow: "0 12px 30px rgba(124,92,255,0.14)",
+                        "& svg": { color: "#c4b5fd" },
+                      }
+                    : {}),
                 }}
               >
                 {item.icon ? item.icon : null}
