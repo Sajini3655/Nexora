@@ -14,13 +14,18 @@ const defaultProfile = {
   email: "you@example.com",
   phone: "",
   location: "",
+  specialization: "General",
+  timezone: "Asia/Colombo",
   bio: "",
   skills: [
     { id: "SK-1", name: "React", level: 3 },
     { id: "SK-2", name: "Node.js", level: 3 },
   ],
   experienceLevel: "JUNIOR",
+  availabilityStatus: "AVAILABLE",
   capacityPoints: 20,
+  weeklyCapacityHours: 40,
+  yearsOfExperience: 1,
   // UI demo only (do NOT store real passwords like this in real apps)
   password: "password",
 };
@@ -102,9 +107,14 @@ export async function loadProfileFromBackendSafe() {
       email: data.email ?? local.email,
       phone: data.phone ?? local.phone,
       location: data.location ?? local.location,
+      specialization: data.specialization ?? local.specialization,
+      timezone: data.timezone ?? local.timezone,
       bio: data.bio ?? local.bio,
       experienceLevel: data.experienceLevel ?? local.experienceLevel,
+      availabilityStatus: data.availabilityStatus ?? local.availabilityStatus,
       capacityPoints: data.capacityPoints ?? local.capacityPoints,
+      weeklyCapacityHours: data.weeklyCapacityHours ?? local.weeklyCapacityHours,
+      yearsOfExperience: data.yearsOfExperience ?? local.yearsOfExperience,
       skills,
     };
     saveProfile(merged);
@@ -121,9 +131,14 @@ export async function syncProfileToBackend(profile) {
     email: profile.email,
     phone: profile.phone,
     location: profile.location,
+    specialization: profile.specialization,
+    timezone: profile.timezone,
     bio: profile.bio,
     experienceLevel: profile.experienceLevel || "JUNIOR",
+    availabilityStatus: profile.availabilityStatus || "AVAILABLE",
     capacityPoints: profile.capacityPoints || 20,
+    weeklyCapacityHours: profile.weeklyCapacityHours || 40,
+    yearsOfExperience: profile.yearsOfExperience || 1,
     skills: (profile.skills || []).map((s) => ({
       name: s.name,
       level: s.level ?? 3,
@@ -142,9 +157,14 @@ export async function syncProfileToBackend(profile) {
     email: data.email ?? profile.email,
     phone: data.phone ?? profile.phone,
     location: data.location ?? profile.location,
+    specialization: data.specialization ?? profile.specialization,
+    timezone: data.timezone ?? profile.timezone,
     bio: data.bio ?? profile.bio,
     experienceLevel: data.experienceLevel ?? profile.experienceLevel,
+    availabilityStatus: data.availabilityStatus ?? profile.availabilityStatus,
     capacityPoints: data.capacityPoints ?? profile.capacityPoints,
+    weeklyCapacityHours: data.weeklyCapacityHours ?? profile.weeklyCapacityHours,
+    yearsOfExperience: data.yearsOfExperience ?? profile.yearsOfExperience,
   };
   saveProfile(merged);
   return merged;

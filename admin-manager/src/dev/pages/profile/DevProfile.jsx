@@ -22,6 +22,7 @@ export default function DevProfile() {
 
   // skills
   const [newSkill, setNewSkill] = useState("");
+  const [newSkillLevel, setNewSkillLevel] = useState(3);
 
   // password
   const [oldPw, setOldPw] = useState("");
@@ -53,11 +54,12 @@ export default function DevProfile() {
       setNewSkill("");
       return;
     }
-    const skill = { id: makeSkillId(name), name, level: 3 };
+    const skill = { id: makeSkillId(name), name, level: Number(newSkillLevel) || 3 };
     const next = { ...profile, skills: [skill, ...profile.skills] };
     const saved = updateProfile(() => next);
     setProfile(saved);
     setNewSkill("");
+    setNewSkillLevel(3);
 
     // fire-and-forget sync
     syncProfileToBackend(saved).catch(() => {});
@@ -102,9 +104,9 @@ export default function DevProfile() {
     <>
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Profile</h2>
+          <h2 className="text-2xl font-bold">Developer Profile</h2>
           <p className="text-sm text-slate-300 mt-1">
-            Basic details, skills and password settings.
+            Full profile details used for developer matching, workload tracking, and AI assignment.
           </p>
         </div>
         {statusMsg && <span className="chip">{statusMsg}</span>}
@@ -152,6 +154,71 @@ export default function DevProfile() {
                 placeholder="Moratuwa, Sri Lanka"
               />
             </div>
+            <div>
+              <label className="text-xs text-slate-400">Specialization</label>
+              <input
+                className="input mt-1"
+                value={profile.specialization || ""}
+                onChange={(e) => setProfile((p) => ({ ...p, specialization: e.target.value }))}
+                placeholder="Frontend, Backend, Mobile, DevOps"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">Timezone</label>
+              <input
+                className="input mt-1"
+                value={profile.timezone || ""}
+                onChange={(e) => setProfile((p) => ({ ...p, timezone: e.target.value }))}
+                placeholder="Asia/Colombo"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">Availability</label>
+              <select
+                className="input mt-1"
+                value={profile.availabilityStatus || "AVAILABLE"}
+                onChange={(e) => setProfile((p) => ({ ...p, availabilityStatus: e.target.value }))}
+              >
+                <option value="AVAILABLE">Available</option>
+                <option value="LIMITED">Limited</option>
+                <option value="BUSY">Busy</option>
+                <option value="UNAVAILABLE">Unavailable</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">Weekly capacity hours</label>
+              <input
+                type="number"
+                min="1"
+                className="input mt-1"
+                value={profile.weeklyCapacityHours ?? 40}
+                onChange={(e) => setProfile((p) => ({ ...p, weeklyCapacityHours: Number(e.target.value) || 40 }))}
+                placeholder="40"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">Years of experience</label>
+              <input
+                type="number"
+                min="0"
+                className="input mt-1"
+                value={profile.yearsOfExperience ?? 1}
+                onChange={(e) => setProfile((p) => ({ ...p, yearsOfExperience: Number(e.target.value) || 0 }))}
+                placeholder="1"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">Experience level</label>
+              <select
+                className="input mt-1"
+                value={profile.experienceLevel || "JUNIOR"}
+                onChange={(e) => setProfile((p) => ({ ...p, experienceLevel: e.target.value }))}
+              >
+                <option value="JUNIOR">Junior</option>
+                <option value="MID">Mid</option>
+                <option value="SENIOR">Senior</option>
+              </select>
+            </div>
             <div className="md:col-span-2">
               <label className="text-xs text-slate-400">Bio</label>
               <textarea
@@ -172,12 +239,12 @@ export default function DevProfile() {
         <div className="glass-card p-5">
           <h3 className="text-lg font-bold mb-3">Skills</h3>
           <p className="text-xs text-slate-400 mb-3">
-            Add skills you have (update later when you learn new skills).
+            Add skills you have and set your proficiency level for better assignment matching.
           </p>
 
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_120px_auto] gap-2">
             <input
-              className="input flex-1"
+              className="input"
               placeholder="Add a skill (e.g., Spring Boot)"
               value={newSkill}
               onChange={(e) => setNewSkill(e.target.value)}
@@ -185,6 +252,17 @@ export default function DevProfile() {
                 if (e.key === "Enter") addSkill();
               }}
             />
+            <select
+              className="input"
+              value={newSkillLevel}
+              onChange={(e) => setNewSkillLevel(Number(e.target.value))}
+            >
+              <option value={1}>Level 1</option>
+              <option value={2}>Level 2</option>
+              <option value={3}>Level 3</option>
+              <option value={4}>Level 4</option>
+              <option value={5}>Level 5</option>
+            </select>
             <button type="button" onClick={addSkill} className="btn-primary px-4">
               Add
             </button>
@@ -196,7 +274,7 @@ export default function DevProfile() {
                 key={s.id}
                 className="chip flex items-center gap-2"
               >
-                {s.name}
+                {s.name} · L{s.level ?? 3}
                 <button
                   type="button"
                   onClick={() => removeSkill(s.id)}
