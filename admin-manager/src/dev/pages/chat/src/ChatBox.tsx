@@ -16,7 +16,7 @@ import {
 } from "./api";
 
 interface Message {
-  user: "user" | "assistant";
+  user: "me" | "other" | "assistant";
   message: string;
   senderId?: string;
   senderName?: string;
@@ -34,6 +34,7 @@ interface ChatEndResult {
   tickets_created: TicketCreated[];
   ticket_message: string;
   ticket_prompt_needed: boolean;
+  source?: "ai" | "local";
 }
 
 interface ChatBoxProps {
@@ -111,11 +112,15 @@ function normalizeAiResult(data: any, messages: Message[]): ChatEndResult {
       ? data.summary.trim()
       : fallbackSummary;
 
-  const blockers = Array.isArray(data?.blockers)
+  const aiBlockers = Array.isArray(data?.blockers)
     ? data.blockers
         .filter((item: any) => typeof item === "string" && item.trim())
         .map((item: string) => item.trim())
-    : fallbackBlockers;
+    : [];
+
+  // Prefer AI-detected blockers, but if AI returns none and local keyword
+  // detection finds blockers, use those so developer messages trigger tickets.
+  const blockers = aiBlockers.length > 0 ? aiBlockers : fallbackBlockers;
 
   return {
     summary,
@@ -123,9 +128,10 @@ function normalizeAiResult(data: any, messages: Message[]): ChatEndResult {
     tickets_created: Array.isArray(data?.tickets_created) ? data.tickets_created : [],
     ticket_message:
       typeof data?.ticket_message === "string"
-        ? data.ticket_message
+        ? data?.ticket_message
         : "Summary generated. You can create a ticket if needed.",
-    ticket_prompt_needed: true,
+    ticket_prompt_needed: (blockers && blockers.length > 0) || false,
+    source: Array.isArray(data?.blockers) || (typeof data?.summary === "string" && data.summary.trim()) ? "ai" : "local",
   };
 }
 
@@ -183,7 +189,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     setChat((prev) => [
       ...prev,
       {
-        user: "user",
+        user: "me",
         message: text,
         senderId: currentUserId,
         senderName: currentUserName,
@@ -258,13 +264,19 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         if (cancelled) return;
 
         const mappedMessages: Message[] = Array.isArray(storedMessages)
-          ? storedMessages.map((m: any) => ({
-              user: String(m.senderId) === String(currentUserId) ? "user" : "assistant",
-              message: m.content ?? "",
-              senderId: String(m.senderId),
-              senderName: m.senderName ?? "Unknown",
-              createdAt: m.createdAt,
-            }))
+          ? storedMessages.map((m: any) => {
+              const senderName = m.senderName ?? "Unknown";
+              const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
+              const isMe = String(m.senderId) === String(currentUserId);
+
+              return {
+                user: isAi ? "assistant" : isMe ? "me" : "other",
+                message: m.content ?? "",
+                senderId: String(m.senderId),
+                senderName: senderName,
+                createdAt: m.createdAt,
+              };
+            })
           : [];
 
         setChat(mappedMessages);
@@ -279,6 +291,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               tickets_created: [],
               ticket_message: "",
               ticket_prompt_needed: false,
+              source: "ai",
             };
 
             setSummaryData(endedSummary);
@@ -316,11 +329,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         client.subscribe(subscriptionTopic, (message) => {
           const payload = JSON.parse(message.body);
 
+          const incomingSenderName = payload.senderName ?? "Unknown";
+          const incomingIsAi = String(incomingSenderName).toLowerCase().includes("ai") || incomingSenderName === "AI Shadow";
+          const incomingIsMe = String(payload.senderId) === String(currentUserId);
+
           const incoming: Message = {
-            user: String(payload.senderId) === String(currentUserId) ? "user" : "assistant",
+            user: incomingIsAi ? "assistant" : incomingIsMe ? "me" : "other",
             message: payload.content ?? "",
             senderId: String(payload.senderId),
-            senderName: payload.senderName ?? "Unknown",
+            senderName: incomingSenderName,
             createdAt: payload.createdAt,
           };
 
@@ -422,39 +439,34 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         result = normalizeAiResult(aiData, chat);
       } catch {
         result = normalizeAiResult(null, chat);
-        appendAssistantMessage("AI summary service was unavailable, so a local summary was generated.");
       }
 
       await saveSummary(sessionId, result.summary);
 
+      const blockers = Array.isArray(result.blockers) ? result.blockers : [];
       const finalResult: ChatEndResult = {
         ...result,
-        ticket_prompt_needed: true,
+        ticket_prompt_needed: blockers.length > 0,
       };
 
       setSummaryData(finalResult);
       setChatEnded(true);
-      setShowTicketPrompt(true);
+      setShowTicketPrompt(blockers.length > 0);
       onSummary(finalResult);
-
-      appendAssistantMessage("Chat ended. Summary generated and saved.");
-      appendAssistantMessage("Do you want to create a ticket from this chat summary?");
     } catch (error: any) {
       const fallbackResult: ChatEndResult = {
         summary: buildLocalSummary(chat),
         blockers: detectBlockers(chat),
         tickets_created: [],
         ticket_message: "Summary generated locally. You can create a ticket if needed.",
-        ticket_prompt_needed: true,
+        ticket_prompt_needed: detectBlockers(chat).length > 0,
+        source: "local",
       };
 
       setSummaryData(fallbackResult);
       setChatEnded(true);
-      setShowTicketPrompt(true);
+      setShowTicketPrompt(fallbackResult.blockers.length > 0);
       onSummary(fallbackResult);
-
-      appendAssistantMessage("Chat ended. Fallback summary generated.");
-      appendAssistantMessage("Do you want to create a ticket from this chat summary?");
 
       setErrorMessage(error?.message || "Chat ended with fallback summary, but backend save may have failed.");
     } finally {
@@ -478,7 +490,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
         setSummaryData(skippedResult);
         onSummary(skippedResult);
-        appendAssistantMessage("Ticket creation skipped by user.");
         return;
       }
 
@@ -500,8 +511,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
       setSummaryData(finalResult);
       onSummary(finalResult);
-
-      appendAssistantMessage(`Ticket created: ${createdTicket.ticket_id} from this chat summary.`);
     } catch (error: any) {
       appendAssistantMessage("Error while creating ticket.");
       setErrorMessage(error?.message || "Failed to create ticket.");
@@ -643,6 +652,17 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       fontSize: 14,
       lineHeight: 1.5,
     },
+    bubbleOther: {
+      background: "linear-gradient(135deg, #2b6cb0, #1e40af)",
+      color: "#fff",
+      padding: "11px 14px",
+      borderRadius: "16px 16px 4px 16px",
+      wordBreak: "break-word",
+      whiteSpace: "pre-wrap",
+      fontSize: 14,
+      lineHeight: 1.5,
+      boxShadow: "0 8px 18px rgba(30,64,175,0.12)",
+    },
     meta: {
       fontSize: 11,
       color: "#64748b",
@@ -661,6 +681,16 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       gap: 12,
       flexWrap: "wrap",
       border: "1px solid rgba(109,93,252,0.28)",
+    },
+    summaryBox: {
+      marginTop: 12,
+      padding: 14,
+      borderRadius: 12,
+      background: "rgba(17,29,51,0.6)",
+      border: "1px solid rgba(148,163,184,0.06)",
+      color: "#e6eef8",
+      fontSize: 14,
+      whiteSpace: "pre-wrap",
     },
     errorBox: {
       padding: 12,
@@ -789,6 +819,54 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                 fontWeight: 900,
               }}
             />
+            {chatEnded && (
+              <Button
+                size="small"
+                variant="contained"
+                onClick={async () => {
+                  try {
+                    setLoadingSession(true);
+                    setErrorMessage("");
+                    setChat([]);
+                    setSummaryData(null);
+                    setShowTicketPrompt(false);
+
+                    const session = await startSession(projectId);
+                    if (!session || !session.id) throw new Error("Failed to start new chat session");
+                    setSessionId(String(session.id));
+
+                    const stored = await getMessages(String(session.id));
+                    const mapped: Message[] = Array.isArray(stored)
+                      ? stored.map((m: any) => {
+                          const senderName = m.senderName ?? "Unknown";
+                          const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
+                          const isMe = String(m.senderId) === String(currentUserId);
+
+                          return {
+                            user: isAi ? "assistant" : isMe ? "me" : "other",
+                            message: m.content ?? "",
+                            senderId: String(m.senderId),
+                            senderName: senderName,
+                            createdAt: m.createdAt,
+                          };
+                        })
+                      : [];
+
+                    setChat(mapped);
+                    setChatEnded(false);
+                    setShowTicketPrompt(false);
+                  } catch (e: any) {
+                    setErrorMessage(e?.message || "Failed to start new chat.");
+                  } finally {
+                    setLoadingSession(false);
+                  }
+                }}
+                disabled={loadingSession}
+                sx={{ fontWeight: 900 }}
+              >
+                Start new chat
+              </Button>
+            )}
           </div>
         </header>
 
@@ -809,17 +887,19 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               )}
 
               {chat.map((m, idx) => {
-                const isUser = m.user === "user";
+                const isMe = m.user === "me";
+                const isAssistant = m.user === "assistant";
+
+                const wrapStyle = isMe ? styles.bubbleWrapUser : styles.bubbleWrapAssistant;
+                const bubbleStyle = isAssistant ? styles.bubbleAI : isMe ? styles.bubbleUser : styles.bubbleOther;
 
                 return (
-                  <div key={`${m.createdAt || "msg"}-${idx}`} style={isUser ? styles.bubbleWrapUser : styles.bubbleWrapAssistant}>
+                  <div key={`${m.createdAt || "msg"}-${idx}`} style={wrapStyle}>
                     <div style={styles.meta}>
-                      <span>{m.senderName || (isUser ? currentUserName : "AI Shadow")}</span>
+                      <span>{m.senderName || (isMe ? currentUserName : isAssistant ? "AI Shadow" : "User")}</span>
                       <span>{formatTime(m.createdAt)}</span>
                     </div>
-                    <div style={isUser ? styles.bubbleUser : styles.bubbleAI}>
-                      {m.message}
-                    </div>
+                    <div style={bubbleStyle}>{m.message}</div>
                   </div>
                 );
               })}
@@ -852,6 +932,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                       <CloseIcon />
                     </IconButton>
                   </div>
+                </div>
+              )}
+
+              {summaryData && (
+                <div style={styles.summaryBox}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontWeight: 900 }}>Chat summary</div>
+                    <div style={{ fontSize: 12, color: "#86efac", fontWeight: 800 }}>
+                      {summaryData.source === "ai" ? "AI Summary" : "Local Summary"}
+                    </div>
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, whiteSpace: "pre-wrap" }}>{summaryData.summary}</div>
                 </div>
               )}
 
