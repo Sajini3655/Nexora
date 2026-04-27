@@ -3,7 +3,6 @@ import {
   DashboardRounded,
   FolderRounded,
   TaskAltRounded,
-  ChatBubbleOutlineRounded,
   BadgeRounded,
 } from "@mui/icons-material";
 import UnifiedSidebar from "../../../components/layout/UnifiedSidebar.jsx";
@@ -28,11 +27,6 @@ const menuItems = [
     label: "My Profile",
     path: "/dev/profile",
     icon: <BadgeRounded />,
-  },
-  {
-    label: "Chat",
-    path: "/dev/chat",
-    icon: <ChatBubbleOutlineRounded />,
   },
 ];
 

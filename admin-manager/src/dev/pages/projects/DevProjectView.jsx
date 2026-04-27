@@ -1,8 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Chip,
+  CircularProgress,
+  Divider,
+  Grid,
+  LinearProgress,
+  Paper,
+  Stack,
+  Typography,
+} from "@mui/material";
 import Card from "../../../components/ui/Card.jsx";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import ChatBox from "../chat/src/ChatBox";
 import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
 
@@ -22,6 +35,7 @@ function buildProjects(tasks) {
     return {
       id: String(list[0]?.projectId || key),
       name: list[0]?.projectName || `Project ${key}`,
+      description: list[0]?.projectDescription || list[0]?.description || "Read-only project collaboration view.",
       progress,
       taskCount: total,
       status: progress === 100 ? "Completed" : progress > 0 ? "Active" : "Planning",
@@ -33,6 +47,7 @@ function buildProjects(tasks) {
 export default function DevProjectView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [tasks, setTasks] = useState(() => loadTasks());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -61,6 +76,8 @@ export default function DevProjectView() {
   }, [id]);
 
   const project = useMemo(() => buildProjects(tasks).find((item) => String(item.id) === String(id)) || null, [tasks, id]);
+  const currentUserId = String(user?.id || user?.email || "");
+  const currentUserName = user?.name || user?.email || "Developer";
 
   if (loading) {
     return (
@@ -98,37 +115,146 @@ export default function DevProjectView() {
           </Typography>
         </Box>
 
-        <Chip component={Link} clickable to="/dev/projects" label="Back" />
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Chip component={Link} clickable to="/dev/projects" label="Back" />
+          <Chip label="Read only" variant="outlined" sx={{ color: "#cbd5e1", borderColor: "rgba(148,163,184,0.25)" }} />
+        </Stack>
       </Box>
 
       {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
 
       <Grid container spacing={2.5}>
-        <Grid item xs={12} md={7}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Project Overview</Typography>
+        <Grid item xs={12} lg={7}>
+          <Card sx={{ p: 3, height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Project Details</Typography>
             <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.76)" }}>
-              This project contains tasks assigned to your developer account.
+              Read-only project view for developers. Use the project chat below to discuss work, blockers, and coordination.
             </Typography>
-            <Box sx={{ mt: 3, display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 2 }}>
-              <Metric label="Status" value={project.status} />
-              <Metric label="Tasks" value={project.taskCount} />
-              <Metric label="Progress" value={`${project.progress}%`} />
+
+            <Paper sx={{ mt: 2.5, p: 2.2, borderRadius: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <Stack spacing={1.25}>
+                <InfoRow label="Project name" value={project.name} />
+                <InfoRow label="Project id" value={project.id} />
+                <InfoRow label="Status" value={project.status} />
+                <InfoRow label="Task count" value={project.taskCount} />
+                <InfoRow label="Progress" value={`${project.progress}%`} />
+                <InfoRow label="Description" value={project.description} />
+              </Stack>
+              <Box sx={{ mt: 2 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.7 }}>
+                  <Typography variant="caption">Progress</Typography>
+                  <Typography variant="caption">{project.progress}%</Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={project.progress}
+                  sx={{
+                    height: 8,
+                    borderRadius: 999,
+                    bgcolor: "rgba(255,255,255,0.08)",
+                    "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+                  }}
+                />
+              </Box>
+            </Paper>
+
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Tasks with assigned developers</Typography>
+              <Stack spacing={1.5}>
+                {project.tasks.map((task) => (
+                  <Paper
+                    key={task.id}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <Stack spacing={1}>
+                      <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 900 }}>{task.title}</Typography>
+                          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.4 }}>
+                            {task.description || "No task description available."}
+                          </Typography>
+                        </Box>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                          <StatusBadge label={String(task.status || "Todo")} />
+                          <Chip size="small" label={task.priority || "Medium"} />
+                        </Stack>
+                      </Stack>
+
+                      <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+
+                      <Grid container spacing={1.2}>
+                        <Grid item xs={12} sm={6} md={3}><InfoRow label="Assigned developer" value={task.assignedToName || task.assignee || "Unassigned"} /></Grid>
+                        <Grid item xs={12} sm={6} md={3}><InfoRow label="Developer id" value={task.assignedToId || "-"} /></Grid>
+                        <Grid item xs={12} sm={6} md={3}><InfoRow label="Due date" value={task.dueDate || "-"} /></Grid>
+                        <Grid item xs={12} sm={6} md={3}><InfoRow label="Task id" value={task.id} /></Grid>
+                      </Grid>
+
+                      <Box>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.6)" }}>Weighted points</Typography>
+                          <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.6)" }}>
+                            {task.completedPointValue || 0} / {task.totalPointValue || 0}
+                          </Typography>
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={task.progressPercentage || 0}
+                          sx={{
+                            height: 7,
+                            borderRadius: 999,
+                            bgcolor: "rgba(255,255,255,0.08)",
+                            "& .MuiLinearProgress-bar": { bgcolor: "#38bdf8" },
+                          }}
+                        />
+                      </Box>
+
+                      <Box>
+                        <Chip
+                          component={Link}
+                          clickable
+                          to={`/dev/tasks/${task.id}`}
+                          label="Open task details"
+                          size="small"
+                          sx={{ mt: 0.5 }}
+                        />
+                      </Box>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
             </Box>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={5}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Tasks in project</Typography>
-            <Box sx={{ display: "grid", gap: 1.25 }}>
-              {project.tasks.map((task) => (
-                <Box key={task.id} sx={{ p: 1.5, borderRadius: 2, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }} onClick={() => navigate(`/dev/tasks/${task.id}`)}>
-                  <Typography variant="body2" sx={{ fontWeight: 800 }}>{task.title}</Typography>
-                  <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{task.status} • {task.priority || "Medium"}</Typography>
-                </Box>
-              ))}
-            </Box>
+        <Grid item xs={12} lg={5}>
+          <Card sx={{ p: 3, height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Project Chat</Typography>
+            <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.76)", mb: 2 }}>
+              Chat is attached to this project page so developers can discuss work without using the sidebar.
+            </Typography>
+
+            {authLoading ? (
+              <Box sx={{ display: "grid", placeItems: "center", minHeight: 260 }}>
+                <CircularProgress sx={{ color: "#6b51ff" }} />
+              </Box>
+            ) : currentUserId ? (
+              <Box sx={{ borderRadius: 3, overflow: "hidden" }}>
+                <ChatBox
+                  projectId={String(project.id)}
+                  projectName={project.name}
+                  currentUserId={currentUserId}
+                  currentUserName={currentUserName}
+                  onSummary={() => {}}
+                />
+              </Box>
+            ) : (
+              <Alert severity="info">Sign in to use the project chat.</Alert>
+            )}
           </Card>
         </Grid>
       </Grid>
@@ -141,6 +267,15 @@ function Metric({ label, value }) {
     <Box sx={{ p: 2, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
       <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{label}</Typography>
       <Typography variant="body1" sx={{ mt: 0.5, fontWeight: 800 }}>{value}</Typography>
+    </Box>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <Box>
+      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{label}</Typography>
+      <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 800, wordBreak: "break-word" }}>{String(value ?? "-")}</Typography>
     </Box>
   );
 }
