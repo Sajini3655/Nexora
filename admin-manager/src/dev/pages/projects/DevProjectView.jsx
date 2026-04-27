@@ -138,7 +138,6 @@ export default function DevProjectView() {
                 <InfoRow label="Status" value={project.status} />
                 <InfoRow label="Task count" value={project.taskCount} />
                 <InfoRow label="Progress" value={`${project.progress}%`} />
-                <InfoRow label="Description" value={project.description} />
               </Stack>
               <Box sx={{ mt: 2 }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.7 }}>
@@ -165,63 +164,65 @@ export default function DevProjectView() {
                   <Paper
                     key={task.id}
                     sx={{
-                      p: 2,
+                      p: 1.25,
                       borderRadius: 3,
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.06)",
                     }}
                   >
                     <Stack spacing={1}>
-                      <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Box sx={{ minWidth: 0 }}>
                           <Typography sx={{ fontWeight: 900 }}>{task.title}</Typography>
-                          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.4 }}>
-                            {task.description || "No task description available."}
+                          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.64)", mt: 0.4 }}>
+                            {task.description ? task.description : "No description."}
                           </Typography>
                         </Box>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+
+                        <Stack direction="row" spacing={1} alignItems="center">
                           <StatusBadge label={String(task.status || "Todo")} />
                           <Chip size="small" label={task.priority || "Medium"} />
                         </Stack>
                       </Stack>
 
-                      <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+                      <Divider sx={{ borderColor: "rgba(255,255,255,0.06)" }} />
 
-                      <Grid container spacing={1.2}>
-                        <Grid item xs={12} sm={6} md={3}><InfoRow label="Assigned developer" value={task.assignedToName || task.assignee || "Unassigned"} /></Grid>
-                        <Grid item xs={12} sm={6} md={3}><InfoRow label="Developer id" value={task.assignedToId || "-"} /></Grid>
-                        <Grid item xs={12} sm={6} md={3}><InfoRow label="Due date" value={task.dueDate || "-"} /></Grid>
-                        <Grid item xs={12} sm={6} md={3}><InfoRow label="Task id" value={task.id} /></Grid>
-                      </Grid>
-
-                      <Box>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                          <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.6)" }}>Weighted points</Typography>
-                          <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.6)" }}>
-                            {task.completedPointValue || 0} / {task.totalPointValue || 0}
-                          </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                        <Box>
+                          <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Assigned</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 800 }}>{task.assignedToName || task.assignee || "Unassigned"}</Typography>
                         </Box>
-                        <LinearProgress
-                          variant="determinate"
-                          value={task.progressPercentage || 0}
-                          sx={{
-                            height: 7,
-                            borderRadius: 999,
-                            bgcolor: "rgba(255,255,255,0.08)",
-                            "& .MuiLinearProgress-bar": { bgcolor: "#38bdf8" },
-                          }}
-                        />
-                      </Box>
 
-                      <Box>
-                        <Chip
-                          component={Link}
-                          clickable
-                          to={`/dev/tasks/${task.id}`}
-                          label="Open task details"
-                          size="small"
-                          sx={{ mt: 0.5 }}
-                        />
+                        <Box>
+                          <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)", textAlign: "right" }}>Task</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 800, textAlign: "right" }}>{task.id}</Typography>
+                        </Box>
+                      </Stack>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ width: '65%' }}>
+                          <LinearProgress
+                            variant="determinate"
+                            value={task.progressPercentage || 0}
+                            sx={{
+                              height: 7,
+                              borderRadius: 999,
+                              bgcolor: "rgba(255,255,255,0.06)",
+                              "& .MuiLinearProgress-bar": { bgcolor: "#38bdf8" },
+                            }}
+                          />
+                        </Box>
+
+                        <Box>
+                          <Chip
+                            component={Link}
+                            clickable
+                            to={`/dev/tasks/${task.id}`}
+                            label="Open"
+                            size="small"
+                            sx={{ ml: 1 }}
+                          />
+                        </Box>
                       </Box>
                     </Stack>
                   </Paper>
@@ -249,6 +250,7 @@ export default function DevProjectView() {
                   projectName={project.name}
                   currentUserId={currentUserId}
                   currentUserName={currentUserName}
+                  hideSidebar
                   onSummary={() => {}}
                 />
               </Box>
