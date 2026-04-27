@@ -1,14 +1,6 @@
 import { API_BASE_URL } from "../../utils/constants";
 
 const API_BASE = `${API_BASE_URL}/api`;
-const CLIENT_TICKET_CACHE_KEY = "client.tickets.cache.v1";
-const CLIENT_TICKET_CACHE_TTL_MS = 60 * 1000;
-
-let ticketMemoryCache = {
-  timestamp: 0,
-  data: null,
-};
-let ticketFetchPromise = null;
 
 export const clientTicketCategories = [
   "Bug / Something not working",
@@ -74,7 +66,7 @@ async function ticketFetch(path = "", options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}/tickets${path}`, {
+  const res = await fetch(`${API_BASE_URL}/tickets${path}`, {
     ...options,
     headers,
   });
@@ -162,59 +154,8 @@ function toUiProfile(row, user) {
   };
 }
 
-function safeReadTicketCache() {
-  try {
-    if (typeof window === "undefined") return null;
-    const raw = window.sessionStorage.getItem(CLIENT_TICKET_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed?.data)) return null;
-    return {
-      timestamp: Number(parsed?.timestamp || 0),
-      data: parsed.data,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeTicketCache(data) {
-  const payload = {
-    timestamp: Date.now(),
-    data: Array.isArray(data) ? data : [],
-  };
-
-  ticketMemoryCache = payload;
-
-  try {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(CLIENT_TICKET_CACHE_KEY, JSON.stringify(payload));
-    }
-  } catch {
-    // Ignore storage write errors and keep in-memory cache.
-  }
-}
-
-export function getCachedClientTickets() {
-  if (Array.isArray(ticketMemoryCache.data)) {
-    return ticketMemoryCache.data;
-  }
-
-  const persisted = safeReadTicketCache();
-  if (persisted) {
-    ticketMemoryCache = persisted;
-    return persisted.data;
-  }
-
-  return [];
-}
-
 export async function fetchClientProjects() {
   const tickets = await fetchClientTickets();
-  return buildProjectsFromTickets(tickets);
-}
-
-export function buildProjectsFromTickets(tickets) {
   const grouped = new Map();
 
   tickets.forEach((ticket) => {
@@ -255,52 +196,10 @@ export function buildProjectsFromTickets(tickets) {
   });
 }
 
-export async function fetchClientTickets(options = {}) {
-  const forceRefresh = Boolean(options?.forceRefresh);
-
-  const now = Date.now();
-  const inMemoryFresh =
-    Array.isArray(ticketMemoryCache.data) &&
-    now - Number(ticketMemoryCache.timestamp || 0) < CLIENT_TICKET_CACHE_TTL_MS;
-
-  if (!forceRefresh && inMemoryFresh) {
-    return ticketMemoryCache.data;
-  }
-
-  if (!forceRefresh && !Array.isArray(ticketMemoryCache.data)) {
-    const persisted = safeReadTicketCache();
-    const persistedFresh =
-      Array.isArray(persisted?.data) &&
-      now - Number(persisted?.timestamp || 0) < CLIENT_TICKET_CACHE_TTL_MS;
-    if (persistedFresh) {
-      ticketMemoryCache = persisted;
-      return persisted.data;
-    }
-  }
-
-  if (!forceRefresh && ticketFetchPromise) {
-    return ticketFetchPromise;
-  }
-
-  ticketFetchPromise = (async () => {
-    try {
-      const res = await ticketFetch("", { method: "GET" });
-      const data = await res.json();
-      const mapped = Array.isArray(data) ? data.map(toUiTicket) : [];
-      writeTicketCache(mapped);
-      return mapped;
-    } catch (error) {
-      const fallback = getCachedClientTickets();
-      if (fallback.length > 0) {
-        return fallback;
-      }
-      throw error;
-    } finally {
-      ticketFetchPromise = null;
-    }
-  })();
-
-  return ticketFetchPromise;
+export async function fetchClientTickets() {
+  const res = await ticketFetch("", { method: "GET" });
+  const data = await res.json();
+  return Array.isArray(data) ? data.map(toUiTicket) : [];
 }
 
 export async function fetchClientProfile() {
@@ -374,3 +273,118 @@ export async function createClientTicket(payload) {
   return toUiTicket(data, 0);
 }
 
+export async function updateClientProfile(profileData) {
+  try {
+    const res = await apiFetch("/client/profile", {
+      method: "PUT",
+      body: JSON.stringify(profileData),
+    });
+    const data = await res.json();
+    return toUiProfile(data, null);
+  } catch (error) {
+    throw new Error(error?.message || "Failed to update profile");
+  }
+}
+
+export async function uploadProfilePicture(file) {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = getToken();
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_BASE}/client/profile/picture`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let errorMessage = `Upload failed: ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        const text = await res.text().catch(() => "");
+        errorMessage = text || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await res.json();
+    return data.url || data.profilePicture;
+  } catch (error) {
+    throw new Error(error?.message || "Failed to upload profile picture");
+  }
+}
+
+export async function fetchClientHistory() {
+  try {
+    const res = await apiFetch("/client/history", { method: "GET" });
+    const data = await res.json();
+    return {
+      projects: Array.isArray(data?.projects) ? data.projects : [],
+      tickets: Array.isArray(data?.tickets) ? data.tickets : [],
+    };
+  } catch (error) {
+    console.warn("Failed to fetch history:", error);
+    return {
+      projects: [],
+      tickets: [],
+    };
+  }
+}
+
+export function getCachedClientTickets() {
+  try {
+    const cached = localStorage.getItem("clientTickets");
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function buildProjectsFromTickets(tickets) {
+  const grouped = new Map();
+
+  tickets.forEach((ticket) => {
+    const key = ticket.category || "General Support";
+    const existing = grouped.get(key) || {
+      id: key.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      name: key,
+      manager: "Client Support",
+      progress: 0,
+      status: "Open",
+      eta: "-",
+      tickets: [],
+    };
+
+    existing.tickets.push(ticket);
+    grouped.set(key, existing);
+  });
+
+  return Array.from(grouped.values()).map((project) => {
+    const total = project.tickets.length;
+    const done = project.tickets.filter((ticket) => ticket.status === "Done").length;
+    const inProgress = project.tickets.filter((ticket) => ticket.status === "In Progress").length;
+    const latest = project.tickets
+      .map((ticket) => ticket.updatedAt)
+      .find((date) => date && date !== "-") || "-";
+
+    return {
+      ...project,
+      progress: total > 0 ? Math.round((done / total) * 100) : 0,
+      status:
+        done === total && total > 0
+          ? "Resolved"
+          : inProgress > 0
+            ? "In Progress"
+            : "Open",
+      eta: latest,
+    };
+  });
+}
