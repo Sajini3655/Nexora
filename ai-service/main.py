@@ -5,10 +5,9 @@ import os
 import json
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
-from summarizer import get_ai_response, summarize_chat
+from summarizer import get_ai_response
 from groq import Groq
 from get_valid_model import get_first_available_model
 
