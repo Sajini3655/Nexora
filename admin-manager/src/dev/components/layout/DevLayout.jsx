@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box } from "@mui/material";
 import DevSidebar from "./DevSidebar";
-import DevTopbar from "./DevTopbar";
+import Topbar from "../../../components/layout/Topbar.jsx";
 
 export default function DevLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -10,31 +10,18 @@ export default function DevLayout({ children }) {
     <Box
       sx={{
         minHeight: "100vh",
-        position: "relative",
-        overflow: "hidden",
-        bgcolor: "#050b16",
-        color: "#e5e7eb",
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          inset: 0,
-          background:
-            "radial-gradient(circle at top left, rgba(109,93,252,0.18), transparent 28%), radial-gradient(circle at top right, rgba(20,184,166,0.12), transparent 24%), linear-gradient(180deg, rgba(255,255,255,0.03), transparent 18%)",
-          pointerEvents: "none",
-        },
-        "&::after": {
-          content: '""',
-          position: "absolute",
-          inset: 0,
-          backgroundImage:
-            "linear-gradient(rgba(148,163,184,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.04) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-          opacity: 0.12,
-          pointerEvents: "none",
-        },
+        background:
+          "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 24%), radial-gradient(circle at top right, rgba(0,255,170,0.10), transparent 22%), linear-gradient(180deg, #07101f 0%, #040a15 100%)",
+        color: "#e7e9ee",
       }}
     >
-      <DevTopbar onToggleSidebar={() => setSidebarOpen(true)} />
+      <Topbar
+        onMenuClick={() => setSidebarOpen(true)}
+        workspace="Developer Workspace"
+      />
+
+      {/* Real spacer for fixed topbar */}
+      <Box sx={{ height: { xs: "116px", md: "122px" } }} />
 
       <DevSidebar
         open={sidebarOpen}
@@ -44,12 +31,16 @@ export default function DevLayout({ children }) {
       <Box
         component="main"
         sx={{
-          position: "relative",
-          zIndex: 1,
-          p: { xs: 2, md: 3, lg: 4 },
-          maxWidth: "1400px",
           width: "100%",
-          mx: "auto",
+          maxWidth: "none",
+          mx: 0,
+          pt: 2,
+          px: {
+            xs: 2,
+            sm: 3,
+            md: 5,
+          },
+          pb: { xs: 3, md: 4 },
         }}
       >
         {children}

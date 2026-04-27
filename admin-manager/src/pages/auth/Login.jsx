@@ -30,16 +30,11 @@ export default function Login() {
     try {
       const user = await login({ email, password });
 
-      console.log("LOGIN USER:", user);
-      console.log("LOGIN TOKEN:", localStorage.getItem("token"));
-
       if (!user) {
         throw new Error("Login failed. Backend did not return current user.");
       }
 
       const roles = getUserRoles(user);
-
-      console.log("LOGIN ROLES:", roles);
 
       if (!roles.length) {
         throw new Error("Login succeeded, but this user has no role.");
@@ -59,8 +54,6 @@ export default function Login() {
       setDebug(`Login successful. Opening ${role} workspace...`);
       navigate(path, { replace: true });
     } catch (err) {
-      console.error("LOGIN ERROR:", err);
-
       const message =
         err?.response?.data?.message ||
         err?.response?.data?.error ||
@@ -137,3 +130,4 @@ export default function Login() {
     </div>
   );
 }
+

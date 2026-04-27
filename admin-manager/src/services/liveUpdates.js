@@ -127,3 +127,4 @@ export function subscribeLiveTopic(topic, handler) {
     maybeShutdownClient();
   };
 }
+

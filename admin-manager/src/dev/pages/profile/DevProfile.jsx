@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import DevLayout from "../../components/layout/DevLayout";
 import { loadProfile, updateProfile, loadProfileFromBackendSafe, syncProfileToBackend } from "../../data/profileStore";
 
 function makeSkillId(name) {
@@ -100,7 +99,7 @@ export default function DevProfile() {
   };
 
   return (
-    <DevLayout>
+    <>
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold">Profile</h2>
@@ -259,6 +258,7 @@ export default function DevProfile() {
           </div>
         </div>
       </div>
-    </DevLayout>
+    </>
   );
 }
+

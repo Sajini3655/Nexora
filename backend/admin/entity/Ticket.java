@@ -45,6 +45,10 @@ public class Ticket {
     @JoinColumn(name = "project_id")
     private Project project;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_task_id")
+    private TaskItem assignedTask;
+
     @Column(name = "source_channel", length = 30)
     private String sourceChannel;
 

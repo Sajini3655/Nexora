@@ -21,3 +21,4 @@ export function LayoutProvider({ children }) {
 export function useLayout() {
   return useContext(LayoutContext);
 }
+

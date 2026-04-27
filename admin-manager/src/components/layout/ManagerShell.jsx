@@ -1,52 +1,35 @@
 import React, { useState } from "react";
+import { Box } from "@mui/material";
 import ManagerSidebar from "./ManagerSidebar";
-import { Box, AppBar, Toolbar, IconButton, Typography } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
+import Topbar from "./Topbar";
+import { layoutGaps } from "../../theme/layoutGaps.js";
 
 export default function ManagerShell({ children }) {
   const [open, setOpen] = useState(false);
+  const topbarClearance = layoutGaps.topbar.topInset + layoutGaps.topbar.height;
 
   return (
     <Box
       sx={{
-        display: "flex",
         minHeight: "100vh",
-        bgcolor: "#050b18",
-        color: "white",
+        background:
+          "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.08), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
+        color: "#e7e9ee",
       }}
     >
+      <Topbar onMenuClick={() => setOpen((p) => !p)} />
       <ManagerSidebar open={open} onClose={() => setOpen(false)} />
-
-      <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-        <AppBar
-          position="fixed"
-          elevation={0}
-          sx={{
-            bgcolor: "rgba(10,16,35,0.82)",
-            backdropFilter: "blur(10px)",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          <Toolbar>
-            <IconButton
-              edge="start"
-              color="inherit"
-              onClick={() => setOpen(true)}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Manager Panel
-            </Typography>
-          </Toolbar>
-        </AppBar>
-
-        <Toolbar />
-
-        <Box sx={{ flexGrow: 1 }}>
-          {children}
-        </Box>
+      <Box sx={{ height: `${topbarClearance}px` }} />
+      <Box
+        sx={{
+          pt: layoutGaps.contentTopGap,
+          px: `${layoutGaps.adminManager.side}px`,
+          pb: `${layoutGaps.adminManager.bottom}px`,
+          maxWidth: `${layoutGaps.maxContentWidth}px`,
+          mx: "auto",
+        }}
+      >
+        {children}
       </Box>
     </Box>
   );

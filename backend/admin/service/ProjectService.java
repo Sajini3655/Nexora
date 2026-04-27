@@ -3,6 +3,7 @@ package com.admin.service;
 import com.admin.dto.CreateProjectRequest;
 import com.admin.dto.ProjectResponse;
 import com.admin.dto.ProjectTaskResponse;
+import com.admin.dto.UpdateProjectRequest;
 import com.admin.entity.Project;
 import com.admin.entity.Role;
 import com.admin.entity.TaskItem;
@@ -54,6 +55,25 @@ public class ProjectService {
                 liveUpdatePublisher.publishProjectsChanged("created");
                 liveUpdatePublisher.publishTasksChanged("created");
                 return mapToResponse(savedProject);
+    }
+
+    @Transactional
+    public ProjectResponse updateProject(Long projectId, UpdateProjectRequest request, Authentication authentication) {
+        User manager = getAuthenticatedManager(authentication);
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        if (project.getManager() == null || !project.getManager().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only update your own projects");
+        }
+
+        project.setName(request.getName().trim());
+        project.setDescription(request.getDescription().trim());
+
+        Project saved = projectRepository.save(project);
+        liveUpdatePublisher.publishProjectsChanged("updated");
+        return mapToResponse(saved);
     }
 
     @Transactional(readOnly = true)

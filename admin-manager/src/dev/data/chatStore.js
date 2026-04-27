@@ -97,3 +97,4 @@ export function closeChatThread(threadId) {
 export function getChatThread(threadId) {
   return loadChatThreads().find((t) => t.id === threadId) || null;
 }
+

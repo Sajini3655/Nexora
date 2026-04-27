@@ -107,6 +107,10 @@ print("Using model:", MODEL)
 def home():
     return {"status": "AI Shadow Chat Backend Running", "model": MODEL}
 
+@app.get("/health")
+def health():
+    return {"status": "ok", "model": MODEL}
+
 @app.post("/chat/message")
 async def chat_message(req: Request):
     """

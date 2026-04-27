@@ -20,3 +20,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Configuration is considered valid only when explicit Vite env variables are set.
 export const isSupabaseConfigured = Boolean(envSupabaseUrl && envSupabaseAnonKey);
+

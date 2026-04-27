@@ -1,10 +1,9 @@
 import React from "react";
 import { Box, Paper, Stack, Typography } from "@mui/material";
-import ClientLayout from "../../components/layout/ClientLayout";
 
 export default function ClientSettings() {
   return (
-    <ClientLayout>
+    <>
       <Stack spacing={3}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 900 }}>
@@ -33,6 +32,7 @@ export default function ClientSettings() {
           </Typography>
         </Paper>
       </Stack>
-    </ClientLayout>
+    </>
   );
 }
+

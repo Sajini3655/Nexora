@@ -1,301 +1,216 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { FiBell } from "react-icons/fi";
-import { loadProfile } from "../../data/profileStore";
+import React, { useState } from "react";
 import {
-  loadNotifications,
-  markAllRead,
-  markRead,
-} from "../../data/notificationStore";
-import { useAuth } from "../../../context/AuthContext.jsx";
-import {
-  AppBar,
   Avatar,
   Box,
   Chip,
-  Divider,
   IconButton,
   Menu,
   MenuItem,
-  Toolbar,
   Typography,
+  Divider,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
-export default function DevTopbar({ onToggleSidebar }) {
+export default function DevTopbar({ onMenuClick }) {
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { logout } = useAuth();
-
-  const [profile, setProfile] = useState(() => loadProfile());
-  const [notifs, setNotifs] = useState(() => loadNotifications());
-  const [openNotifs, setOpenNotifs] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
 
-  const unread = notifs.filter((n) => !n.read).length;
-  const openProfile = Boolean(anchorEl);
-
-  const initials = (profile.name || "D")
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join("");
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setNotifs(loadNotifications());
-      setProfile(loadProfile());
-    }, 1200);
-
-    return () => clearInterval(id);
-  }, []);
-
-  const onMarkAll = () => setNotifs(markAllRead());
-  const onOpenNotif = (id) => setNotifs(markRead(id));
+  const open = Boolean(anchorEl);
+  const initials = (user?.name?.[0] || user?.email?.[0] || "D").toUpperCase();
+  const roleLabel = user?.role || "DEVELOPER";
 
   return (
-    <AppBar
-      position="sticky"
-      elevation={0}
+    <Box
       sx={{
+        position: "fixed",
         top: 0,
-        zIndex: 20,
-        bgcolor: "rgba(7, 17, 31, 0.86)",
+        left: 0,
+        right: 0,
+        zIndex: 1300,
+        height: 86,
+        px: { xs: 2, md: 3 },
+        display: "flex",
+        alignItems: "center",
+        gap: 2,
+        background:
+          "linear-gradient(135deg, rgba(53,56,93,0.96) 0%, rgba(15,23,42,0.98) 55%, rgba(8,47,56,0.88) 100%)",
+        borderBottom: "1px solid rgba(148,163,184,0.18)",
+        boxShadow: "0 18px 45px rgba(0,0,0,0.30)",
         backdropFilter: "blur(18px)",
-        borderBottom: "1px solid rgba(148,163,184,0.12)",
+        borderRadius: "0 0 24px 24px",
       }}
     >
-      <Toolbar sx={{ minHeight: 68, px: { xs: 2, md: 3 } }}>
-        <IconButton
-          color="inherit"
-          onClick={onToggleSidebar}
+      <IconButton
+        onClick={onMenuClick}
+        sx={{
+          width: 48,
+          height: 48,
+          color: "#e5e7eb",
+          border: "1px solid rgba(255,255,255,0.13)",
+          background: "rgba(255,255,255,0.045)",
+          "&:hover": {
+            background: "rgba(124,92,255,0.16)",
+            borderColor: "rgba(167,139,250,0.28)",
+          },
+        }}
+      >
+        <MenuIcon />
+      </IconButton>
+
+      <Box
+        sx={{
+          width: 42,
+          height: 42,
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #7c5cff, #38bdf8)",
+          boxShadow: "0 14px 34px rgba(56,189,248,0.18)",
+          flexShrink: 0,
+        }}
+      />
+
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
           sx={{
-            mr: 1.5,
-            border: "1px solid rgba(255,255,255,0.10)",
-            borderRadius: 2,
-            bgcolor: "rgba(255,255,255,0.03)",
+            fontWeight: 950,
+            letterSpacing: -0.4,
+            color: "#f8fafc",
+            lineHeight: 1.1,
           }}
         >
-          <MenuIcon />
-        </IconButton>
-
-        <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 900, lineHeight: 1 }} noWrap>
-            Developer Workspace
-          </Typography>
-          <Typography variant="caption" sx={{ color: "#94a3b8" }} noWrap>
-            Tasks, projects, tickets, and chat
-          </Typography>
-        </Box>
-
-        <Box sx={{ flex: 1 }} />
-
-        <Chip
-          size="small"
-          label="DEVELOPER"
+          Nexora
+        </Typography>
+        <Typography
+          variant="body2"
           sx={{
-            display: { xs: "none", sm: "inline-flex" },
-            mr: 1.5,
-            bgcolor: "rgba(124,92,255,0.16)",
-            color: "#ddd6fe",
-            border: "1px solid rgba(124,92,255,0.28)",
+            color: "#94a3b8",
             fontWeight: 800,
+            mt: 0.25,
           }}
-        />
+        >
+          Developer Workspace
+        </Typography>
+      </Box>
 
-        <Box sx={{ position: "relative", mr: 1 }}>
-          <IconButton
-            onClick={() => {
-              setOpenNotifs((v) => !v);
-              setAnchorEl(null);
-            }}
+      <Box sx={{ flex: 1 }} />
+
+      {user ? (
+        <Box
+          sx={{
+            display: { xs: "none", md: "flex" },
+            alignItems: "center",
+            gap: 1,
+            px: 1.4,
+            py: 0.8,
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.045)",
+            border: "1px solid rgba(148,163,184,0.13)",
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 900, color: "#e5e7eb" }}>
+            {user.name || user.email || "Developer User"}
+          </Typography>
+
+          <Chip
+            size="small"
+            label={roleLabel}
             sx={{
-              color: "#e5e7eb",
-              border: "1px solid rgba(255,255,255,0.12)",
-              bgcolor: "rgba(255,255,255,0.03)",
+              height: 24,
+              fontWeight: 950,
+              color: "#ddd6fe",
+              background: "rgba(124,92,255,0.20)",
+              border: "1px solid rgba(167,139,250,0.26)",
             }}
-          >
-            <FiBell />
-            {unread > 0 ? (
-              <Box
-                component="span"
-                sx={{
-                  position: "absolute",
-                  top: -5,
-                  right: -5,
-                  minWidth: 18,
-                  height: 18,
-                  px: 0.5,
-                  borderRadius: 999,
-                  bgcolor: "#6d5dfc",
-                  color: "#fff",
-                  fontSize: 10,
-                  display: "grid",
-                  placeItems: "center",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                }}
-              >
-                {unread}
-              </Box>
-            ) : null}
-          </IconButton>
+          />
+        </Box>
+      ) : null}
 
-          {openNotifs ? (
-            <Box
-              sx={{
-                position: "absolute",
-                right: 0,
-                mt: 1,
-                width: { xs: 310, sm: 370 },
-                maxHeight: 360,
-                overflow: "hidden",
-                borderRadius: 2,
-                bgcolor: "#0f172a",
-                border: "1px solid rgba(255,255,255,0.10)",
-                boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
-                zIndex: 50,
-              }}
-            >
-              <Box
-                sx={{
-                  px: 2,
-                  py: 1.5,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
-                <Typography sx={{ fontWeight: 900 }}>Notifications</Typography>
-                <Chip
-                  size="small"
-                  label="Mark all read"
-                  onClick={onMarkAll}
-                  sx={{
-                    bgcolor: "rgba(124,92,255,0.16)",
-                    color: "#ddd6fe",
-                    fontWeight: 800,
-                  }}
-                />
-              </Box>
+      <IconButton
+        sx={{
+          width: 44,
+          height: 44,
+          color: "#e5e7eb",
+          border: "1px solid rgba(148,163,184,0.14)",
+          background: "rgba(255,255,255,0.035)",
+        }}
+      >
+        <NotificationsNoneIcon />
+      </IconButton>
 
-              <Box sx={{ maxHeight: 290, overflow: "auto" }}>
-                {notifs.length === 0 ? (
-                  <Typography sx={{ px: 2, py: 3, color: "#94a3b8", fontSize: 14 }}>
-                    No notifications.
-                  </Typography>
-                ) : (
-                  notifs.slice(0, 10).map((n) => (
-                    <Box
-                      key={n.id}
-                      component="button"
-                      type="button"
-                      onClick={() => onOpenNotif(n.id)}
-                      sx={{
-                        width: "100%",
-                        textAlign: "left",
-                        px: 2,
-                        py: 1.5,
-                        border: 0,
-                        borderBottom: "1px solid rgba(255,255,255,0.08)",
-                        bgcolor: n.read ? "transparent" : "rgba(255,255,255,0.04)",
-                        color: "#e5e7eb",
-                        cursor: "pointer",
-                        "&:hover": { bgcolor: "rgba(255,255,255,0.06)" },
-                      }}
-                    >
-                      <Typography sx={{ fontWeight: 800, fontSize: 14 }}>
-                        {n.title}
-                      </Typography>
-                      <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.5 }}>
-                        {n.body}
-                      </Typography>
-                      <Typography sx={{ color: "#64748b", fontSize: 11, mt: 0.8 }}>
-                        {n.createdAt}
-                      </Typography>
-                    </Box>
-                  ))
-                )}
-              </Box>
-            </Box>
-          ) : null}
+      <IconButton
+        onClick={(event) => setAnchorEl(event.currentTarget)}
+        sx={{
+          p: 0.55,
+          border: "1px solid rgba(167,139,250,0.32)",
+          background: "rgba(124,92,255,0.12)",
+        }}
+      >
+        <Avatar
+          sx={{
+            width: 38,
+            height: 38,
+            bgcolor: "#6d5dfc",
+            fontWeight: 950,
+            color: "#fff",
+          }}
+        >
+          {initials}
+        </Avatar>
+      </IconButton>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={() => setAnchorEl(null)}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            minWidth: 230,
+            borderRadius: 3,
+            color: "#e5e7eb",
+            background: "#0f172a",
+            border: "1px solid rgba(148,163,184,0.18)",
+            boxShadow: "0 18px 60px rgba(0,0,0,0.45)",
+          },
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography sx={{ fontWeight: 950 }}>
+            {user?.name || "Developer"}
+          </Typography>
+          <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+            {user?.email || ""}
+          </Typography>
         </Box>
 
-        <IconButton
-          onClick={(event) => {
-            setOpenNotifs(false);
-            setAnchorEl(event.currentTarget);
-          }}
-          sx={{
-            p: 0.4,
-            border: "1px solid rgba(255,255,255,0.12)",
-            bgcolor: "rgba(255,255,255,0.03)",
+        <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            navigate("/dev/profile");
           }}
         >
-          <Avatar
-            sx={{
-              width: 32,
-              height: 32,
-              bgcolor: "#6d5dfc",
-              fontSize: 13,
-              fontWeight: 900,
-            }}
-          >
-            {initials || "D"}
-          </Avatar>
-        </IconButton>
+          <PersonIcon fontSize="small" sx={{ mr: 1 }} />
+          Profile
+        </MenuItem>
 
-        <Menu
-          anchorEl={anchorEl}
-          open={openProfile}
-          onClose={() => setAnchorEl(null)}
-          PaperProps={{
-            sx: {
-              mt: 1,
-              minWidth: 240,
-              borderRadius: 2,
-              bgcolor: "#0f172a",
-              color: "#e5e7eb",
-              border: "1px solid rgba(255,255,255,0.10)",
-              boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
-            },
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            logout();
+            navigate("/login");
           }}
         >
-          <Box sx={{ px: 2, py: 1.5 }}>
-            <Typography fontWeight={900} noWrap>
-              {profile.name}
-            </Typography>
-            <Typography variant="caption" sx={{ color: "#94a3b8" }} noWrap>
-              {profile.email}
-            </Typography>
-          </Box>
-
-          <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
-
-          <MenuItem
-            onClick={() => {
-              setAnchorEl(null);
-              navigate("/dev/profile");
-            }}
-          >
-            <PersonIcon fontSize="small" style={{ marginRight: 10 }} />
-            Profile
-          </MenuItem>
-
-          <MenuItem
-            onClick={() => {
-              setAnchorEl(null);
-              logout();
-              navigate("/login");
-            }}
-          >
-            <LogoutIcon fontSize="small" style={{ marginRight: 10 }} />
-            Logout
-          </MenuItem>
-        </Menu>
-      </Toolbar>
-    </AppBar>
+          <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
+          Logout
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 }

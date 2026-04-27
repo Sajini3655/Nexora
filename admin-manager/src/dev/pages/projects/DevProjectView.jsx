@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
-import DevLayout from "../../components/layout/DevLayout";
 import Card from "../../../components/ui/Card.jsx";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
 
@@ -16,7 +16,9 @@ function buildProjects(tasks) {
   return [...groups.entries()].map(([key, list]) => {
     const total = list.length;
     const done = list.filter((task) => String(task.status).toLowerCase() === "completed" || String(task.status).toLowerCase() === "done").length;
-    const progress = total === 0 ? 0 : Math.round((done / total) * 100);
+    const totalPointValue = list.reduce((sum, task) => sum + Number(task.totalPointValue || 0), 0);
+    const completedPointValue = list.reduce((sum, task) => sum + Number(task.completedPointValue || 0), 0);
+    const progress = totalPointValue > 0 ? Math.round((completedPointValue * 100) / totalPointValue) : (total === 0 ? 0 : Math.round((done / total) * 100));
     return {
       id: String(list[0]?.projectId || key),
       name: list[0]?.projectName || `Project ${key}`,
@@ -62,36 +64,34 @@ export default function DevProjectView() {
 
   if (loading) {
     return (
-      <DevLayout>
-        <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
-          <CircularProgress sx={{ color: "#6b51ff" }} />
-        </Box>
-      </DevLayout>
+      <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
+        <CircularProgress sx={{ color: "#6b51ff" }} />
+      </Box>
     );
   }
 
   if (!project) {
     return (
-      <DevLayout>
+      <>
         {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
         <Card sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 900 }}>Project not found</Typography>
           <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.72)" }}>
-            No backend-derived project matches <strong>{id}</strong>.
+            No assigned project matches <strong>{id}</strong>.
           </Typography>
           <Box sx={{ mt: 2 }}>
             <Chip component={Link} clickable to="/dev/projects" label="Back to projects" />
           </Box>
         </Card>
-      </DevLayout>
+      </>
     );
   }
 
   return (
-    <DevLayout>
+    <>
       <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap", mb: 3 }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>Backend Project</Typography>
+          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>Assigned Project</Typography>
           <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>{project.name}</Typography>
           <Typography variant="body2" sx={{ mt: 0.75, color: "rgba(231,233,238,0.72)" }}>
             {project.taskCount} tasks • {project.progress}% complete
@@ -108,7 +108,7 @@ export default function DevProjectView() {
           <Card sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Project Overview</Typography>
             <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.76)" }}>
-              This project is grouped from backend tasks assigned to your developer account.
+              This project contains tasks assigned to your developer account.
             </Typography>
             <Box sx={{ mt: 3, display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 2 }}>
               <Metric label="Status" value={project.status} />
@@ -132,7 +132,7 @@ export default function DevProjectView() {
           </Card>
         </Grid>
       </Grid>
-    </DevLayout>
+    </>
   );
 }
 
@@ -144,3 +144,7 @@ function Metric({ label, value }) {
     </Box>
   );
 }
+
+
+
+

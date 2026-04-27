@@ -1,6 +1,14 @@
 import { API_BASE_URL } from "../../utils/constants";
 
 const API_BASE = `${API_BASE_URL}/api`;
+const CLIENT_TICKET_CACHE_KEY = "client.tickets.cache.v1";
+const CLIENT_TICKET_CACHE_TTL_MS = 60 * 1000;
+
+let ticketMemoryCache = {
+  timestamp: 0,
+  data: null,
+};
+let ticketFetchPromise = null;
 
 export const clientTicketCategories = [
   "Bug / Something not working",
@@ -154,8 +162,59 @@ function toUiProfile(row, user) {
   };
 }
 
+function safeReadTicketCache() {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.sessionStorage.getItem(CLIENT_TICKET_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed?.data)) return null;
+    return {
+      timestamp: Number(parsed?.timestamp || 0),
+      data: parsed.data,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeTicketCache(data) {
+  const payload = {
+    timestamp: Date.now(),
+    data: Array.isArray(data) ? data : [],
+  };
+
+  ticketMemoryCache = payload;
+
+  try {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(CLIENT_TICKET_CACHE_KEY, JSON.stringify(payload));
+    }
+  } catch {
+    // Ignore storage write errors and keep in-memory cache.
+  }
+}
+
+export function getCachedClientTickets() {
+  if (Array.isArray(ticketMemoryCache.data)) {
+    return ticketMemoryCache.data;
+  }
+
+  const persisted = safeReadTicketCache();
+  if (persisted) {
+    ticketMemoryCache = persisted;
+    return persisted.data;
+  }
+
+  return [];
+}
+
 export async function fetchClientProjects() {
   const tickets = await fetchClientTickets();
+  return buildProjectsFromTickets(tickets);
+}
+
+export function buildProjectsFromTickets(tickets) {
   const grouped = new Map();
 
   tickets.forEach((ticket) => {
@@ -196,10 +255,52 @@ export async function fetchClientProjects() {
   });
 }
 
-export async function fetchClientTickets() {
-  const res = await ticketFetch("", { method: "GET" });
-  const data = await res.json();
-  return Array.isArray(data) ? data.map(toUiTicket) : [];
+export async function fetchClientTickets(options = {}) {
+  const forceRefresh = Boolean(options?.forceRefresh);
+
+  const now = Date.now();
+  const inMemoryFresh =
+    Array.isArray(ticketMemoryCache.data) &&
+    now - Number(ticketMemoryCache.timestamp || 0) < CLIENT_TICKET_CACHE_TTL_MS;
+
+  if (!forceRefresh && inMemoryFresh) {
+    return ticketMemoryCache.data;
+  }
+
+  if (!forceRefresh && !Array.isArray(ticketMemoryCache.data)) {
+    const persisted = safeReadTicketCache();
+    const persistedFresh =
+      Array.isArray(persisted?.data) &&
+      now - Number(persisted?.timestamp || 0) < CLIENT_TICKET_CACHE_TTL_MS;
+    if (persistedFresh) {
+      ticketMemoryCache = persisted;
+      return persisted.data;
+    }
+  }
+
+  if (!forceRefresh && ticketFetchPromise) {
+    return ticketFetchPromise;
+  }
+
+  ticketFetchPromise = (async () => {
+    try {
+      const res = await ticketFetch("", { method: "GET" });
+      const data = await res.json();
+      const mapped = Array.isArray(data) ? data.map(toUiTicket) : [];
+      writeTicketCache(mapped);
+      return mapped;
+    } catch (error) {
+      const fallback = getCachedClientTickets();
+      if (fallback.length > 0) {
+        return fallback;
+      }
+      throw error;
+    } finally {
+      ticketFetchPromise = null;
+    }
+  })();
+
+  return ticketFetchPromise;
 }
 
 export async function fetchClientProfile() {
@@ -272,3 +373,4 @@ export async function createClientTicket(payload) {
   const data = await inserted.json();
   return toUiTicket(data, 0);
 }
+

@@ -1,8 +1,8 @@
-// src/pages/dashboard/ManagerDashboard.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   Grid,
   LinearProgress,
@@ -15,13 +15,74 @@ import { useNavigate } from "react-router-dom";
 import { fetchManagerTasks, fetchProjects } from "../../../services/managerService";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import RecentEmailTickets from "../../components/RecentEmailTickets";
+import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloperProgress";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+
+const MANAGER_DASHBOARD_CACHE_KEY = "manager.dashboard.cache.v1";
+
+function readManagerDashboardCache() {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.sessionStorage.getItem(MANAGER_DASHBOARD_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    const projects = Array.isArray(parsed?.projects) ? parsed.projects : [];
+    const tasks = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
+
+    return { projects, tasks };
+  } catch {
+    return null;
+  }
+}
+
+function writeManagerDashboardCache(projects, tasks) {
+  try {
+    if (typeof window === "undefined") return;
+    const payload = {
+      projects: Array.isArray(projects) ? projects : [],
+      tasks: Array.isArray(tasks) ? tasks : [],
+      timestamp: Date.now(),
+    };
+    window.sessionStorage.setItem(MANAGER_DASHBOARD_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore cache write errors.
+  }
+}
+
+function StatCard({ label, value, hint }) {
+  return (
+    <Paper
+      sx={{
+        p: 1.5,
+        minHeight: 102,
+        borderRadius: 2,
+        border: "1px solid rgba(148,163,184,0.16)",
+        background: "rgba(15,23,42,0.72)",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+      }}
+    >
+      <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>
+        {label}
+      </Typography>
+      <Typography sx={{ mt: 0.6, fontSize: 24, lineHeight: 1.1, fontWeight: 900, color: "#f8fafc" }}>
+        {value}
+      </Typography>
+      <Typography variant="caption" sx={{ mt: 0.45, display: "block", color: "#64748b" }}>
+        {hint}
+      </Typography>
+    </Paper>
+  );
+}
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
+  const cachedDashboard = useMemo(() => readManagerDashboardCache(), []);
 
-  const [projects, setProjects] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState(cachedDashboard?.projects || []);
+  const [tasks, setTasks] = useState(cachedDashboard?.tasks || []);
+  const [loading, setLoading] = useState(!cachedDashboard);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const normalizeTaskStatus = (task) =>
@@ -40,11 +101,16 @@ export default function ManagerDashboard() {
     );
   };
 
-  const getTaskPriority = (task) =>
-    String(task?.priority || task?.taskPriority || "MEDIUM").toUpperCase();
+  const getTaskTitle = (task) => task?.title || task?.taskName || task?.name || "Untitled Task";
 
-  const getTaskDate = (task) =>
-    task?.dueDate || task?.deadline || task?.targetDate || null;
+  const getTaskDate = (task) => task?.dueDate || task?.deadline || task?.targetDate || null;
+
+  const formatDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString();
+  };
 
   const getProjectId = (project) =>
     String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
@@ -55,17 +121,27 @@ export default function ManagerDashboard() {
   const getProjectDescription = (project) =>
     project?.description ?? project?.projectDescription ?? "No description available.";
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (options = {}) => {
+    const isBackground = Boolean(options.background);
+
     try {
-      setLoading(true);
+      if (isBackground) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError("");
       const [projectData, taskData] = await Promise.all([
         fetchProjects(),
         fetchManagerTasks(),
       ]);
 
-      setProjects(Array.isArray(projectData) ? projectData : []);
-      setTasks(Array.isArray(taskData) ? taskData : []);
+      const normalizedProjects = Array.isArray(projectData) ? projectData : [];
+      const normalizedTasks = Array.isArray(taskData) ? taskData : [];
+
+      setProjects(normalizedProjects);
+      setTasks(normalizedTasks);
+      writeManagerDashboardCache(normalizedProjects, normalizedTasks);
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -73,18 +149,23 @@ export default function ManagerDashboard() {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    loadDashboard();
+    loadDashboard({ background: Boolean(cachedDashboard) });
   }, [loadDashboard]);
 
   const liveTopics = useMemo(
     () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"],
     []
   );
-  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 550 });
+  const refreshDashboard = useCallback(() => {
+    loadDashboard({ background: true });
+  }, [loadDashboard]);
+
+  useLiveRefresh(liveTopics, refreshDashboard, { debounceMs: 900 });
 
   const tasksByProject = useMemo(() => {
     const grouped = new Map();
@@ -112,7 +193,7 @@ export default function ManagerDashboard() {
     return grouped;
   }, [tasks]);
 
-  const projectCards = useMemo(() => {
+  const projectRows = useMemo(() => {
     return projects.map((project) => {
       const projectId = getProjectId(project);
       const projectTaskList = Array.isArray(project?.tasks)
@@ -120,7 +201,21 @@ export default function ManagerDashboard() {
         : tasksByProject.get(projectId) || [];
       const totalTasks = projectTaskList.length;
       const doneTasks = projectTaskList.filter((task) => isCompletedTask(task)).length;
-      const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+      const totalPointValue = projectTaskList.reduce(
+        (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0),
+        0
+      );
+      const completedPointValue = projectTaskList.reduce(
+        (sum, task) => {
+          const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+          const taskCompleted = Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
+          return sum + taskCompleted;
+        },
+        0
+      );
+      const progress = totalPointValue > 0
+        ? Math.round((completedPointValue * 100) / totalPointValue)
+        : (totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0);
       const status =
         totalTasks === 0 ? "Planning" : doneTasks === totalTasks ? "Completed" : "Active";
 
@@ -130,6 +225,8 @@ export default function ManagerDashboard() {
         description: getProjectDescription(project),
         totalTasks,
         doneTasks,
+        totalPointValue,
+        completedPointValue,
         progress,
         status,
       };
@@ -137,26 +234,41 @@ export default function ManagerDashboard() {
   }, [projects, tasksByProject]);
 
   const activeProjectCount = useMemo(
-    () => projectCards.filter((project) => project.status === "Active").length,
-    [projectCards]
-  );
-
-  const openTasks = useMemo(
-    () => tasks.filter((task) => !isCompletedTask(task)),
-    [tasks]
-  );
-
-  const completedTasks = useMemo(
-    () => tasks.filter((task) => isCompletedTask(task)),
-    [tasks]
+    () => projectRows.filter((project) => project.status === "Active").length,
+    [projectRows]
   );
 
   const completionRate = useMemo(() => {
-    if (tasks.length === 0) {
+    const totalPointValue = tasks.reduce(
+      (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0),
+      0
+    );
+    const completedPointValue = tasks.reduce((sum, task) => {
+      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+      return sum + Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
+    }, 0);
+
+    if (totalPointValue === 0) {
       return 0;
     }
-    return Math.round((completedTasks.length / tasks.length) * 100);
-  }, [completedTasks.length, tasks.length]);
+
+    return Math.round((completedPointValue / totalPointValue) * 100);
+  }, [tasks]);
+
+  const totalWeighted = useMemo(
+    () => tasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0), 0),
+    [tasks]
+  );
+
+  const doneWeighted = useMemo(
+    () => tasks.reduce((sum, task) => {
+      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+      return sum + Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
+    }, 0),
+    [tasks]
+  );
+
+  const openTasks = useMemo(() => tasks.filter((task) => !isCompletedTask(task)), [tasks]);
 
   const upcomingTasks = useMemo(() => {
     return [...openTasks]
@@ -172,196 +284,182 @@ export default function ManagerDashboard() {
   }, [openTasks]);
 
   const recentCompletedTasks = useMemo(() => {
-    return [...completedTasks]
+    return tasks
+      .filter((task) => isCompletedTask(task))
       .sort((a, b) => {
         const firstDate = a?.completedAt || a?.updatedAt || a?.createdAt || 0;
         const secondDate = b?.completedAt || b?.updatedAt || b?.createdAt || 0;
         return new Date(secondDate) - new Date(firstDate);
       })
       .slice(0, 5);
-  }, [completedTasks]);
+  }, [tasks]);
 
-  const glassBoxStyle = {
-    p: 2.2,
-    borderRadius: 3,
-    bgcolor: "rgba(255,255,255,0.05)",
-    backdropFilter: "blur(10px)",
-    border: "1px solid rgba(255,255,255,0.11)",
-    boxShadow: "0 16px 45px rgba(0,0,0,0.22)",
-    cursor: "pointer",
-    transition: "all 180ms ease",
-    "&:hover": {
-      transform: "translateY(-3px)",
-      boxShadow: "0 20px 45px rgba(0,0,0,0.28)",
-      borderColor: "rgba(255,255,255,0.2)",
-    },
-  };
-
-  const statBoxStyle = {
-    p: 2.4,
-    borderRadius: 3,
-    bgcolor: "rgba(255,255,255,0.05)",
-    backdropFilter: "blur(10px)",
-    border: "1px solid rgba(255,255,255,0.11)",
-    boxShadow: "0 14px 36px rgba(0,0,0,0.2)",
-    textAlign: "center",
-  };
-
-  const taskBoxStyle = {
-    ...glassBoxStyle,
-    cursor: "default",
-    "&:hover": {
-      transform: "none",
-      boxShadow: "none",
-    },
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Active": return "#1976d2";
-      case "Planning": return "#f59e0b";
-      case "Pending": return "#ff9800";
-      case "Completed": return "#4caf50";
-      default: return "#1976d2";
+  const getStatusChipStyle = (status) => {
+    const normalized = String(status || "").toLowerCase();
+    if (normalized === "completed") {
+      return { bgcolor: "rgba(34,197,94,0.16)", color: "#86efac" };
     }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "HIGH":
-      case "CRITICAL":
-        return "#ef5350";
-      case "MEDIUM":
-        return "#ffb300";
-      case "LOW":
-        return "#66bb6a";
-      default:
-        return "#90caf9";
+    if (normalized === "planning") {
+      return { bgcolor: "rgba(245,158,11,0.16)", color: "#fcd34d" };
     }
-  };
-
-  const getTaskTitle = (task) => task?.title || task?.taskName || task?.name || "Untitled Task";
-
-  const formatDate = (value) => {
-    if (!value) {
-      return "-";
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return "-";
-    }
-
-    return date.toLocaleDateString();
+    return { bgcolor: "rgba(59,130,246,0.18)", color: "#93c5fd" };
   };
 
   if (loading) {
     return (
       <Box sx={{ p: 3, minHeight: "52vh", display: "grid", placeItems: "center" }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-        <CircularProgress size={24} />
-        <Typography>Loading manager data...</Typography>
+          <CircularProgress size={24} />
+          <Typography>Loading manager data...</Typography>
         </Stack>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box sx={{ pb: { xs: 2, md: 3 } }}>
+      {refreshing ? (
+        <LinearProgress
+          sx={{
+            mb: 1.2,
+            height: 4,
+            borderRadius: 999,
+            bgcolor: "rgba(255,255,255,0.08)",
+            "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+          }}
+        />
+      ) : null}
+
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", md: "center" }}
+        spacing={1.2}
+        sx={{ mb: 2 }}
+      >
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
+            Manager Dashboard
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+            Track delivery health, inbound tickets, and developer progress.
+          </Typography>
+        </Box>
+
+        <Button variant="outlined" onClick={() => navigate("/manager/projects")}>View Projects</Button>
+      </Stack>
+
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
+
+      <Grid container spacing={1.5} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard label="Total Projects" value={projectRows.length} hint={`${activeProjectCount} active`} />
+        </Grid>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard label="Total Tasks" value={tasks.length} hint={`${tasks.length - (projectRows.reduce((sum, p) => sum + p.doneTasks, 0))} open`} />
+        </Grid>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard label="Weighted Progress" value={`${completionRate}%`} hint={`${doneWeighted}/${totalWeighted} points`} />
+        </Grid>
+        <Grid item xs={12} sm={6} lg={3}>
+          <StatCard label="Weighted Done" value={doneWeighted} hint="Point value completed" />
+        </Grid>
+      </Grid>
+
       <Paper
         sx={{
-          mb: 3,
-          p: { xs: 2.2, md: 2.8 },
-          borderRadius: 3,
-          border: "1px solid rgba(255,255,255,0.1)",
-          background:
-            "radial-gradient(1200px 220px at -5% -60%, rgba(16,185,129,0.16), transparent 55%), radial-gradient(1100px 280px at 110% -80%, rgba(59,130,246,0.18), transparent 60%), rgba(255,255,255,0.03)",
-          backdropFilter: "blur(10px)",
+          mb: 2,
+          p: 1.8,
+          borderRadius: 2.5,
+          border: "1px solid rgba(148,163,184,0.16)",
+          background: "rgba(15,23,42,0.68)",
         }}
       >
-        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }} spacing={2}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.1 }}>
           <Box>
-            <Typography variant="h4" sx={{ mb: 0.6, fontWeight: 900, letterSpacing: "-0.02em" }}>Manager Dashboard</Typography>
-            <Typography sx={{ opacity: 0.78 }}>
-              Track project delivery and monitor workload.
+            <Typography sx={{ fontWeight: 900 }}>Projects Overview</Typography>
+            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              {projectRows.length} total projects • {activeProjectCount} active
             </Typography>
           </Box>
+          <Button variant="outlined" size="small" onClick={() => navigate("/manager/projects")}>
+            View All Projects
+          </Button>
         </Stack>
+
+        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1 }}>
+          Go to Project Management for detailed list, editing, and task tracking. Click "View All Projects" to manage projects and tasks.
+        </Typography>
       </Paper>
-
-      {error ? <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert> : null}
-
-      {/* Key Stats */}
-      <Grid container spacing={2.2} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={3}><Box sx={statBoxStyle}><Typography variant="h6">Total Projects</Typography><Typography variant="h5">{projectCards.length}</Typography></Box></Grid>
-        <Grid item xs={12} md={3}><Box sx={statBoxStyle}><Typography variant="h6">Active Projects</Typography><Typography variant="h5">{activeProjectCount}</Typography></Box></Grid>
-        <Grid item xs={12} md={3}><Box sx={statBoxStyle}><Typography variant="h6">Total Tasks</Typography><Typography variant="h5">{tasks.length}</Typography></Box></Grid>
-        <Grid item xs={12} md={3}><Box sx={statBoxStyle}><Typography variant="h6">Completion Rate</Typography><Typography variant="h5">{completionRate}%</Typography></Box></Grid>
-      </Grid>
-
-      {/* Projects */}
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: 850 }}>Projects</Typography>
-      {projectCards.length === 0 ? (
-        <Paper sx={{ p: 3, mb: 4, borderRadius: 3, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
-          <Typography>No projects available yet.</Typography>
-          <Typography variant="body2" sx={{ opacity: 0.75, mt: 0.75 }}>
-            Use the sidebar Add Project page to create a new project.
-          </Typography>
-        </Paper>
-      ) : null}
-      <Grid container spacing={2.2} sx={{ mb: 4 }}>
-        {projectCards.map((proj) => (
-          <Grid item xs={12} md={4} key={proj.id}>
-            <Box sx={glassBoxStyle} onClick={() => navigate(`/manager/projects/${proj.id}`)}>
-              <Chip label={proj.status} size="small" sx={{ mb: 1, bgcolor: getStatusColor(proj.status), color:"#fff" }}/>
-              <Typography variant="h6">{proj.name}</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.8, mb: 1 }}>
-                {proj.totalTasks} tasks • {proj.doneTasks} done
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.75, mb: 1 }}>
-                {proj.description}
-              </Typography>
-              <LinearProgress variant="determinate" value={proj.progress} sx={{ mt:1, mb:1, height:8, borderRadius:5, backgroundColor:"rgba(255,255,255,0.1)", "& .MuiLinearProgress-bar":{backgroundColor:getStatusColor(proj.status)}}}/>
-              <Typography variant="body2">{proj.progress}% complete</Typography>
-            </Box>
-          </Grid>
-        ))}
-      </Grid>
 
       <RecentEmailTickets />
 
-      {/* Tasks */}
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: 850 }}>Task Focus</Typography>
-      <Grid container spacing={2.2}>
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" sx={{ mb:1.2, fontWeight: 800 }}>Upcoming Open Tasks</Typography>
-          {upcomingTasks.length === 0 ? (
-            <Typography variant="body2" sx={{ opacity: 0.7 }}>No open tasks.</Typography>
-          ) : upcomingTasks.map((task, index) => (
-            <Box key={task?.id || task?.taskId || `open-${index}`} sx={taskBoxStyle}>
-              <Typography variant="body1">{getTaskTitle(task)}</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.75 }}>
-                Priority: <span style={{ color: getPriorityColor(getTaskPriority(task)) }}>{getTaskPriority(task)}</span> • Due: {formatDate(getTaskDate(task))}
-              </Typography>
-            </Box>
-          ))}
-        </Grid>
+      <Paper
+        sx={{
+          p: 1.6,
+          mb: 2,
+          borderRadius: 2.5,
+          border: "1px solid rgba(148,163,184,0.16)",
+          background: "rgba(15,23,42,0.68)",
+        }}
+      >
+        <Typography sx={{ fontWeight: 900, mb: 1 }}>Developer Progress</Typography>
+        <ManagerDeveloperProgress />
+      </Paper>
 
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" sx={{ mb:1.2, fontWeight: 800 }}>Recently Completed</Typography>
-          {recentCompletedTasks.length === 0 ? (
-            <Typography variant="body2" sx={{ opacity: 0.7 }}>No completed tasks yet.</Typography>
-          ) : recentCompletedTasks.map((task, index) => (
-            <Box key={task?.id || task?.taskId || `done-${index}`} sx={taskBoxStyle}>
-              <Typography variant="body1">{getTaskTitle(task)}</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.75 }}>
-                Completed • Updated: {formatDate(task.completedAt || task.updatedAt || task.createdAt)}
-              </Typography>
-            </Box>
-          ))}
-        </Grid>
-      </Grid>
+      <Paper
+        sx={{
+          p: 1.6,
+          borderRadius: 2.5,
+          border: "1px solid rgba(148,163,184,0.16)",
+          background: "rgba(15,23,42,0.68)",
+        }}
+      >
+        <Typography sx={{ fontWeight: 900, mb: 1 }}>Task Focus</Typography>
+
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1.2 }}>
+          <Box>
+            <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 800 }}>
+              Upcoming Open Tasks
+            </Typography>
+            <Stack spacing={0.8} sx={{ mt: 0.7 }}>
+              {upcomingTasks.length === 0 ? (
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>No open tasks.</Typography>
+              ) : upcomingTasks.map((task, index) => (
+                <Box key={task?.id || `open-${index}`} sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f" }}>
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 800 }} noWrap>{getTaskTitle(task)}</Typography>
+                  <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                    Due: {formatDate(getTaskDate(task))}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+
+          <Box>
+            <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 800 }}>
+              Recently Completed
+            </Typography>
+            <Stack spacing={0.8} sx={{ mt: 0.7 }}>
+              {recentCompletedTasks.length === 0 ? (
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>No completed tasks yet.</Typography>
+              ) : recentCompletedTasks.map((task, index) => (
+                <Box key={task?.id || `done-${index}`} sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f" }}>
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 800 }} noWrap>{getTaskTitle(task)}</Typography>
+                  <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                    Updated: {formatDate(task?.completedAt || task?.updatedAt || task?.createdAt)}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        </Box>
+      </Paper>
     </Box>
   );
 }
+
+
+
+
 

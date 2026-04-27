@@ -1,37 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Box,
-  Grid,
-  Typography,
-  Chip,
-  MenuItem,
-  Divider,
-  Stack,
-  Paper,
-} from "@mui/material";
+import { Box, Button, Chip, Divider, MenuItem, Paper, Stack, Typography } from "@mui/material";
 import PageHeader from "../../../components/ui/PageHeader";
 import Card from "../../../components/ui/Card";
 import Input from "../../../components/ui/Input";
-import Button from "../../../components/ui/Button";
-import {
-  assignManagerTaskAssignee,
-  fetchManagerDevelopers,
-  fetchManagerTasks,
-  getErrorMessage,
-  suggestManagerTaskAssignment,
-} from "../../../services/managerService";
+import { assignManagerTaskAssignee, fetchManagerDevelopers, fetchManagerTasks, getErrorMessage, suggestManagerTaskAssignment } from "../../../services/managerService";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
 function getProjectName(task) {
-  return (
-    task?.projectName ||
-    task?.project_name ||
-    task?.project?.name ||
-    task?.projectTitle ||
-    task?.project_title ||
-    task?.project?.title ||
-    "Project not provided"
-  );
+  return task?.projectName || task?.project_name || task?.project?.name || task?.projectTitle || task?.project_title || task?.project?.title || "Project not provided";
 }
 
 function getPriority(task) {
@@ -43,13 +20,11 @@ function getStatus(task) {
 }
 
 function getAssignee(task) {
-  return (
-    task?.assignedToName ||
-    task?.assigned_to_name ||
-    task?.assignedTo?.name ||
-    task?.assigneeName ||
-    ""
-  );
+  return task?.assignedToName || task?.assigned_to_name || task?.assignedTo?.name || task?.assigneeName || "";
+}
+
+function isAssignedTask(task) {
+  return Boolean(getAssignee(task) || task?.assignedToId || task?.assigned_to_id || task?.assignedTo);
 }
 
 function getTaskLabel(task) {
@@ -59,10 +34,8 @@ function getTaskLabel(task) {
 export default function AIAssignment() {
   const [developers, setDevelopers] = useState([]);
   const [tasks, setTasks] = useState([]);
-
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [selectedDeveloperId, setSelectedDeveloperId] = useState("");
-
   const [suggestion, setSuggestion] = useState(null);
   const [loadingAssignManual, setLoadingAssignManual] = useState(false);
   const [loadingAssignAI, setLoadingAssignAI] = useState(false);
@@ -70,11 +43,7 @@ export default function AIAssignment() {
 
   const load = useCallback(async () => {
     try {
-      const [developersData, tasksData] = await Promise.all([
-        fetchManagerDevelopers(),
-        fetchManagerTasks(),
-      ]);
-
+      const [developersData, tasksData] = await Promise.all([fetchManagerDevelopers(), fetchManagerTasks()]);
       setDevelopers(Array.isArray(developersData) ? developersData : []);
       setTasks(Array.isArray(tasksData) ? tasksData : []);
     } catch (e) {
@@ -86,26 +55,27 @@ export default function AIAssignment() {
     load();
   }, [load]);
 
-  const liveTopics = useMemo(
-    () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects", "/topic/users"],
-    []
-  );
+  const liveTopics = useMemo(() => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects", "/topic/users"], []);
   useLiveRefresh(liveTopics, load, { debounceMs: 500 });
 
+  const unassignedTasks = useMemo(() => tasks.filter((task) => !isAssignedTask(task)), [tasks]);
+  const assignedTasks = useMemo(() => tasks.filter((task) => isAssignedTask(task)), [tasks]);
+
+  useEffect(() => {
+    if (selectedTaskId && !unassignedTasks.some((task) => String(task.id) === String(selectedTaskId))) {
+      setSelectedTaskId("");
+      setSelectedDeveloperId("");
+      setSuggestion(null);
+    }
+  }, [selectedTaskId, unassignedTasks]);
+
   const selectedTask = useMemo(
-    () => tasks.find((t) => String(t?.id) === String(selectedTaskId)) || null,
-    [tasks, selectedTaskId]
+    () => unassignedTasks.find((task) => String(task.id) === String(selectedTaskId)) || null,
+    [unassignedTasks, selectedTaskId]
   );
 
-  const canAssignManual = useMemo(
-    () => Boolean(selectedTaskId && selectedDeveloperId),
-    [selectedTaskId, selectedDeveloperId]
-  );
-
-  const canAssignAI = useMemo(
-    () => Boolean(selectedTaskId && selectedTask?.title),
-    [selectedTaskId, selectedTask]
-  );
+  const canAssignManual = useMemo(() => Boolean(selectedTaskId && selectedDeveloperId), [selectedTaskId, selectedDeveloperId]);
+  const canAssignAI = useMemo(() => Boolean(selectedTaskId && selectedTask?.title), [selectedTaskId, selectedTask]);
 
   const handleAssignManual = async () => {
     if (!canAssignManual) return;
@@ -115,16 +85,11 @@ export default function AIAssignment() {
     setLoadingAssignManual(true);
 
     try {
-      await assignManagerTaskAssignee(
-        Number(selectedTaskId),
-        Number(selectedDeveloperId)
-      );
-
-      const dev = developers.find(
-        (d) => String(d?.id) === String(selectedDeveloperId)
-      );
-
+      await assignManagerTaskAssignee(Number(selectedTaskId), Number(selectedDeveloperId));
+      const dev = developers.find((d) => String(d?.id) === String(selectedDeveloperId));
       setMsg(dev ? `Assigned to ${dev.name}.` : "Task assignment updated.");
+      setSelectedTaskId("");
+      setSelectedDeveloperId("");
       await load();
     } catch (e) {
       setMsg(getErrorMessage(e, "Manual assignment failed."));
@@ -144,14 +109,10 @@ export default function AIAssignment() {
       const data = await suggestManagerTaskAssignment({
         title: selectedTask?.title || "",
         description: selectedTask?.description || "",
-        estimatedPoints:
-          selectedTask?.estimatedPoints != null
-            ? Number(selectedTask.estimatedPoints)
-            : null,
+        estimatedPoints: selectedTask?.estimatedPoints != null ? Number(selectedTask.estimatedPoints) : null,
       });
 
       setSuggestion(data);
-
       const recommendedId = data?.recommendedDeveloper?.id;
 
       if (!recommendedId) {
@@ -181,12 +142,8 @@ export default function AIAssignment() {
           borderBottom: "1px solid rgba(255,255,255,0.06)",
           py: 1.2,
         },
-        "& .MuiMenuItem-root.Mui-selected": {
-          bgcolor: "rgba(124,92,255,0.20)",
-        },
-        "& .MuiMenuItem-root:hover": {
-          bgcolor: "rgba(124,92,255,0.14)",
-        },
+        "& .MuiMenuItem-root.Mui-selected": { bgcolor: "rgba(124,92,255,0.20)" },
+        "& .MuiMenuItem-root:hover": { bgcolor: "rgba(124,92,255,0.14)" },
       },
     },
   };
@@ -195,126 +152,71 @@ export default function AIAssignment() {
     <Box sx={{ p: { xs: 0, md: 0.5 } }}>
       <PageHeader
         title="AI Task Assignment"
-        subtitle="Assign developers to tasks using project context, priority, status, and backend recommendations."
-        right={
-          <Chip
-            label={`Developers: ${developers.length}`}
-            sx={{
-              fontWeight: 700,
-              color: "#a7f3d0",
-              border: "1px solid rgba(16,185,129,0.28)",
-              backgroundColor: "rgba(16,185,129,0.12)",
-            }}
-          />
-        }
+        subtitle="Work only with unassigned tasks. Assigned work stays in the queue below for review."
+        right={<Chip label={`Unassigned: ${unassignedTasks.length}`} sx={{ fontWeight: 700, color: "#a7f3d0", border: "1px solid rgba(16,185,129,0.28)", backgroundColor: "rgba(16,185,129,0.12)" }} />}
       />
 
-      <Card
-        sx={{
-          p: 2.4,
-          borderRadius: 3,
-          border: "1px solid rgba(255,255,255,0.09)",
-          background: "#0b1628",
-          boxShadow: "none",
-        }}
-      >
-        <Typography sx={{ fontWeight: 950, mb: 1.6, fontSize: 20 }}>
-          Assign Developer
-        </Typography>
+      <Card sx={{ p: 2.4, borderRadius: 3, border: "1px solid rgba(255,255,255,0.09)", background: "#0b1628", boxShadow: "none" }}>
+        <Typography sx={{ fontWeight: 950, mb: 1.6, fontSize: 20 }}>Assign Unassigned Task</Typography>
 
-        <Grid container spacing={1.5}>
-          <Grid item xs={12} md={6}>
-            <Input
-              select
-              label="Task"
-              value={selectedTaskId}
-              onChange={(e) => setSelectedTaskId(e.target.value)}
-              SelectProps={{
-                MenuProps: selectMenuProps,
-                renderValue: (value) => {
-                  if (!value) return "Select task";
-                  const task = tasks.find((t) => String(t.id) === String(value));
-                  return task ? getTaskLabel(task) : "Select task";
-                },
-              }}
-            >
-              <MenuItem value="">
-                <Typography sx={{ color: "#94a3b8" }}>Select task</Typography>
-              </MenuItem>
-
-              {tasks.map((task) => (
-                <MenuItem key={task.id} value={String(task.id)}>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 900, fontSize: 14 }}>
-                      {task.title || "Untitled Task"}
-                    </Typography>
-                    <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.2 }}>
-                      Project: {getProjectName(task)} • Priority: {getPriority(task)}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-            </Input>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Input
-              select
-              label="Developer"
-              value={selectedDeveloperId}
-              onChange={(e) => setSelectedDeveloperId(e.target.value)}
-              SelectProps={{
-                MenuProps: selectMenuProps,
-                renderValue: (value) => {
-                  if (!value) return "Select developer";
-                  const dev = developers.find((d) => String(d.id) === String(value));
-                  return dev?.name || "Select developer";
-                },
-              }}
-            >
-              <MenuItem value="">
-                <Typography sx={{ color: "#94a3b8" }}>Select developer</Typography>
-              </MenuItem>
-
-              {developers.map((dev) => (
-                <MenuItem key={dev.id} value={String(dev.id)}>
-                  <Box>
-                    <Typography sx={{ fontWeight: 900, fontSize: 14 }}>
-                      {dev.name}
-                    </Typography>
-                    {dev.email ? (
-                      <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.2 }}>
-                        {dev.email}
-                      </Typography>
-                    ) : null}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Input>
-          </Grid>
-        </Grid>
-
-        {selectedTask ? (
-          <Box
-            sx={{
-              mt: 1.5,
-              p: 1.5,
-              borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.03)",
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1.5 }}>
+          <Input
+            select
+            label="Task"
+            value={selectedTaskId}
+            onChange={(e) => setSelectedTaskId(e.target.value)}
+            SelectProps={{
+              MenuProps: selectMenuProps,
+              renderValue: (value) => {
+                if (!value) return "Select unassigned task";
+                const task = unassignedTasks.find((t) => String(t.id) === String(value));
+                return task ? getTaskLabel(task) : "Select unassigned task";
+              },
             }}
           >
-            <Typography sx={{ fontWeight: 900, fontSize: 14 }}>
-              Selected Task
-            </Typography>
+            <MenuItem value=""><Typography sx={{ color: "#94a3b8" }}>Select unassigned task</Typography></MenuItem>
+            {unassignedTasks.map((task) => (
+              <MenuItem key={task.id} value={String(task.id)}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 900, fontSize: 14 }}>{task.title || "Untitled Task"}</Typography>
+                  <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.2 }}>
+                    Project: {getProjectName(task)} • Priority: {getPriority(task)}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Input>
 
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              useFlexGap
-              flexWrap="wrap"
-              sx={{ mt: 1 }}
-            >
+          <Input
+            select
+            label="Developer"
+            value={selectedDeveloperId}
+            onChange={(e) => setSelectedDeveloperId(e.target.value)}
+            SelectProps={{
+              MenuProps: selectMenuProps,
+              renderValue: (value) => {
+                if (!value) return "Select developer";
+                const dev = developers.find((d) => String(d.id) === String(value));
+                return dev?.name || "Select developer";
+              },
+            }}
+          >
+            <MenuItem value=""><Typography sx={{ color: "#94a3b8" }}>Select developer</Typography></MenuItem>
+            {developers.map((dev) => (
+              <MenuItem key={dev.id} value={String(dev.id)}>
+                <Box>
+                  <Typography sx={{ fontWeight: 900, fontSize: 14 }}>{dev.name}</Typography>
+                  {dev.email ? <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.2 }}>{dev.email}</Typography> : null}
+                </Box>
+              </MenuItem>
+            ))}
+          </Input>
+        </Box>
+
+        {selectedTask ? (
+          <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, border: "1px solid rgba(255,255,255,0.08)", background: "#0f1b2f" }}>
+            <Typography sx={{ fontWeight: 900, fontSize: 14 }}>Selected Task</Typography>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
               <InfoPill label="Task" value={selectedTask.title || "Untitled Task"} />
               <InfoPill label="Project" value={getProjectName(selectedTask)} />
               <InfoPill label="Priority" value={getPriority(selectedTask)} />
@@ -324,225 +226,72 @@ export default function AIAssignment() {
         ) : null}
 
         <Box sx={{ display: "flex", gap: 1, mt: 1.8, flexWrap: "wrap" }}>
-          <Button
-            tone="soft"
-            loading={loadingAssignAI}
-            disabled={!canAssignAI}
-            onClick={handleAssignWithAI}
-            sx={{ minHeight: 42, px: 2.4, fontWeight: 800 }}
-          >
+          <Button disabled={!canAssignAI || loadingAssignAI} onClick={handleAssignWithAI} sx={{ minHeight: 42, px: 2.4, fontWeight: 800 }}>
             AI Suggest
           </Button>
-
-          <Button
-            loading={loadingAssignManual}
-            disabled={!canAssignManual}
-            onClick={handleAssignManual}
-            sx={{ minHeight: 42, px: 2.4, fontWeight: 800 }}
-          >
+          <Button disabled={!canAssignManual || loadingAssignManual} onClick={handleAssignManual} sx={{ minHeight: 42, px: 2.4, fontWeight: 800 }}>
             Assign Manually
           </Button>
         </Box>
 
         {msg ? (
-          <Box
-            sx={{
-              mt: 1.6,
-              px: 1.4,
-              py: 0.9,
-              borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "rgba(255,255,255,0.05)",
-            }}
-          >
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              {msg}
-            </Typography>
+          <Box sx={{ mt: 1.6, px: 1.4, py: 0.9, borderRadius: 2, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)" }}>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>{msg}</Typography>
           </Box>
         ) : null}
 
         {suggestion?.recommendedDeveloper ? (
-          <Box
-            sx={{
-              mt: 1.6,
-              p: 1.4,
-              borderRadius: 2,
-              border: "1px solid rgba(59,130,246,0.3)",
-              background: "rgba(59,130,246,0.1)",
-            }}
-          >
-            <Typography sx={{ fontWeight: 900 }}>
-              AI recommendation: {suggestion.recommendedDeveloper.name}
-            </Typography>
-
-            <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.4 }}>
-              Confidence {suggestion.confidence}% • {suggestion.explanation}
-            </Typography>
+          <Box sx={{ mt: 1.6, p: 1.4, borderRadius: 2, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)" }}>
+            <Typography sx={{ fontWeight: 900 }}>AI recommendation: {suggestion.recommendedDeveloper.name}</Typography>
+            <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.4 }}>Confidence {suggestion.confidence}% • {suggestion.explanation}</Typography>
           </Box>
         ) : null}
 
         <Divider sx={{ my: 2.2, borderColor: "rgba(255,255,255,0.08)" }} />
 
-        <Typography sx={{ fontWeight: 900, mb: 1.2 }}>
-          Task Queue
-        </Typography>
+        <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Task Queue</Typography>
 
-        {tasks.length === 0 ? (
-          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-            No tasks available.
-          </Typography>
-        ) : (
-          <Box
-            sx={{
-              maxHeight: 420,
-              overflow: "auto",
-              pr: 0.5,
-              "&::-webkit-scrollbar": {
-                width: 8,
-              },
-              "&::-webkit-scrollbar-track": {
-                background: "rgba(255,255,255,0.04)",
-                borderRadius: 999,
-              },
-              "&::-webkit-scrollbar-thumb": {
-                background: "rgba(124,92,255,0.55)",
-                borderRadius: 999,
-              },
-            }}
-          >
-            <Stack spacing={1}>
-              {tasks.slice(0, 20).map((task) => {
-                const assignee = getAssignee(task);
-
-                return (
-                  <Paper
-                    key={task.id}
-                    elevation={0}
-                    sx={{
-                      p: 1.5,
-                      borderRadius: 2.5,
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      background: "rgba(255,255,255,0.035)",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: {
-                          xs: "1fr",
-                          md: "1.3fr 1fr 0.7fr 0.7fr 1fr",
-                        },
-                        gap: 1.2,
-                        alignItems: "center",
-                      }}
-                    >
-                      <Box>
-                        <Typography sx={{ fontWeight: 900, fontSize: 15 }}>
-                          {task.title || "Untitled Task"}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: "#64748b" }}>
-                          Task ID: {task.id}
-                        </Typography>
-                      </Box>
-
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "#cbd5e1", fontWeight: 800 }}
-                      >
-                        {getProjectName(task)}
-                      </Typography>
-
-                      <StatusChip label={getPriority(task)} type="priority" />
-
-                      <StatusChip label={getStatus(task)} type="status" />
-
-                      <Typography
-                        variant="body2"
-                        sx={{ color: assignee ? "#cbd5e1" : "#94a3b8" }}
-                      >
-                        {assignee ? `Assigned: ${assignee}` : "Unassigned"}
-                      </Typography>
-                    </Box>
-                  </Paper>
-                );
-              })}
-            </Stack>
-          </Box>
-        )}
+        <Stack spacing={2}>
+          <QueueSection title="Unassigned" tasks={unassignedTasks} accent="rgba(34,197,94,0.14)" />
+          <QueueSection title="Assigned" tasks={assignedTasks} accent="rgba(124,92,255,0.14)" />
+        </Stack>
       </Card>
+    </Box>
+  );
+}
+
+function QueueSection({ title, tasks, accent }) {
+  return (
+    <Box>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+        <Typography sx={{ fontWeight: 900 }}>{title}</Typography>
+        <StatusBadge label={tasks.length} variant="neutral" />
+      </Stack>
+      <Stack spacing={1}>
+        {tasks.length === 0 ? (
+          <Typography variant="body2" sx={{ color: "#94a3b8" }}>No tasks in this section.</Typography>
+        ) : tasks.slice(0, 12).map((task) => (
+          <Paper key={task.id} elevation={0} sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.035)" }}>
+            <Typography sx={{ fontWeight: 900, fontSize: 15 }}>{task.title || "Untitled Task"}</Typography>
+            <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.25 }}>
+              {task.projectName || "No project"} • {task.status || "Unknown"} • {task.priority || "Medium"}
+              {task.assignedToName ? ` • Assigned: ${task.assignedToName}` : ""}
+            </Typography>
+          </Paper>
+        ))}
+      </Stack>
     </Box>
   );
 }
 
 function InfoPill({ label, value }) {
   return (
-    <Box
-      sx={{
-        px: 1.2,
-        py: 0.7,
-        borderRadius: 999,
-        bgcolor: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <Typography
-        component="span"
-        sx={{ color: "#94a3b8", fontSize: 12, fontWeight: 700 }}
-      >
-        {label}:{" "}
-      </Typography>
-      <Typography
-        component="span"
-        sx={{ color: "#e5e7eb", fontSize: 12, fontWeight: 900 }}
-      >
-        {value}
-      </Typography>
+    <Box sx={{ px: 1.2, py: 0.7, borderRadius: 999, bgcolor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <Typography component="span" sx={{ color: "#94a3b8", fontSize: 12, fontWeight: 700 }}>{label}: </Typography>
+      <Typography component="span" sx={{ color: "#e5e7eb", fontSize: 12, fontWeight: 900 }}>{value}</Typography>
     </Box>
   );
 }
 
-function StatusChip({ label, type }) {
-  const normalized = String(label || "").toUpperCase();
 
-  let bgcolor = "rgba(124,92,255,0.14)";
-  let color = "#e5e7eb";
 
-  if (type === "priority" && normalized === "HIGH") {
-    bgcolor = "rgba(239,68,68,0.14)";
-    color = "#fecaca";
-  }
-
-  if (type === "priority" && normalized === "MEDIUM") {
-    bgcolor = "rgba(245,158,11,0.14)";
-    color = "#fde68a";
-  }
-
-  if (type === "priority" && normalized === "LOW") {
-    bgcolor = "rgba(34,197,94,0.14)";
-    color = "#bbf7d0";
-  }
-
-  if (type === "status" && (normalized === "DONE" || normalized === "COMPLETED")) {
-    bgcolor = "rgba(34,197,94,0.14)";
-    color = "#bbf7d0";
-  }
-
-  if (type === "status" && normalized.includes("PROGRESS")) {
-    bgcolor = "rgba(59,130,246,0.14)";
-    color = "#bfdbfe";
-  }
-
-  return (
-    <Chip
-      size="small"
-      label={label || "-"}
-      sx={{
-        width: "fit-content",
-        bgcolor,
-        color,
-        border: "1px solid rgba(255,255,255,0.08)",
-        fontWeight: 800,
-      }}
-    />
-  );
-}

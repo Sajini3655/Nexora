@@ -1,17 +1,36 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Box,
-  Typography,
-  Grid,
-  Paper,
-  Chip,
   Button,
+  Chip,
+  CircularProgress,
   LinearProgress,
-  CircularProgress
+  Paper,
+  Stack,
+  Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { fetchManagerTasks, fetchProjects } from "../../../services/managerService";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+
+function isCompletedTask(task) {
+  const status = String(task?.status || task?.taskStatus || "").toLowerCase();
+  return status === "done" || status === "completed" || status === "complete" || status === "closed" || status === "resolved";
+}
+
+function getProjectId(project) {
+  return String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
+}
+
+function getProjectName(project) {
+  return String(project?.name ?? project?.projectName ?? project?.title ?? "Untitled Project");
+}
+
+function getProjectDescription(project) {
+  return project?.description ?? project?.projectDescription ?? "No description available.";
+}
 
 export default function ProjectManagement() {
   const navigate = useNavigate();
@@ -20,40 +39,15 @@ export default function ProjectManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const getProjectId = (project) =>
-    String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
-
-  const normalizeTaskStatus = (task) =>
-    String(task?.status || task?.taskStatus || task?.state || "")
-      .trim()
-      .toLowerCase();
-
-  const isTaskDone = (task) => {
-    const status = normalizeTaskStatus(task);
-    return (
-      status === "done" ||
-      status === "complete" ||
-      status === "completed" ||
-      status === "closed" ||
-      status === "resolved"
-    );
-  };
-
   const loadProjects = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      const [projectsData, tasksData] = await Promise.all([
-        fetchProjects(),
-        fetchManagerTasks(),
-      ]);
+      const [projectsData, tasksData] = await Promise.all([fetchProjects(), fetchManagerTasks()]);
       setProjects(Array.isArray(projectsData) ? projectsData : []);
       setTasks(Array.isArray(tasksData) ? tasksData : []);
     } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          "Failed to load project management data."
-      );
+      setError(err?.response?.data?.message || "Failed to load project management data.");
     } finally {
       setLoading(false);
     }
@@ -63,59 +57,53 @@ export default function ProjectManagement() {
     loadProjects();
   }, [loadProjects]);
 
-  const liveTopics = useMemo(
-    () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"],
-    []
-  );
-  useLiveRefresh(liveTopics, loadProjects, { debounceMs: 550 });
+  useLiveRefresh(["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"], loadProjects, { debounceMs: 550 });
 
-  const projectCards = useMemo(() => {
+  const projectRows = useMemo(() => {
     const tasksByProject = new Map();
 
     tasks.forEach((task) => {
-      const projectKey = String(
-        task?.projectId ??
-          task?.project_id ??
-          task?.project?.id ??
-          task?.project?.projectId ??
-          ""
-      );
-
-      if (!projectKey) {
-        return;
-      }
-
-      if (!tasksByProject.has(projectKey)) {
-        tasksByProject.set(projectKey, []);
-      }
-
+      const projectKey = String(task?.projectId ?? task?.project_id ?? task?.project?.id ?? task?.project?.projectId ?? "");
+      if (!projectKey) return;
+      if (!tasksByProject.has(projectKey)) tasksByProject.set(projectKey, []);
       tasksByProject.get(projectKey).push(task);
     });
 
     return projects.map((project) => {
       const projectId = getProjectId(project);
-      const taskList = Array.isArray(project?.tasks)
-        ? project.tasks
-        : tasksByProject.get(projectId) || [];
-      const totalTasks = taskList.length;
-      const doneTasks = taskList.filter((task) => isTaskDone(task)).length;
-      const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
-
-      let status = "Planning";
-      if (totalTasks > 0) {
-        status = doneTasks === totalTasks ? "Completed" : "Active";
-      }
+      const projectTasks = Array.isArray(project?.tasks) ? project.tasks : tasksByProject.get(projectId) || [];
+      const taskCount = projectTasks.length;
+      const completedTaskCount = projectTasks.filter((task) => isCompletedTask(task)).length;
+      const totalPointValue = projectTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0), 0);
+      const completedPointValue = projectTasks.reduce((sum, task) => {
+        const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+        return sum + Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
+      }, 0);
+      const weightedProgress = totalPointValue > 0
+        ? Math.round((completedPointValue * 100) / totalPointValue)
+        : (taskCount > 0 ? Math.round((completedTaskCount * 100) / taskCount) : 0);
+      const status = taskCount === 0 ? "Planning" : completedTaskCount === taskCount ? "Completed" : "Active";
 
       return {
         id: projectId,
-        name: project?.name || project?.projectName || "Untitled Project",
-        description: project?.description || project?.projectDescription || "No description provided.",
+        name: getProjectName(project),
+        description: getProjectDescription(project),
         status,
-        progress,
-        tasks: totalTasks,
+        taskCount,
+        completedTaskCount,
+        totalPointValue,
+        completedPointValue,
+        weightedProgress,
       };
     });
   }, [projects, tasks]);
+
+  const getStatusChipStyle = (status) => {
+    const normalized = String(status || "").toLowerCase();
+    if (normalized === "completed") return { bgcolor: "rgba(34,197,94,0.16)", color: "#86efac" };
+    if (normalized === "planning") return { bgcolor: "rgba(245,158,11,0.16)", color: "#fcd34d" };
+    return { bgcolor: "rgba(59,130,246,0.18)", color: "#93c5fd" };
+  };
 
   if (loading) {
     return (
@@ -127,103 +115,88 @@ export default function ProjectManagement() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Typography variant="h4" sx={{ mb: 4 }}>
-        Project Management
-      </Typography>
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
+      <Paper
+        sx={{
+          mb: 2,
+          p: 1.8,
+          borderRadius: 2.5,
+          border: "1px solid rgba(148,163,184,0.16)",
+          background: "rgba(15,23,42,0.68)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+        }}
+      >
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }} spacing={1.2}>
+          <Box>
+            <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.4 }}>
+              Manager / Projects
+            </Typography>
+            <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
+              Project Management
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
+              List projects and open Manage Project for tasks, story points, and assignment.
+            </Typography>
+          </Box>
 
-      {error ? (
-        <Box sx={{ mb: 3, p: 2, borderRadius: 2, border: "1px solid rgba(255,120,120,0.5)", backgroundColor: "rgba(255,120,120,0.08)" }}>
-          <Typography>{error}</Typography>
-        </Box>
-      ) : null}
+          <Button variant="outlined" onClick={() => navigate("/manager/add-project")}>Add Project</Button>
+        </Stack>
+      </Paper>
 
-      {!error && projectCards.length === 0 ? (
-        <Paper sx={{ p: 3, border: "1px solid rgba(255,255,255,0.08)" }}>
-          <Typography>No projects found for this manager.</Typography>
-        </Paper>
-      ) : null}
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
-      <Grid container spacing={3}>
-        {projectCards.map((project) => (
-          <Grid item xs={12} md={6} lg={4} key={project.id}>
-            <Paper
-              sx={{
-                p: 3,
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                transition: "0.3s",
-                border: "1px solid rgba(255,255,255,0.06)",
-                "&:hover": {
-                  transform: "translateY(-5px)",
-                  boxShadow: "0 10px 25px rgba(0,0,0,0.4)"
-                }
-              }}
-            >
-              {/* Top Info */}
-              <Box>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  {project.name}
-                </Typography>
-
-                <Typography
-                  variant="body2"
-                  sx={{ mb: 2, opacity: 0.8 }}
-                >
-                  {project.description}
-                </Typography>
-
-                <Chip
-                  label={project.status}
-                  color={
-                    project.status === "Active"
-                      ? "success"
-                      : project.status === "Planning"
-                      ? "warning"
-                      : "default"
-                  }
-                  size="small"
-                  sx={{ mb: 2 }}
-                />
-
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Tasks: {project.tasks}
-                </Typography>
-
-                <LinearProgress
-                  variant="determinate"
-                  value={project.progress}
-                  sx={{ height: 8, borderRadius: 5 }}
-                />
-
-                <Typography
-                  variant="caption"
-                  sx={{ display: "block", mt: 1 }}
-                >
-                  {project.progress}% Complete
-                </Typography>
+      <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
+        {projectRows.length === 0 ? (
+          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+            No projects found for this manager.
+          </Typography>
+        ) : (
+          <Box sx={{ overflowX: "auto" }}>
+            <Box sx={{ minWidth: 860 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)" }}>
+                {["Project", "Status", "Tasks", "Completed", "Weighted", "Progress"].map((header) => (
+                  <Typography key={header} variant="caption" sx={{ color: "#64748b", textTransform: "uppercase", fontWeight: 800 }}>
+                    {header}
+                  </Typography>
+                ))}
               </Box>
 
-              {/* Manage Button */}
-              <Button
-                variant="contained"
-                sx={{ mt: 3 }}
-                fullWidth
-                onClick={() =>
-                  navigate(
-                    `/manager/project-management/${project.id}`
-                  )
-                }
-              >
-                Manage Project
-              </Button>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
+              {projectRows.map((project) => (
+                <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid rgba(148,163,184,0.12)" }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: 14 }} noWrap>
+                      {project.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#94a3b8" }} noWrap>
+                      {project.description}
+                    </Typography>
+                    <Box sx={{ mt: 0.7 }}>
+                      <Button size="small" variant="outlined" onClick={() => navigate(`/manager/project-management/${project.id}`)} sx={{ textTransform: "none", fontWeight: 700 }}>
+                        Manage Project
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  <Chip size="small" label={project.status} sx={{ width: "fit-content", fontWeight: 800, ...getStatusChipStyle(project.status) }} />
+
+                  <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{project.taskCount}</Typography>
+                  <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{project.completedTaskCount}</Typography>
+                  <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{project.completedPointValue}/{project.totalPointValue}</Typography>
+
+                  <Box>
+                    <Typography variant="caption" sx={{ color: "#cbd5e1" }}>{project.weightedProgress}%</Typography>
+                    <LinearProgress variant="determinate" value={project.weightedProgress} sx={{ mt: 0.4, height: 6, borderRadius: 999, bgcolor: "rgba(255,255,255,0.08)" }} />
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
+      </Paper>
     </Box>
   );
 }
+
+
+
+

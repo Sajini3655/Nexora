@@ -19,3 +19,4 @@ export default function Spinner({ label = "Loading...", compact = false }) {
     </Box>
   );
 }
+
