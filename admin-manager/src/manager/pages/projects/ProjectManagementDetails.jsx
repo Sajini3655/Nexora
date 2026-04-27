@@ -123,9 +123,6 @@ export default function ProjectManagementDetails() {
   const [savingProjectDetails, setSavingProjectDetails] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
 
-  const [newProjectForm, setNewProjectForm] = useState({ name: "", description: "" });
-  const [creatingProject, setCreatingProject] = useState(false);
-
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskDraft, setTaskDraft] = useState(null);
@@ -385,41 +382,10 @@ export default function ProjectManagementDetails() {
       setEditProjectName(updated.name);
       setEditProjectDescription(updated.description);
       setSuccess("Project details updated successfully.");
-      setNewProjectForm({ name: "", description: "" });
     } catch (err) {
       setError(getErrorMessage(err, "Failed to save project details."));
     } finally {
       setSavingProjectDetails(false);
-    }
-  };
-
-  const handleCreateNewProject = async () => {
-    if (!newProjectForm.name.trim()) {
-      setError("Project name is required.");
-      return;
-    }
-
-    setCreatingProject(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const created = await api.post("/projects", {
-        name: newProjectForm.name.trim(),
-        description: newProjectForm.description.trim() || null,
-      });
-
-      setSuccess("New project created successfully!");
-      setNewProjectForm({ name: "", description: "" });
-      
-      // Navigate to the new project after a short delay
-      setTimeout(() => {
-        window.location.href = `/admin/projects/${created.id}`;
-      }, 800);
-    } catch (err) {
-      setError(getErrorMessage(err, "Failed to create project."));
-    } finally {
-      setCreatingProject(false);
     }
   };
 
@@ -799,38 +765,6 @@ export default function ProjectManagementDetails() {
               </Box>
             </Box>
           )}
-        </Paper>
-
-        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
-          <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Create New Project</Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mb: 1.2 }}>
-            After managing this project, you can quickly create another one below.
-          </Typography>
-
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.5fr auto" }, gap: 1, alignItems: "center" }}>
-            <TextField
-              size="small"
-              label="Project name"
-              value={newProjectForm.name}
-              onChange={(e) => setNewProjectForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., Mobile App Redesign"
-            />
-            <TextField
-              size="small"
-              label="Project description"
-              value={newProjectForm.description}
-              onChange={(e) => setNewProjectForm((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="Optional description"
-            />
-            <Button
-              variant="contained"
-              disabled={creatingProject || !newProjectForm.name.trim()}
-              onClick={handleCreateNewProject}
-              sx={{ height: "40px" }}
-            >
-              {creatingProject ? "Creating..." : "Create Project"}
-            </Button>
-          </Box>
         </Paper>
       </Stack>
 
