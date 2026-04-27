@@ -42,6 +42,7 @@ interface ChatBoxProps {
   currentUserId: string;
   currentUserName: string;
   onSummary: (data: ChatEndResult) => void;
+  hideSidebar?: boolean;
 }
 
 const WS_URL = "http://localhost:8081/ws";
@@ -150,6 +151,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   currentUserId,
   currentUserName,
   onSummary,
+  hideSidebar = false,
 }) => {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
@@ -512,9 +514,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
   const styles: { [key: string]: CSSProperties } = {
     shell: {
-      minHeight: 640,
+      minHeight: 360,
       display: "grid",
-      gridTemplateColumns: "270px minmax(0, 1fr)",
+      gridTemplateColumns: hideSidebar ? "minmax(0, 1fr)" : "270px minmax(0, 1fr)",
       borderRadius: 22,
       overflow: "hidden",
       background: "linear-gradient(180deg, #0f1b2f 0%, #0b1628 100%)",
@@ -573,13 +575,16 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         "radial-gradient(800px 300px at 15% 0%, rgba(109,93,252,0.08), transparent 55%), #081323",
     },
     inputBar: {
-      padding: 14,
+      padding: 12,
       borderTop: "1px solid rgba(148,163,184,0.12)",
       background: "#0d182b",
       display: "grid",
       gridTemplateColumns: "minmax(0, 1fr) auto auto",
-      gap: 10,
+      gap: 8,
       alignItems: "center",
+      position: "sticky",
+      bottom: 0,
+      zIndex: 3,
     },
     input: {
       width: "100%",
@@ -676,81 +681,83 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
   return (
     <div style={styles.shell} className="nx-chat-shell">
-      <aside style={styles.sidebar} className="nx-chat-sidebar">
-        <div>
-          <div style={styles.smallLabel}>Workspace</div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: "#f8fafc", marginTop: 4 }}>
-            AI Shadow Chat
+      {!hideSidebar && (
+        <aside style={styles.sidebar} className="nx-chat-sidebar">
+          <div>
+            <div style={styles.smallLabel}>Workspace</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#f8fafc", marginTop: 4 }}>
+              AI Shadow Chat
+            </div>
+            <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
+              Project discussion with live updates.
+            </div>
           </div>
-          <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
-            Project discussion with live updates.
-          </div>
-        </div>
 
-        <div style={styles.roomCard}>
-          <div style={styles.smallLabel}>Active room</div>
-          <div style={{ color: "#f8fafc", fontWeight: 900, marginTop: 6 }}>
-            {projectName}
+          <div style={styles.roomCard}>
+            <div style={styles.smallLabel}>Active room</div>
+            <div style={{ color: "#f8fafc", fontWeight: 900, marginTop: 6 }}>
+              {projectName}
+            </div>
+            <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
+              Project ID: {projectId}
+            </div>
           </div>
-          <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
-            Project ID: {projectId}
-          </div>
-        </div>
 
-        <div>
-          <div style={{ ...styles.smallLabel, marginBottom: 8 }}>Members</div>
-          <div style={styles.memberCard}>
-            <div
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #6d5dfc, #22c55e)",
-              }}
-            />
-            <div>
-              <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
-                {currentUserName}
+          <div>
+            <div style={{ ...styles.smallLabel, marginBottom: 8 }}>Members</div>
+            <div style={styles.memberCard}>
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #6d5dfc, #22c55e)",
+                }}
+              />
+              <div>
+                <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
+                  {currentUserName}
+                </div>
+                <div style={{ color: "#64748b", fontSize: 12 }}>Developer</div>
               </div>
-              <div style={{ color: "#64748b", fontSize: 12 }}>Developer</div>
             </div>
-          </div>
-          <div style={{ ...styles.memberCard, marginTop: 8 }}>
-            <div
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: "50%",
-                background: "#1e293b",
-                display: "grid",
-                placeItems: "center",
-                color: "#a78bfa",
-                fontWeight: 900,
-                fontSize: 12,
-              }}
-            >
-              AI
-            </div>
-            <div>
-              <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
-                AI Shadow
+            <div style={{ ...styles.memberCard, marginTop: 8 }}>
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  background: "#1e293b",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "#a78bfa",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                AI
               </div>
-              <div style={{ color: "#64748b", fontSize: 12 }}>Summary assistant</div>
+              <div>
+                <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
+                  AI Shadow
+                </div>
+                <div style={{ color: "#64748b", fontSize: 12 }}>Summary assistant</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ marginTop: "auto" }}>
-          <div style={styles.smallLabel}>Status</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#cbd5e1", fontSize: 13, marginTop: 8 }}>
-            <CircleRoundedIcon sx={{ fontSize: 10, color: socketConnected ? "#22c55e" : "#64748b" }} />
-            {socketConnected ? "Live connection" : "Offline"}
+          <div style={{ marginTop: "auto" }}>
+            <div style={styles.smallLabel}>Status</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#cbd5e1", fontSize: 13, marginTop: 8 }}>
+              <CircleRoundedIcon sx={{ fontSize: 10, color: socketConnected ? "#22c55e" : "#64748b" }} />
+              {socketConnected ? "Live connection" : "Offline"}
+            </div>
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>
+              {chatEnded ? "Chat ended. Summary processed." : "Messages sync in real time."}
+            </div>
           </div>
-          <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>
-            {chatEnded ? "Chat ended. Summary processed." : "Messages sync in real time."}
-          </div>
-        </div>
-      </aside>
+        </aside>
+      )}
 
       <main style={styles.main}>
         <header style={styles.header}>
@@ -896,6 +903,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               display: none !important;
             }
           }
+
+          /* Improve placeholder visibility and ensure input stays visible when embedded */
+          .nx-chat-shell input::placeholder { color: rgba(148,163,184,0.7); }
+          .nx-chat-shell input { caret-color: #a78bfa; }
         `}
       </style>
     </div>
