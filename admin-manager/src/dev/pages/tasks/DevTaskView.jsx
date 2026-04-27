@@ -1,20 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
-import DevLayout from "../../components/layout/DevLayout";
 import Card from "../../../components/ui/Card.jsx";
+import ProgressBar from "../../components/tasks/ProgressBar";
+import StoryPointChecklist from "../../components/tasks/StoryPointChecklist";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import { loadTasks } from "../../data/taskStore";
-import { fetchAssignedTaskByIdFromBackend, syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
+import {
+  fetchAssignedTaskByIdFromBackend,
+  fetchTaskProgress,
+  fetchTaskStoryPoints,
+  markStoryPointDone,
+  markStoryPointTodo,
+  syncAssignedTasksToLocalStoreSafe,
+} from "../../data/taskApi";
 
 function getTaskStatus(task) {
   return String(task?.status || "Assigned");
-}
-
-function getProgress(task) {
-  const subtasks = Array.isArray(task?.subtasks) ? task.subtasks : [];
-  const total = subtasks.reduce((sum, subtask) => sum + Number(subtask.points || 0), 0);
-  const done = subtasks.filter((subtask) => subtask.done).reduce((sum, subtask) => sum + Number(subtask.points || 0), 0);
-  return total === 0 ? 0 : Math.round((done / total) * 100);
 }
 
 function statusChipColor(status) {
@@ -27,8 +29,51 @@ function statusChipColor(status) {
 export default function DevTaskView() {
   const { id } = useParams();
   const [task, setTask] = useState(() => loadTasks().find((item) => String(item.id) === String(id)) || null);
+  const [storyPoints, setStoryPoints] = useState([]);
+  const [progressData, setProgressData] = useState(null);
+  const [togglingStoryPointId, setTogglingStoryPointId] = useState(null);
+  const [storyPointError, setStoryPointError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadStoryPointData = async (taskId, fallbackTask) => {
+    const [progress, checklist] = await Promise.all([
+      fetchTaskProgress(taskId),
+      fetchTaskStoryPoints(taskId),
+    ]);
+
+    const totalStoryPoints = Number(progress?.totalStoryPoints ?? fallbackTask?.totalStoryPoints ?? 0);
+    const completedStoryPoints = Number(progress?.completedStoryPoints ?? fallbackTask?.completedStoryPoints ?? 0);
+    const totalPointValue = Number(progress?.totalPointValue ?? fallbackTask?.totalPointValue ?? totalStoryPoints);
+    const completedPointValue = Number(progress?.completedPointValue ?? fallbackTask?.completedPointValue ?? completedStoryPoints);
+    const progressPercentage = totalPointValue > 0
+      ? Math.round((completedPointValue * 100) / totalPointValue)
+      : (totalStoryPoints > 0 ? Math.round((completedStoryPoints * 100) / totalStoryPoints) : Number(fallbackTask?.progressPercentage || 0));
+
+    const safeProgress = progress && typeof progress === "object"
+      ? {
+          ...progress,
+          taskId,
+          totalStoryPoints,
+          completedStoryPoints,
+          totalPointValue,
+          completedPointValue,
+          progressPercentage,
+          status: progress?.status ?? fallbackTask?.status,
+        }
+      : {
+          taskId,
+          totalStoryPoints,
+          completedStoryPoints,
+          totalPointValue,
+          completedPointValue,
+          progressPercentage,
+          status: fallbackTask?.status,
+        };
+
+    setProgressData(safeProgress);
+    setStoryPoints(Array.isArray(checklist) ? checklist : []);
+  };
 
   useEffect(() => {
     let active = true;
@@ -41,12 +86,36 @@ export default function DevTaskView() {
         const backendTask = await fetchAssignedTaskByIdFromBackend(id);
         if (!active) return;
         setTask(backendTask);
+        try {
+          await loadStoryPointData(backendTask.id, backendTask);
+          if (!active) return;
+          setStoryPointError("");
+        } catch (storyPointErr) {
+          if (!active) return;
+          setStoryPointError(storyPointErr?.message || "Failed to load story points.");
+          setProgressData({
+            taskId: backendTask.id,
+            totalStoryPoints: Number(backendTask?.totalStoryPoints || 0),
+            completedStoryPoints: Number(backendTask?.completedStoryPoints || 0),
+            progressPercentage: Number(backendTask?.progressPercentage || 0),
+            status: backendTask?.status,
+          });
+          setStoryPoints([]);
+        }
       } catch {
         try {
           await syncAssignedTasksToLocalStoreSafe();
           const found = loadTasks().find((item) => String(item.id) === String(id)) || null;
           if (!active) return;
           setTask(found);
+          setProgressData({
+            taskId: found?.id,
+            totalStoryPoints: Number(found?.totalStoryPoints || 0),
+            completedStoryPoints: Number(found?.completedStoryPoints || 0),
+            progressPercentage: Number(found?.progressPercentage || 0),
+            status: found?.status,
+          });
+          setStoryPoints([]);
         } catch (err) {
           if (!active) return;
           setError(err?.message || "Failed to load task details.");
@@ -63,21 +132,41 @@ export default function DevTaskView() {
     };
   }, [id]);
 
-  const progress = useMemo(() => getProgress(task), [task]);
+  const progress = useMemo(() => Number(progressData?.progressPercentage || 0), [progressData]);
+
+  const handleToggleStoryPoint = async (storyPoint) => {
+    if (!storyPoint?.id || !task?.id) return;
+
+    setStoryPointError("");
+    setTogglingStoryPointId(storyPoint.id);
+
+    try {
+      const done = String(storyPoint?.status || "").toUpperCase() === "DONE";
+      if (done) {
+        await markStoryPointTodo(storyPoint.id);
+      } else {
+        await markStoryPointDone(storyPoint.id);
+      }
+
+      await loadStoryPointData(task.id, task);
+    } catch (err) {
+      setStoryPointError(err?.message || "Failed to update story point.");
+    } finally {
+      setTogglingStoryPointId(null);
+    }
+  };
 
   if (loading) {
     return (
-      <DevLayout>
-        <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
-          <CircularProgress sx={{ color: "#6b51ff" }} />
-        </Box>
-      </DevLayout>
+      <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
+        <CircularProgress sx={{ color: "#6b51ff" }} />
+      </Box>
     );
   }
 
   if (!task) {
     return (
-      <DevLayout>
+      <>
         {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
         <Card sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 900 }}>Task not found</Typography>
@@ -88,12 +177,12 @@ export default function DevTaskView() {
             <Chip component={Link} clickable to="/dev/tasks" label="Back to tasks" />
           </Box>
         </Card>
-      </DevLayout>
+      </>
     );
   }
 
   return (
-    <DevLayout>
+    <>
       <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap", mb: 3 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>
@@ -108,8 +197,8 @@ export default function DevTaskView() {
         </Box>
 
         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          <Chip label={getTaskStatus(task)} color={statusChipColor(task.status)} />
-          <Chip label={task.priority || "Medium"} variant="outlined" />
+          <StatusBadge label={getTaskStatus(task)} />
+          <StatusBadge label={task.priority || "Medium"} />
           <Chip component={Link} clickable to="/dev/tasks" label="Back" />
         </Box>
       </Box>
@@ -131,6 +220,29 @@ export default function DevTaskView() {
               <Metric label="Created" value={task.createdAt || "-"} />
               <Metric label="Project" value={task.projectName || "-"} />
             </Box>
+
+            <Box sx={{ mt: 2 }}>
+              <ProgressBar value={progress} />
+              <Typography variant="caption" sx={{ color: "#94a3b8", mt: 0.6, display: "block" }}>
+                Completed Story Points: {progressData?.completedStoryPoints || 0} / {progressData?.totalStoryPoints || 0}
+              </Typography>
+                <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
+                  Weighted Points: {progressData?.completedPointValue || 0} / {progressData?.totalPointValue || 0}
+                </Typography>
+            </Box>
+
+            <Box sx={{ mt: 2.2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                Story Points
+              </Typography>
+              <StoryPointChecklist
+                storyPoints={storyPoints}
+                loading={false}
+                error={storyPointError}
+                togglingId={togglingStoryPointId}
+                onToggle={handleToggleStoryPoint}
+              />
+            </Box>
           </Card>
         </Grid>
 
@@ -147,7 +259,7 @@ export default function DevTaskView() {
           </Card>
         </Grid>
       </Grid>
-    </DevLayout>
+    </>
   );
 }
 
@@ -168,3 +280,6 @@ function StackedInfo({ label, value }) {
     </Box>
   );
 }
+
+
+

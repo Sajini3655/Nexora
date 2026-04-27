@@ -63,8 +63,8 @@ export const updateAdminUserStatus = async (id, enabled) => {
   return response.data;
 };
 
-export const updateAdminUserRole = async (id, role) => {
-  const response = await api.patch(`/admin/users/${id}/role`, { role });
+export const updateAdminUserRole = async (id, payload) => {
+  const response = await api.patch(`/admin/users/${id}/role`, payload);
   return response.data;
 };
 

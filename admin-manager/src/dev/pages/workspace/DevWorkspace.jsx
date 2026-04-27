@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Box, CircularProgress, Grid, Typography } from "@mui/material";
-import DevLayout from "../../components/layout/DevLayout";
 import { useNavigate } from "react-router-dom";
 import Card from "../../../components/ui/Card.jsx";
 import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
 export default function DevWorkspace() {
   const navigate = useNavigate();
@@ -12,32 +12,31 @@ export default function DevWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Sync backend tasks on mount and periodically
-  useEffect(() => {
-    let active = true;
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const synced = await syncAssignedTasksToLocalStoreSafe();
-        if (!active) return;
-        setTasks(Array.isArray(synced) ? synced : loadTasks());
-      } catch (err) {
-        if (!active) return;
-        setError(err?.message || "Failed to load backend tasks.");
-        setTasks(loadTasks());
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const synced = await syncAssignedTasksToLocalStoreSafe();
+      setTasks(Array.isArray(synced) ? synced : loadTasks());
+    } catch (err) {
+      setError(err?.message || "Failed to load backend tasks.");
+      setTasks(loadTasks());
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Sync backend tasks on mount, then refresh from live backend events.
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const liveTopics = useMemo(
+    () => ["/topic/developer.workspace", "/topic/tasks"],
+    []
+  );
+
+  useLiveRefresh(liveTopics, loadData, { debounceMs: 450 });
 
   const projectSnapshot = useMemo(() => {
     const firstTask = tasks[0] || {};
@@ -58,31 +57,37 @@ export default function DevWorkspace() {
 
   if (loading) {
     return (
-      <DevLayout>
-        <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
-          <CircularProgress sx={{ color: "#6b51ff" }} />
-        </Box>
-      </DevLayout>
+      <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
+        <CircularProgress sx={{ color: "#6b51ff" }} />
+      </Box>
     );
   }
 
   return (
-    <DevLayout>
+    <>
       {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
 
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
+      <Box
+        sx={{
+          mb: 3,
+          p: { xs: 2.5, md: 3 },
+          borderRadius: 4,
+          border: "1px solid rgba(148,163,184,0.14)",
+          background:
+            "linear-gradient(135deg, rgba(124,92,255,0.18) 0%, rgba(11,22,40,0.95) 100%)",
+        }}
+      >
         <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, lg: { alignItems: "center", justifyContent: "space-between" }, gap: 2 }}>
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>
+            <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.5 }}>
               {projectSnapshot.name}
             </Typography>
-            <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.75 }}>
+            <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.74)", mt: 0.75 }}>
               Backend ID: <strong>{projectSnapshot.id}</strong> • Progress: <strong>{projectSnapshot.progress}%</strong>
             </Typography>
           </Box>
 
-          <Card sx={{ p: 2.5, background: "rgba(124,92,255,0.08)", border: "1px solid rgba(124,92,255,0.16)" }}>
+          <Card sx={{ p: 2.5, background: "rgba(124,92,255,0.1)", border: "1px solid rgba(124,92,255,0.18)" }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "center" }}>
               <Box>
                 <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Project Progress</Typography>
@@ -106,7 +111,7 @@ export default function DevWorkspace() {
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>Assigned Tasks</Typography>
             <Box sx={{ display: "grid", gap: 1.5 }}>
               {assignedTasks.map((task) => (
-                <Card key={task.id} sx={{ p: 2, background: "rgba(255,255,255,0.05)", cursor: "pointer", "&:hover": { background: "rgba(255,255,255,0.08)" } }} onClick={() => navigate(`/dev/tasks/${task.id}`)}>
+                <Card key={task.id} sx={{ p: 2, background: "rgba(255,255,255,0.04)", cursor: "pointer" }} onClick={() => navigate(`/dev/tasks/${task.id}`)}>
                   <Typography variant="body2" sx={{ fontWeight: 800 }}>{task.title}</Typography>
                   <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)", display: "block", mt: 0.5 }}>
                     {task.id} • {task.projectName} • {task.priority} priority
@@ -142,6 +147,7 @@ export default function DevWorkspace() {
           </Card>
         </Grid>
       </Grid>
-    </DevLayout>
+    </>
   );
 }
+

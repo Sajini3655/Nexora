@@ -21,3 +21,4 @@ const ControlButtons: React.FC<Props> = ({ startChat, endChat, chatStarted }) =>
 };
 
 export default ControlButtons;
+

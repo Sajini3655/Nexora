@@ -30,8 +30,11 @@ const theme = createTheme({
 
   typography: {
     fontFamily: `Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`,
-    h5: { fontWeight: 900, letterSpacing: -0.4 },
-    h6: { fontWeight: 900, letterSpacing: -0.2 },
+    fontSize: 15,
+    h5: { fontWeight: 900, letterSpacing: -0.4, fontSize: "1.7rem" },
+    h6: { fontWeight: 900, letterSpacing: -0.2, fontSize: "1.35rem" },
+    body1: { fontSize: "1.02rem" },
+    body2: { fontSize: "0.95rem" },
     button: { textTransform: "none", fontWeight: 800 }
   },
 

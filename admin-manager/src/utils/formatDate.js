@@ -7,3 +7,4 @@ export function formatDate(dateStr) {
     return dateStr;
   }
 }
+

@@ -1,57 +1,30 @@
 import React from "react";
-import { Box, List, ListItemButton, ListItemText } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext.jsx";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import AddCircleIcon from "@mui/icons-material/AddCircle";
+import FolderIcon from "@mui/icons-material/Folder";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import UnifiedSidebar from "./UnifiedSidebar.jsx";
+
+const navItems = [
+  { label: "Dashboard", to: "/manager", icon: <DashboardIcon /> },
+  { label: "Add Project", to: "/manager/add-project", icon: <AddCircleIcon /> },
+  { label: "Project Management", to: "/manager/project-management", icon: <FolderIcon /> },
+  { label: "AI Task Assignment", to: "/manager/ai-assignment", icon: <AutoAwesomeIcon /> },
+];
 
 export default function ManagerSidebar({ open, onClose }) {
-  const navigate = useNavigate();
-  const { moduleAccess } = useAuth();
-
-  const handleNavigate = (path) => {
-    navigate(path);
-    if (onClose) onClose();
-  };
-
   return (
-    <Box
-      sx={{
-        width: 250,
-        bgcolor: "rgba(15,20,40,0.96)",
-        backdropFilter: "blur(10px)",
-        color: "white",
-        position: "fixed",
-        top: "64px",
-        height: "calc(100% - 64px)",
-        display: open ? "block" : "none",
-        zIndex: 1200,
-        borderRight: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <List>
-        {moduleAccess?.DASHBOARD ? (
-          <ListItemButton onClick={() => handleNavigate("/manager")}>
-            <ListItemText primary="Main Dashboard" />
-          </ListItemButton>
-        ) : null}
-
-        {moduleAccess?.FILES ? (
-          <>
-            <ListItemButton onClick={() => handleNavigate("/manager/add-project")}>
-              <ListItemText primary="Add Project" />
-            </ListItemButton>
-
-            <ListItemButton onClick={() => handleNavigate("/manager/project-management")}>
-              <ListItemText primary="Project Management" />
-            </ListItemButton>
-          </>
-        ) : null}
-
-        {moduleAccess?.TASKS ? (
-          <ListItemButton onClick={() => handleNavigate("/manager/ai-assignment")}>
-            <ListItemText primary="AI Task Assignment" />
-          </ListItemButton>
-        ) : null}
-      </List>
-    </Box>
+    <UnifiedSidebar
+      open={open}
+      onClose={onClose}
+      title="Manager Menu"
+      sections={[
+        {
+          label: "Navigation",
+          items: navItems.map((item) => ({ ...item, end: item.to === "/manager" })),
+        },
+      ]}
+      footer="Manager Role • Delivery Workspace"
+    />
   );
 }

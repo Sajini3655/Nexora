@@ -1,7 +1,3 @@
-// src/data/taskApi.js
-// Sync tasks assigned to the current developer from the shared backend.
-// This enables: Manager assigns a task -> Developer sees it in their dashboard.
-
 import { loadTasks, saveTasks } from "./taskStore";
 import { API_BASE_URL } from "../../utils/constants";
 
@@ -18,7 +14,10 @@ async function apiFetch(path, options = {}) {
     "Content-Type": "application/json",
     ...(options.headers || {}),
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -29,30 +28,52 @@ async function apiFetch(path, options = {}) {
     const text = await res.text().catch(() => "");
     throw new Error(text || `Request failed: ${res.status}`);
   }
+
   return res;
 }
 
-function titleCaseEnum(v) {
-  if (!v) return "Medium";
-  const s = String(v).toLowerCase();
-  return s.charAt(0).toUpperCase() + s.slice(1);
+function titleCaseEnum(value) {
+  if (!value) return "Medium";
+  const text = String(value).replace("_", " ").toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function mapBackendStatusToUi(status) {
-  const s = String(status || "").toUpperCase();
-  if (s === "DONE") return "Completed";
-  if (s === "IN_PROGRESS" || s === "INPROGRESS") return "In Progress";
-  return "Assigned"; // TODO / IN_PROGRESS
+  const value = String(status || "").toUpperCase();
+
+  if (value === "DONE" || value === "COMPLETED") return "Completed";
+  if (value === "IN_PROGRESS" || value === "INPROGRESS") return "In Progress";
+  if (value === "BLOCKED") return "Blocked";
+
+  return "Todo";
+}
+
+function numberOrZero(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function calculateProgress(completedPointValue, totalPointValue, fallbackProgress = 0) {
+  const total = numberOrZero(totalPointValue);
+  const completed = numberOrZero(completedPointValue);
+
+  if (total <= 0) {
+    return numberOrZero(fallbackProgress);
+  }
+
+  return Math.round((completed * 100) / total);
 }
 
 function mapBackendTaskToUi(taskDto, existingUiTask) {
   const id = String(taskDto.id);
+
   const projectId =
     taskDto.projectId ??
     taskDto.project_id ??
     taskDto.project?.id ??
     existingUiTask?.projectId ??
     null;
+
   const projectName =
     taskDto.projectName ??
     taskDto.project_name ??
@@ -60,19 +81,60 @@ function mapBackendTaskToUi(taskDto, existingUiTask) {
     existingUiTask?.projectName ??
     "";
 
+  const totalStoryPoints = numberOrZero(
+    taskDto.totalStoryPoints ??
+      taskDto.storyPointCount ??
+      taskDto.storyPointsCount ??
+      existingUiTask?.totalStoryPoints
+  );
+
+  const completedStoryPoints = numberOrZero(
+    taskDto.completedStoryPoints ??
+      taskDto.doneStoryPoints ??
+      existingUiTask?.completedStoryPoints
+  );
+
+  const totalPointValue = numberOrZero(
+    taskDto.totalPointValue ??
+      taskDto.totalPoints ??
+      taskDto.estimatedPoints ??
+      existingUiTask?.totalPointValue
+  );
+
+  const completedPointValue = numberOrZero(
+    taskDto.completedPointValue ??
+      taskDto.completedPoints ??
+      existingUiTask?.completedPointValue
+  );
+
+  const progressPercentage = calculateProgress(
+    completedPointValue,
+    totalPointValue,
+    taskDto.progressPercentage ?? existingUiTask?.progressPercentage
+  );
+
   return {
     id,
-    title: taskDto.title,
+    title: taskDto.title || "Untitled task",
     description: taskDto.description || "",
     status: mapBackendStatusToUi(taskDto.status),
-    assignee: taskDto.assignedToName || "You",
-    dueDate: taskDto.dueDate || "-",
+    assignee: taskDto.assignedToName || taskDto.assigneeName || "You",
+    assignedToName: taskDto.assignedToName || taskDto.assigneeName || "You",
+    assignedToId: taskDto.assignedToId ?? taskDto.assigned_to_id ?? null,
+    dueDate: taskDto.dueDate || taskDto.deadline || "-",
     priority: titleCaseEnum(taskDto.priority),
-    storyPoints: taskDto.estimatedPoints ?? 1,
     projectId,
     projectName,
     createdAt: taskDto.createdAt ?? existingUiTask?.createdAt ?? null,
-    // Keep existing subtasks (UI-only) so progress stays.
+    updatedAt: taskDto.updatedAt ?? existingUiTask?.updatedAt ?? null,
+
+    totalStoryPoints,
+    completedStoryPoints,
+    totalPointValue,
+    completedPointValue,
+    progressPercentage,
+
+    storyPoints: totalStoryPoints,
     subtasks: Array.isArray(existingUiTask?.subtasks) ? existingUiTask.subtasks : [],
   };
 }
@@ -83,27 +145,76 @@ export async function fetchAssignedTasksFromBackend() {
 }
 
 export async function fetchAssignedTaskByIdFromBackend(taskId) {
-  const res = await apiFetch(`/developer/tasks/${encodeURIComponent(taskId)}`, { method: "GET" });
+  const res = await apiFetch(`/developer/tasks/${encodeURIComponent(taskId)}`, {
+    method: "GET",
+  });
   return res.json();
 }
 
-/**
- * Pull backend tasks and merge into local taskStore (keeps subtasks).
- */
+export async function fetchTaskStoryPoints(taskId) {
+  try {
+    const res = await apiFetch(`/tasks/${encodeURIComponent(taskId)}/story-points`, {
+      method: "GET",
+    });
+    return res.json();
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (message.includes("403") || message.includes("400")) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function fetchTaskProgress(taskId) {
+  try {
+    const res = await apiFetch(`/tasks/${encodeURIComponent(taskId)}/progress`, {
+      method: "GET",
+    });
+    return res.json();
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (message.includes("403") || message.includes("400")) {
+      return {
+        totalStoryPoints: 0,
+        completedStoryPoints: 0,
+        totalPointValue: 0,
+        completedPointValue: 0,
+        progressPercentage: 0,
+      };
+    }
+    throw error;
+  }
+}
+
+export async function markStoryPointDone(storyPointId) {
+  const res = await apiFetch(`/story-points/${encodeURIComponent(storyPointId)}/done`, {
+    method: "PATCH",
+  });
+  return res.json();
+}
+
+export async function markStoryPointTodo(storyPointId) {
+  const res = await apiFetch(`/story-points/${encodeURIComponent(storyPointId)}/todo`, {
+    method: "PATCH",
+  });
+  return res.json();
+}
+
 export async function syncAssignedTasksToLocalStoreSafe() {
   try {
     const backendTasks = await fetchAssignedTasksFromBackend();
     const existing = loadTasks();
-    const byId = new Map(existing.map((t) => [String(t.id), t]));
+    const byId = new Map(existing.map((task) => [String(task.id), task]));
 
     const mappedFromBackend = Array.isArray(backendTasks)
-      ? backendTasks.map((t) => mapBackendTaskToUi(t, byId.get(String(t.id))))
+      ? backendTasks.map((task) => mapBackendTaskToUi(task, byId.get(String(task.id))))
       : [];
 
-    // Backend is the source of truth; do not merge stale local-only tasks.
     saveTasks(mappedFromBackend);
     return mappedFromBackend;
   } catch {
     return loadTasks();
   }
 }
+

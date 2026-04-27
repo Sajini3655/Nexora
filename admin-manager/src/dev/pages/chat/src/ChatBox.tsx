@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState, CSSProperties } from "react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Button, IconButton } from "@mui/material";
+import { Button, Chip, IconButton } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import StopCircleRoundedIcon from "@mui/icons-material/StopCircleRounded";
+import CircleRoundedIcon from "@mui/icons-material/CircleRounded";
 import {
   startSession,
   getMessages,
   endChatAI,
-  saveSummary
+  saveSummary,
+  createProjectTicket,
 } from "./api";
 
 interface Message {
@@ -34,6 +38,7 @@ interface ChatEndResult {
 
 interface ChatBoxProps {
   projectId: string;
+  projectName?: string;
   currentUserId: string;
   currentUserName: string;
   onSummary: (data: ChatEndResult) => void;
@@ -41,11 +46,110 @@ interface ChatBoxProps {
 
 const WS_URL = "http://localhost:8081/ws";
 
+const BLOCKER_KEYWORDS = [
+  "blocked",
+  "blocker",
+  "blocking",
+  "cannot continue",
+  "can't continue",
+  "stuck",
+  "urgent",
+  "critical",
+  "production down",
+  "server down",
+  "database down",
+  "login broken",
+  "not working",
+  "crash",
+  "error",
+  "failed",
+  "failing",
+  "bug",
+  "issue",
+  "500",
+];
+
+function detectBlockers(messages: Message[]): string[] {
+  return messages
+    .filter((m) => {
+      const message = String(m.message || "").toLowerCase();
+      return BLOCKER_KEYWORDS.some((keyword) => message.includes(keyword.toLowerCase()));
+    })
+    .slice(-3)
+    .map((m) => String(m.message || "").trim())
+    .filter(Boolean);
+}
+
+function buildLocalSummary(messages: Message[]): string {
+  if (!messages.length) return "Chat ended. No messages were available to summarize.";
+
+  const lines = messages.slice(-8).map((m) => {
+    const sender = m.senderName || (m.user === "user" ? "Developer" : "Assistant");
+    const message = String(m.message || "").trim();
+    return `- ${sender}: ${message}`;
+  });
+
+  const blockers = detectBlockers(messages);
+
+  return [
+    "Chat Summary:",
+    ...lines,
+    "",
+    blockers.length > 0
+      ? "Blocker/Risk Detected: The chat contains blocker or issue related messages."
+      : "No major blocker detected from keywords.",
+  ].join("\n");
+}
+
+function normalizeAiResult(data: any, messages: Message[]): ChatEndResult {
+  const fallbackSummary = buildLocalSummary(messages);
+  const fallbackBlockers = detectBlockers(messages);
+
+  const summary =
+    typeof data?.summary === "string" && data.summary.trim()
+      ? data.summary.trim()
+      : fallbackSummary;
+
+  const blockers = Array.isArray(data?.blockers)
+    ? data.blockers
+        .filter((item: any) => typeof item === "string" && item.trim())
+        .map((item: string) => item.trim())
+    : fallbackBlockers;
+
+  return {
+    summary,
+    blockers,
+    tickets_created: Array.isArray(data?.tickets_created) ? data.tickets_created : [],
+    ticket_message:
+      typeof data?.ticket_message === "string"
+        ? data.ticket_message
+        : "Summary generated. You can create a ticket if needed.",
+    ticket_prompt_needed: true,
+  };
+}
+
+function ticketReasonFromSummary(summary: string, blockers: string[]): string {
+  if (blockers.length > 0) return blockers[0];
+
+  const cleanSummary = String(summary || "").trim();
+  if (!cleanSummary) return "Ticket requested from ended developer chat.";
+
+  return cleanSummary.length > 180 ? cleanSummary.substring(0, 180) + "..." : cleanSummary;
+}
+
+function formatTime(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 const ChatBox: React.FC<ChatBoxProps> = ({
   projectId,
+  projectName = "Project chat",
   currentUserId,
   currentUserName,
-  onSummary
+  onSummary,
 }) => {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
@@ -68,14 +172,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
   const wsUrlWithToken = useMemo(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      return WS_URL;
-    }
-    return `${WS_URL}?token=${encodeURIComponent(token)}`;
+    return token ? `${WS_URL}?token=${encodeURIComponent(token)}` : WS_URL;
   }, []);
 
   const appendLocalUserMessage = (text: string) => {
     const createdAt = new Date().toISOString();
+
     setChat((prev) => [
       ...prev,
       {
@@ -86,7 +188,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         createdAt,
       },
     ]);
+
     return createdAt;
+  };
+
+  const appendAssistantMessage = (text: string) => {
+    setChat((prev) => [
+      ...prev,
+      {
+        user: "assistant",
+        message: text,
+        senderName: "AI Shadow",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
   };
 
   const isRecentDuplicate = (existing: Message, incoming: Message) => {
@@ -96,9 +211,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     const existingTime = existing.createdAt ? new Date(existing.createdAt).getTime() : NaN;
     const incomingTime = incoming.createdAt ? new Date(incoming.createdAt).getTime() : NaN;
 
-    if (Number.isNaN(existingTime) || Number.isNaN(incomingTime)) {
-      return true;
-    }
+    if (Number.isNaN(existingTime) || Number.isNaN(incomingTime)) return true;
 
     return Math.abs(incomingTime - existingTime) < 8000;
   };
@@ -108,7 +221,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       top: chatWindowRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [chat, showTicketPrompt, errorMessage]);
+  }, [chat, showTicketPrompt, errorMessage, summaryData]);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,7 +261,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               message: m.content ?? "",
               senderId: String(m.senderId),
               senderName: m.senderName ?? "Unknown",
-              createdAt: m.createdAt
+              createdAt: m.createdAt,
             }))
           : [];
 
@@ -160,11 +273,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           if (session.summary) {
             const endedSummary: ChatEndResult = {
               summary: session.summary,
-              blockers: [],
+              blockers: detectBlockers(mappedMessages),
               tickets_created: [],
               ticket_message: "",
               ticket_prompt_needed: false,
             };
+
             setSummaryData(endedSummary);
             onSummary(endedSummary);
           }
@@ -176,9 +290,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           setChat([]);
         }
       } finally {
-        if (!cancelled) {
-          setLoadingSession(false);
-        }
+        if (!cancelled) setLoadingSession(false);
       }
     };
 
@@ -190,9 +302,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   }, [projectId, currentUserId, onSummary]);
 
   useEffect(() => {
-    if (!subscriptionTopic || !sessionId || chatEnded) {
-      return;
-    }
+    if (!subscriptionTopic || !sessionId || chatEnded) return;
 
     const client = new Client({
       webSocketFactory: () => new SockJS(wsUrlWithToken),
@@ -205,21 +315,16 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           const payload = JSON.parse(message.body);
 
           const incoming: Message = {
-            user:
-              String(payload.senderId) === String(currentUserId)
-                ? "user"
-                : "assistant",
+            user: String(payload.senderId) === String(currentUserId) ? "user" : "assistant",
             message: payload.content ?? "",
             senderId: String(payload.senderId),
             senderName: payload.senderName ?? "Unknown",
-            createdAt: payload.createdAt
+            createdAt: payload.createdAt,
           };
 
           setChat((prev) => {
             const exists = prev.some((m) => isRecentDuplicate(m, incoming));
-
-            if (exists) return prev;
-            return [...prev, incoming];
+            return exists ? prev : [...prev, incoming];
           });
         });
       },
@@ -229,7 +334,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       },
       onWebSocketClose: () => {
         setSocketConnected(false);
-      }
+      },
     });
 
     client.activate();
@@ -237,6 +342,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
     return () => {
       setSocketConnected(false);
+
       if (stompClientRef.current) {
         stompClientRef.current.deactivate();
         stompClientRef.current = null;
@@ -252,17 +358,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     }));
   };
 
-  const appendAssistantMessage = (text: string) => {
-    setChat((prev) => [
-      ...prev,
-      {
-        user: "assistant",
-        message: text,
-        senderName: "AI Shadow"
-      }
-    ]);
-  };
-
   const handleSend = async () => {
     if (
       !input.trim() ||
@@ -276,20 +371,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       return;
     }
 
+    const messageText = input.trim();
     let localCreatedAt = "";
 
     try {
       setErrorMessage("");
 
-      localCreatedAt = appendLocalUserMessage(input.trim());
+      localCreatedAt = appendLocalUserMessage(messageText);
 
       stompClientRef.current.publish({
         destination: "/app/chat.send",
         body: JSON.stringify({
           sessionId: Number(sessionId),
           userId: Number(currentUserId),
-          content: input.trim()
-        })
+          content: messageText,
+        }),
       });
 
       setInput("");
@@ -300,311 +396,508 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             !(
               m.user === "user" &&
               m.senderId === currentUserId &&
-              m.message === input.trim() &&
+              m.message === messageText &&
               m.createdAt === localCreatedAt
             )
         )
       );
+
       setErrorMessage(error?.message || "Failed to send message.");
     }
   };
 
   const handleEndChat = async () => {
-    if (!sessionId || chat.length === 0 || endingChat || chatEnded) {
-      return;
-    }
+    if (!sessionId || chat.length === 0 || endingChat || chatEnded) return;
 
     try {
       setEndingChat(true);
       setErrorMessage("");
 
-      const result = await endChatAI(buildAiMessages(chat), projectId, false);
+      let result: ChatEndResult;
 
-      setSummaryData(result);
-      setChatEnded(true);
+      try {
+        const aiData = await endChatAI(buildAiMessages(chat), projectId, false);
+        result = normalizeAiResult(aiData, chat);
+      } catch {
+        result = normalizeAiResult(null, chat);
+        appendAssistantMessage("AI summary service was unavailable, so a local summary was generated.");
+      }
 
       await saveSummary(sessionId, result.summary);
 
-      if (result.blockers?.length > 0 && result.ticket_prompt_needed) {
-        setShowTicketPrompt(true);
-      } else {
-        if (result.ticket_message) {
-          appendAssistantMessage(`ℹ️ ${result.ticket_message}`);
-        }
-        onSummary(result);
-      }
+      const finalResult: ChatEndResult = {
+        ...result,
+        ticket_prompt_needed: true,
+      };
+
+      setSummaryData(finalResult);
+      setChatEnded(true);
+      setShowTicketPrompt(true);
+      onSummary(finalResult);
+
+      appendAssistantMessage("Chat ended. Summary generated and saved.");
+      appendAssistantMessage("Do you want to create a ticket from this chat summary?");
     } catch (error: any) {
-      appendAssistantMessage("[Error generating summary]");
-      setErrorMessage(error?.message || "Failed to end chat and generate summary.");
+      const fallbackResult: ChatEndResult = {
+        summary: buildLocalSummary(chat),
+        blockers: detectBlockers(chat),
+        tickets_created: [],
+        ticket_message: "Summary generated locally. You can create a ticket if needed.",
+        ticket_prompt_needed: true,
+      };
+
+      setSummaryData(fallbackResult);
+      setChatEnded(true);
+      setShowTicketPrompt(true);
+      onSummary(fallbackResult);
+
+      appendAssistantMessage("Chat ended. Fallback summary generated.");
+      appendAssistantMessage("Do you want to create a ticket from this chat summary?");
+
+      setErrorMessage(error?.message || "Chat ended with fallback summary, but backend save may have failed.");
     } finally {
       setEndingChat(false);
     }
   };
 
   const handleTicketChoice = async (createTickets: boolean) => {
-    if (!summaryData || !sessionId) {
-      return;
-    }
+    if (!summaryData) return;
 
     try {
       setShowTicketPrompt(false);
       setErrorMessage("");
 
-      if (createTickets) {
-        const finalResult = await endChatAI(buildAiMessages(chat), projectId, true);
-        setSummaryData(finalResult);
+      if (!createTickets) {
+        const skippedResult: ChatEndResult = {
+          ...summaryData,
+          ticket_message: "Ticket creation skipped by user.",
+          ticket_prompt_needed: false,
+        };
 
-        await saveSummary(sessionId, finalResult.summary);
-
-        if (finalResult.tickets_created?.length > 0) {
-          finalResult.tickets_created.forEach((ticket) => {
-            appendAssistantMessage(
-              `✅ Ticket created: ${ticket.ticket_id} for blocker "${ticket.blocker}"`
-            );
-          });
-        } else if (finalResult.ticket_message) {
-          appendAssistantMessage(`ℹ️ ${finalResult.ticket_message}`);
-        }
-
-        onSummary(finalResult);
-      } else {
-        appendAssistantMessage("ℹ️ Ticket creation skipped by user.");
-        onSummary(summaryData);
+        setSummaryData(skippedResult);
+        onSummary(skippedResult);
+        appendAssistantMessage("Ticket creation skipped by user.");
+        return;
       }
+
+      const blockerOrReason = ticketReasonFromSummary(summaryData.summary, summaryData.blockers);
+      const created = await createProjectTicket(projectId, blockerOrReason);
+
+      const createdTicket = {
+        ticket_id: String(created?.id ?? "UNKNOWN"),
+        blocker: blockerOrReason,
+      };
+
+      const finalResult: ChatEndResult = {
+        ...summaryData,
+        blockers: summaryData.blockers.length > 0 ? summaryData.blockers : [blockerOrReason],
+        tickets_created: [createdTicket],
+        ticket_message: "Created 1 ticket from the chat summary.",
+        ticket_prompt_needed: false,
+      };
+
+      setSummaryData(finalResult);
+      onSummary(finalResult);
+
+      appendAssistantMessage(`Ticket created: ${createdTicket.ticket_id} from this chat summary.`);
     } catch (error: any) {
-      appendAssistantMessage("[Error while processing ticket choice]");
-      setErrorMessage(error?.message || "Failed to process ticket creation choice.");
+      appendAssistantMessage("Error while creating ticket.");
+      setErrorMessage(error?.message || "Failed to create ticket.");
     }
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSend();
-    }
+    if (e.key === "Enter") handleSend();
   };
 
   const styles: { [key: string]: CSSProperties } = {
-    container: {
-      width: "100%",
-      minHeight: 620,
+    shell: {
+      minHeight: 640,
+      display: "grid",
+      gridTemplateColumns: "270px minmax(0, 1fr)",
+      borderRadius: 22,
+      overflow: "hidden",
+      background: "linear-gradient(180deg, #0f1b2f 0%, #0b1628 100%)",
+      border: "1px solid rgba(148,163,184,0.14)",
+      boxShadow: "0 24px 70px rgba(0,0,0,0.28)",
+    },
+    sidebar: {
+      padding: 18,
+      background: "#0a1222",
+      borderRight: "1px solid rgba(148,163,184,0.12)",
       display: "flex",
       flexDirection: "column",
-      borderRadius: 24,
-      overflow: "hidden",
-      fontFamily: "Inter, sans-serif",
-      background:
-        "linear-gradient(180deg, rgba(17,23,43,0.96) 0%, rgba(10,14,28,0.98) 100%)",
-      color: "#fff",
-      border: "1px solid rgba(255,255,255,0.06)",
-      boxShadow: "0 20px 50px rgba(0,0,0,0.28)",
-      position: "relative",
+      gap: 14,
+    },
+    roomCard: {
+      padding: 14,
+      borderRadius: 16,
+      background: "#111d33",
+      border: "1px solid rgba(148,163,184,0.14)",
+    },
+    memberCard: {
+      padding: "10px 12px",
+      borderRadius: 14,
+      background: "#0f1b2f",
+      border: "1px solid rgba(148,163,184,0.10)",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+    },
+    main: {
+      minWidth: 0,
+      display: "flex",
+      flexDirection: "column",
+      background: "#0b1628",
     },
     header: {
+      minHeight: 74,
       padding: "16px 18px",
-      textAlign: "center",
-      fontWeight: 700,
-      background: "rgba(255,255,255,0.10)",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
-      fontSize: 16,
+      borderBottom: "1px solid rgba(148,163,184,0.12)",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 14,
+      background: "#0d182b",
     },
     window: {
       flex: 1,
-      padding: "14px 16px",
+      minHeight: 430,
+      maxHeight: 520,
+      padding: 18,
       overflowY: "auto",
       display: "flex",
       flexDirection: "column",
-      gap: 10,
-      background: "rgba(255,255,255,0.03)",
-      position: "relative",
+      gap: 12,
+      background:
+        "radial-gradient(800px 300px at 15% 0%, rgba(109,93,252,0.08), transparent 55%), #081323",
     },
-    inputRow: {
-      display: "flex",
-      padding: 12,
-      gap: 8,
-      borderTop: "1px solid rgba(255,255,255,0.06)",
-      background: "rgba(255,255,255,0.03)",
+    inputBar: {
+      padding: 14,
+      borderTop: "1px solid rgba(148,163,184,0.12)",
+      background: "#0d182b",
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) auto auto",
+      gap: 10,
       alignItems: "center",
     },
     input: {
-      flex: 1,
+      width: "100%",
       minWidth: 0,
       padding: "12px 14px",
       borderRadius: 14,
-      border: "1px solid rgba(255,255,255,0.15)",
-      background: "rgba(255,255,255,0.08)",
-      color: "#fff",
+      border: "1px solid rgba(148,163,184,0.22)",
+      background: "#101b2f",
+      color: "#f8fafc",
       outline: "none",
       fontSize: 14,
     },
-    bubbleUser: {
+    emptyState: {
+      margin: "auto",
+      maxWidth: 460,
+      textAlign: "center",
+      color: "#94a3b8",
+      padding: 24,
+      borderRadius: 18,
+      border: "1px dashed rgba(148,163,184,0.22)",
+      background: "rgba(255,255,255,0.025)",
+    },
+    bubbleWrapUser: {
       alignSelf: "flex-end",
-      background: "linear-gradient(90deg, #7a5cff 0%, #906dff 100%)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-end",
+      maxWidth: "72%",
+    },
+    bubbleWrapAssistant: {
+      alignSelf: "flex-start",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      maxWidth: "72%",
+    },
+    bubbleUser: {
+      background: "linear-gradient(135deg, #6d5dfc, #4f46e5)",
       color: "#fff",
-      padding: "10px 14px",
-      borderRadius: 16,
-      maxWidth: "80%",
+      padding: "11px 14px",
+      borderRadius: "16px 16px 4px 16px",
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
-      boxShadow: "0 10px 24px rgba(122,92,255,0.25)",
+      boxShadow: "0 12px 26px rgba(109,93,252,0.24)",
+      fontSize: 14,
+      lineHeight: 1.5,
     },
     bubbleAI: {
-      alignSelf: "flex-start",
-      background: "rgba(255,255,255,0.10)",
-      color: "#fff",
-      padding: "10px 14px",
-      borderRadius: 16,
-      maxWidth: "80%",
+      background: "#111d33",
+      color: "#e2e8f0",
+      padding: "11px 14px",
+      borderRadius: "16px 16px 16px 4px",
+      border: "1px solid rgba(148,163,184,0.12)",
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
+      fontSize: 14,
+      lineHeight: 1.5,
     },
-    senderLabel: {
+    meta: {
       fontSize: 11,
-      opacity: 0.7,
-      marginBottom: 4
+      color: "#64748b",
+      marginBottom: 5,
+      display: "flex",
+      gap: 8,
     },
     ticketPrompt: {
-      marginTop: 12,
-      padding: 12,
+      marginTop: 8,
+      padding: 14,
       borderRadius: 16,
-      background: "rgba(255,255,255,0.08)",
+      background: "rgba(109,93,252,0.13)",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       gap: 12,
       flexWrap: "wrap",
-      border: "1px solid rgba(255,255,255,0.08)"
-    },
-    ticketText: {
-      color: "#fff",
-      fontWeight: 500,
-      fontSize: 14,
-      flex: 1,
+      border: "1px solid rgba(109,93,252,0.28)",
     },
     errorBox: {
-      marginTop: 10,
       padding: 12,
       borderRadius: 14,
-      background: "rgba(255,0,0,0.14)",
-      color: "#ffd5d5",
+      background: "rgba(239,68,68,0.12)",
+      color: "#fecaca",
       fontSize: 13,
+      border: "1px solid rgba(239,68,68,0.24)",
     },
-    footerInfo: {
-      padding: "8px 14px 0 14px",
-      fontSize: 12,
-      color: "rgba(222,230,255,0.8)",
-      display: "flex",
-      justifyContent: "space-between"
+    smallLabel: {
+      fontSize: 11,
+      color: "#64748b",
+      fontWeight: 800,
+      letterSpacing: 0.7,
+      textTransform: "uppercase",
     },
-    loadingText: {
-      opacity: 0.7,
-      fontSize: 14,
-    },
-    emptyText: {
-      opacity: 0.7,
-      fontSize: 14,
-    }
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>AI Shadow Chat</div>
+    <div style={styles.shell} className="nx-chat-shell">
+      <aside style={styles.sidebar} className="nx-chat-sidebar">
+        <div>
+          <div style={styles.smallLabel}>Workspace</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: "#f8fafc", marginTop: 4 }}>
+            AI Shadow Chat
+          </div>
+          <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
+            Project discussion with live updates.
+          </div>
+        </div>
 
-      <div style={styles.window} ref={chatWindowRef}>
-        {loadingSession ? (
-          <div style={styles.loadingText}>Loading chat session...</div>
-        ) : (
-          <>
-            {chat.length === 0 && (
-              <div style={styles.emptyText}>
-                Team members can discuss here. Messages are live for everyone in this chat.
+        <div style={styles.roomCard}>
+          <div style={styles.smallLabel}>Active room</div>
+          <div style={{ color: "#f8fafc", fontWeight: 900, marginTop: 6 }}>
+            {projectName}
+          </div>
+          <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
+            Project ID: {projectId}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ ...styles.smallLabel, marginBottom: 8 }}>Members</div>
+          <div style={styles.memberCard}>
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #6d5dfc, #22c55e)",
+              }}
+            />
+            <div>
+              <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
+                {currentUserName}
               </div>
-            )}
-
-            {chat.map((m, idx) => (
-              <div
-                key={idx}
-                style={m.user === "user" ? styles.bubbleUser : styles.bubbleAI}
-              >
-                {m.senderName && <div style={styles.senderLabel}>{m.senderName}</div>}
-                {m.message}
+              <div style={{ color: "#64748b", fontSize: 12 }}>Developer</div>
+            </div>
+          </div>
+          <div style={{ ...styles.memberCard, marginTop: 8 }}>
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: "50%",
+                background: "#1e293b",
+                display: "grid",
+                placeItems: "center",
+                color: "#a78bfa",
+                fontWeight: 900,
+                fontSize: 12,
+              }}
+            >
+              AI
+            </div>
+            <div>
+              <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
+                AI Shadow
               </div>
-            ))}
+              <div style={{ color: "#64748b", fontSize: 12 }}>Summary assistant</div>
+            </div>
+          </div>
+        </div>
 
-            {showTicketPrompt && (
-              <div style={styles.ticketPrompt}>
-                <span style={styles.ticketText}>
-                  🚨 Blocker detected. Do you want to create ticket(s)?
-                </span>
+        <div style={{ marginTop: "auto" }}>
+          <div style={styles.smallLabel}>Status</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#cbd5e1", fontSize: 13, marginTop: 8 }}>
+            <CircleRoundedIcon sx={{ fontSize: 10, color: socketConnected ? "#22c55e" : "#64748b" }} />
+            {socketConnected ? "Live connection" : "Offline"}
+          </div>
+          <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>
+            {chatEnded ? "Chat ended. Summary processed." : "Messages sync in real time."}
+          </div>
+        </div>
+      </aside>
 
-                <div style={{ display: "flex", gap: 6 }}>
-                  <IconButton
-                    style={{ color: "#22c55e" }}
-                    onClick={() => handleTicketChoice(true)}
-                    size="small"
-                  >
-                    <CheckIcon />
-                  </IconButton>
+      <main style={styles.main}>
+        <header style={styles.header}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: "#f8fafc" }}>
+              {projectName}
+            </div>
+            <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+              {chatEnded ? "Chat ended" : "Live project discussion"}
+            </div>
+          </div>
 
-                  <IconButton
-                    style={{ color: "#ef4444" }}
-                    onClick={() => handleTicketChoice(false)}
-                    size="small"
-                  >
-                    <CloseIcon />
-                  </IconButton>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <Chip
+              size="small"
+              label={socketConnected ? "Live" : "Offline"}
+              sx={{
+                bgcolor: socketConnected ? "rgba(34,197,94,0.14)" : "rgba(100,116,139,0.16)",
+                color: socketConnected ? "#86efac" : "#cbd5e1",
+                fontWeight: 900,
+              }}
+            />
+            <Chip
+              size="small"
+              label={`${chat.length} messages`}
+              sx={{
+                bgcolor: "rgba(96,165,250,0.14)",
+                color: "#bfdbfe",
+                fontWeight: 900,
+              }}
+            />
+          </div>
+        </header>
+
+        <section style={styles.window} ref={chatWindowRef}>
+          {loadingSession ? (
+            <div style={styles.emptyState}>Loading chat session...</div>
+          ) : (
+            <>
+              {chat.length === 0 && (
+                <div style={styles.emptyState}>
+                  <div style={{ fontWeight: 900, color: "#f8fafc", marginBottom: 6 }}>
+                    Start the project conversation
+                  </div>
+                  <div>
+                    Share blockers, implementation notes, or project updates. End the chat to generate an AI summary and create tickets when needed.
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {errorMessage && <div style={styles.errorBox}>{errorMessage}</div>}
-          </>
-        )}
-      </div>
+              {chat.map((m, idx) => {
+                const isUser = m.user === "user";
 
-      <div style={styles.footerInfo}>
-        <span>
-          {chatEnded
-            ? "Chat ended. Summary processed."
-            : "Live project discussion"}
-        </span>
-        <span>{socketConnected ? "● Live" : "○ Offline"}</span>
-      </div>
+                return (
+                  <div key={`${m.createdAt || "msg"}-${idx}`} style={isUser ? styles.bubbleWrapUser : styles.bubbleWrapAssistant}>
+                    <div style={styles.meta}>
+                      <span>{m.senderName || (isUser ? currentUserName : "AI Shadow")}</span>
+                      <span>{formatTime(m.createdAt)}</span>
+                    </div>
+                    <div style={isUser ? styles.bubbleUser : styles.bubbleAI}>
+                      {m.message}
+                    </div>
+                  </div>
+                );
+              })}
 
-      <div style={styles.inputRow}>
-        <input
-          style={styles.input}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleInputKeyDown}
-          placeholder={chatEnded ? "Chat ended" : "Type a message..."}
-          disabled={chatEnded || endingChat || loadingSession || !socketConnected}
-        />
+              {showTicketPrompt && (
+                <div style={styles.ticketPrompt}>
+                  <div>
+                    <div style={{ color: "#f8fafc", fontWeight: 900 }}>
+                      Create a ticket from this summary?
+                    </div>
+                    <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+                      The manager can review and assign it as a task.
+                    </div>
+                  </div>
 
-        <Button
-          variant="contained"
-          onClick={handleSend}
-          sx={{ minWidth: 72, px: 1.8, whiteSpace: "nowrap", fontWeight: 700 }}
-          disabled={
-            !input.trim() ||
-            endingChat ||
-            chatEnded ||
-            loadingSession ||
-            !socketConnected
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <IconButton
+                      style={{ color: "#22c55e", background: "rgba(34,197,94,0.12)" }}
+                      onClick={() => handleTicketChoice(true)}
+                      size="small"
+                    >
+                      <CheckIcon />
+                    </IconButton>
+
+                    <IconButton
+                      style={{ color: "#ef4444", background: "rgba(239,68,68,0.12)" }}
+                      onClick={() => handleTicketChoice(false)}
+                      size="small"
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  </div>
+                </div>
+              )}
+
+              {errorMessage && <div style={styles.errorBox}>{errorMessage}</div>}
+            </>
+          )}
+        </section>
+
+        <footer style={styles.inputBar}>
+          <input
+            style={styles.input}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            placeholder={chatEnded ? "Chat ended" : socketConnected ? "Type a message..." : "Waiting for live connection..."}
+            disabled={chatEnded || endingChat || loadingSession || !socketConnected}
+          />
+
+          <Button
+            variant="contained"
+            onClick={handleSend}
+            startIcon={<SendRoundedIcon />}
+            disabled={!input.trim() || endingChat || chatEnded || loadingSession || !socketConnected}
+            sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+          >
+            Send
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={handleEndChat}
+            startIcon={<StopCircleRoundedIcon />}
+            disabled={chat.length === 0 || endingChat || chatEnded || loadingSession}
+            sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+          >
+            {endingChat ? "Ending..." : "End"}
+          </Button>
+        </footer>
+      </main>
+
+      <style>
+        {`
+          @media (max-width: 1050px) {
+            .nx-chat-shell {
+              grid-template-columns: 1fr !important;
+            }
+
+            .nx-chat-sidebar {
+              display: none !important;
+            }
           }
-        >
-          Send
-        </Button>
-
-        <Button
-          color="secondary"
-          variant="outlined"
-          onClick={handleEndChat}
-          sx={{ minWidth: 92, px: 1.4, whiteSpace: "nowrap", fontWeight: 700 }}
-          disabled={chat.length === 0 || endingChat || chatEnded || loadingSession}
-        >
-          {endingChat ? "Ending..." : "End Chat"}
-        </Button>
-      </div>
+        `}
+      </style>
     </div>
   );
 };

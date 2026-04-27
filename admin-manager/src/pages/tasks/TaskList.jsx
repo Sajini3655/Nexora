@@ -182,3 +182,4 @@ function Info({ label, value }) {
     </Box>
   );
 }
+

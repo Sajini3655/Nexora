@@ -10,3 +10,4 @@ const TicketPrompt: React.FC<Props> = ({ ticketMessage }) => {
 };
 
 export default TicketPrompt;
+

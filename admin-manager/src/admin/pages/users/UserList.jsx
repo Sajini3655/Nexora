@@ -3,8 +3,10 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   IconButton,
+  ListItemText,
   MenuItem,
   Pagination,
   Paper,
@@ -34,7 +36,8 @@ import {
   updateAdminUserStatus,
 } from "../../../services/api";
 
-const ROLES = ["", "ADMIN", "MANAGER", "DEVELOPER", "CLIENT"];
+const ROLES = ["ADMIN", "MANAGER", "DEVELOPER", "CLIENT"];
+
 const STATUS_OPTIONS = [
   { label: "All", value: "" },
   { label: "Enabled", value: "true" },
@@ -84,7 +87,6 @@ export default function UserList() {
       setItems(data?.items ?? []);
       setTotalPages(Math.max(data?.totalPages ?? 1, 1));
     } catch (e) {
-      console.error(e);
       setError(extractError(e));
     } finally {
       fetching.current = false;
@@ -120,6 +122,7 @@ export default function UserList() {
 
   const handleToggleStatus = async (user) => {
     const key = `status-${user.id}`;
+
     try {
       setActionLoading(key);
       setError("");
@@ -135,17 +138,33 @@ export default function UserList() {
     }
   };
 
-  const handleRoleChange = async (user, newRole) => {
-    if (!newRole || newRole === user.role) return;
+  const handleRoleChange = async (user, newRoles) => {
+    const selectedRoles = Array.isArray(newRoles)
+      ? newRoles.filter(Boolean)
+      : [newRoles].filter(Boolean);
+
+    if (selectedRoles.length === 0) {
+      setError("At least one role must be selected.");
+      return;
+    }
+
+    const currentRoles = getUserRoles(user);
+
+    const same =
+      selectedRoles.length === currentRoles.length &&
+      selectedRoles.every((r) => currentRoles.includes(r));
+
+    if (same) return;
 
     const key = `role-${user.id}`;
+
     try {
       setActionLoading(key);
       setError("");
       setMessage("");
 
-      await updateAdminUserRole(user.id, newRole);
-      setMessage("User role updated successfully.");
+      await updateAdminUserRole(user.id, { role: selectedRoles[0], roles: selectedRoles });
+      setMessage("User roles updated successfully.");
       await loadUsers();
     } catch (e) {
       setError(extractError(e));
@@ -156,6 +175,7 @@ export default function UserList() {
 
   const handleResendInvite = async (user) => {
     const key = `invite-${user.id}`;
+
     try {
       setActionLoading(key);
       setError("");
@@ -176,6 +196,7 @@ export default function UserList() {
     if (!confirmed) return;
 
     const key = `delete-${user.id}`;
+
     try {
       setActionLoading(key);
       setError("");
@@ -213,6 +234,7 @@ export default function UserList() {
             <Typography sx={{ fontSize: 30, fontWeight: 900, color: "#fff" }}>
               User Management
             </Typography>
+
             <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
               Search, filter, invite, edit roles, enable, disable, and delete users.
             </Typography>
@@ -246,7 +268,7 @@ export default function UserList() {
           borderRadius: "28px",
           p: 3,
           border: "1px solid rgba(255,255,255,0.10)",
-          background: "rgba(255,255,255,0.03)",
+          background: "#0b1628",
         }}
       >
         <Stack spacing={2}>
@@ -267,7 +289,7 @@ export default function UserList() {
               }}
             >
               <MenuItem value="">All</MenuItem>
-              {ROLES.filter(Boolean).map((r) => (
+              {ROLES.map((r) => (
                 <MenuItem key={r} value={r}>
                   {r}
                 </MenuItem>
@@ -295,9 +317,11 @@ export default function UserList() {
             <Button variant="contained" onClick={handleSearch}>
               Search
             </Button>
+
             <Button variant="outlined" onClick={handleClear}>
               Clear
             </Button>
+
             <Button variant="text" onClick={() => loadUsers()}>
               Refresh
             </Button>
@@ -311,37 +335,69 @@ export default function UserList() {
           borderRadius: "28px",
           p: 2,
           border: "1px solid rgba(255,255,255,0.10)",
-          background:
-            "linear-gradient(180deg, rgba(10,14,40,0.95), rgba(5,10,30,0.98))",
+          background: "#0b1628",
         }}
       >
-        <Box sx={{ overflowX: "auto" }}>
+        <Box
+          sx={{
+            maxHeight: "560px",
+            overflow: "auto",
+            pr: 0.5,
+            "&::-webkit-scrollbar": {
+              width: 8,
+              height: 8,
+            },
+            "&::-webkit-scrollbar-track": {
+              background: "rgba(255,255,255,0.04)",
+              borderRadius: 999,
+            },
+            "&::-webkit-scrollbar-thumb": {
+              background: "rgba(124,92,255,0.55)",
+              borderRadius: 999,
+            },
+            "&::-webkit-scrollbar-thumb:hover": {
+              background: "rgba(124,92,255,0.8)",
+            },
+          }}
+        >
           <Table
+            stickyHeader
             sx={{
               minWidth: 1100,
               borderCollapse: "separate",
               borderSpacing: "0 10px",
+              "& .MuiTableCell-stickyHeader": {
+                backgroundColor: "#0b1628",
+                color: "#cbd5e1",
+                zIndex: 2,
+              },
             }}
           >
             <TableHead>
               <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell sx={headCell}>Name</TableCell>
+                <TableCell sx={headCell}>Email</TableCell>
+                <TableCell sx={headCell}>Roles</TableCell>
+                <TableCell sx={headCell}>Status</TableCell>
+                <TableCell sx={headCell}>Created</TableCell>
+                <TableCell sx={headCell} align="right">
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
 
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6}>Loading users...</TableCell>
+                  <TableCell colSpan={6} sx={tableEmptyCell}>
+                    Loading users...
+                  </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6}>No users found.</TableCell>
+                  <TableCell colSpan={6} sx={tableEmptyCell}>
+                    No users found.
+                  </TableCell>
                 </TableRow>
               ) : (
                 items.map((user) => {
@@ -355,19 +411,12 @@ export default function UserList() {
                       <TableCell sx={tableCellLeft}>{user.name}</TableCell>
                       <TableCell sx={tableCellMid}>{user.email}</TableCell>
 
-                      <TableCell sx={tableCellMid} width={220}>
-                        <Input
-                          select
-                          value={user.role}
-                          onChange={(e) => handleRoleChange(user, e.target.value)}
+                      <TableCell sx={tableCellMid} width={260}>
+                        <RoleMultiSelect
+                          value={getUserRoles(user)}
                           disabled={actionLoading === roleKey}
-                        >
-                          {ROLES.filter(Boolean).map((r) => (
-                            <MenuItem key={r} value={r}>
-                              {r}
-                            </MenuItem>
-                          ))}
-                        </Input>
+                          onChange={(newRoles) => handleRoleChange(user, newRoles)}
+                        />
                       </TableCell>
 
                       <TableCell sx={tableCellMid}>
@@ -396,7 +445,7 @@ export default function UserList() {
                           direction="row"
                           spacing={1}
                           justifyContent="flex-end"
-                          flexWrap="wrap"
+                          flexWrap="nowrap"
                         >
                           <Tooltip title={user.enabled ? "Disable User" : "Enable User"}>
                             <span>
@@ -461,22 +510,119 @@ export default function UserList() {
   );
 }
 
+function getUserRoles(user) {
+  if (Array.isArray(user?.roles)) return user.roles.filter(Boolean);
+  if (Array.isArray(user?.roleNames)) return user.roleNames.filter(Boolean);
+  if (typeof user?.role === "string" && user.role.trim()) return [user.role.trim()];
+  return [];
+}
+
+function RoleMultiSelect({ value, disabled, onChange }) {
+  const selected = Array.isArray(value) ? value : [];
+
+  return (
+    <Input
+      select
+      value={selected}
+      disabled={disabled}
+      onChange={(e) => {
+        const nextValue = e.target.value;
+        onChange(typeof nextValue === "string" ? nextValue.split(",") : nextValue);
+      }}
+      SelectProps={{
+        multiple: true,
+        renderValue: (selectedValues) =>
+          Array.isArray(selectedValues) && selectedValues.length > 0
+            ? selectedValues.join(", ")
+            : "Select roles",
+        MenuProps: {
+          PaperProps: {
+            sx: {
+              mt: 1,
+              backgroundColor: "#020617",
+              color: "#ffffff",
+              border: "1px solid rgba(124,92,255,0.35)",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.75)",
+              borderRadius: 2,
+              maxHeight: 320,
+              "& .MuiMenuItem-root": {
+                backgroundColor: "#020617",
+                color: "#ffffff",
+                fontWeight: 800,
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              },
+              "& .MuiMenuItem-root:hover": {
+                backgroundColor: "rgba(124,92,255,0.22)",
+              },
+              "& .MuiMenuItem-root.Mui-selected": {
+                backgroundColor: "rgba(124,92,255,0.34)",
+              },
+              "& .MuiMenuItem-root.Mui-selected:hover": {
+                backgroundColor: "rgba(124,92,255,0.45)",
+              },
+              "& .MuiCheckbox-root": {
+                color: "#94a3b8",
+              },
+              "& .MuiCheckbox-root.Mui-checked": {
+                color: "#8b5cf6",
+              },
+            },
+          },
+        },
+      }}
+      sx={{
+        minWidth: 220,
+        "& .MuiOutlinedInput-root": {
+          backgroundColor: "#020617",
+          borderRadius: "999px",
+          color: "#ffffff",
+        },
+        "& .MuiSelect-select": {
+          color: "#ffffff",
+          fontWeight: 800,
+          py: 1.1,
+        },
+        "& fieldset": {
+          borderColor: "rgba(124,92,255,0.35)",
+        },
+        "&:hover fieldset": {
+          borderColor: "rgba(124,92,255,0.75)",
+        },
+      }}
+    >
+      {ROLES.map((role) => (
+        <MenuItem key={role} value={role}>
+          <Checkbox checked={selected.includes(role)} />
+          <ListItemText primary={role} />
+        </MenuItem>
+      ))}
+    </Input>
+  );
+}
+
 function extractError(error) {
   const data = error?.response?.data;
+
   if (typeof data === "string") return data;
+
   if (data?.message) return data.message;
+
   if (data?.fields) {
     return Object.entries(data.fields)
       .map(([k, v]) => `${k}: ${v}`)
       .join(", ");
   }
+
   return error?.message || "Request failed";
 }
 
 function formatDate(value) {
   if (!value) return "-";
+
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return value;
+
   return date.toLocaleString([], {
     year: "numeric",
     month: "short",
@@ -486,9 +632,17 @@ function formatDate(value) {
   });
 }
 
+const headCell = {
+  fontWeight: 900,
+  color: "#cbd5e1",
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
+  whiteSpace: "nowrap",
+};
+
 const tableCellBase = {
-  background: "rgba(255,255,255,0.03)",
+  background: "#0f1b2f",
   borderBottom: "none",
+  whiteSpace: "nowrap",
 };
 
 const tableCellLeft = {
@@ -507,3 +661,12 @@ const tableCellRight = {
   borderTopRightRadius: 16,
   borderBottomRightRadius: 16,
 };
+
+const tableEmptyCell = {
+  color: "#94a3b8",
+  borderBottom: "none",
+  py: 4,
+};
+
+
+

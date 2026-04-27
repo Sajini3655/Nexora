@@ -338,3 +338,53 @@ export async function fetchClientHistory() {
     };
   }
 }
+
+export function getCachedClientTickets() {
+  try {
+    const cached = localStorage.getItem("clientTickets");
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function buildProjectsFromTickets(tickets) {
+  const grouped = new Map();
+
+  tickets.forEach((ticket) => {
+    const key = ticket.category || "General Support";
+    const existing = grouped.get(key) || {
+      id: key.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      name: key,
+      manager: "Client Support",
+      progress: 0,
+      status: "Open",
+      eta: "-",
+      tickets: [],
+    };
+
+    existing.tickets.push(ticket);
+    grouped.set(key, existing);
+  });
+
+  return Array.from(grouped.values()).map((project) => {
+    const total = project.tickets.length;
+    const done = project.tickets.filter((ticket) => ticket.status === "Done").length;
+    const inProgress = project.tickets.filter((ticket) => ticket.status === "In Progress").length;
+    const latest = project.tickets
+      .map((ticket) => ticket.updatedAt)
+      .find((date) => date && date !== "-") || "-";
+
+    return {
+      ...project,
+      progress: total > 0 ? Math.round((done / total) * 100) : 0,
+      status:
+        done === total && total > 0
+          ? "Resolved"
+          : inProgress > 0
+            ? "In Progress"
+            : "Open",
+      eta: latest,
+    };
+  });
+}

@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Box, Chip, LinearProgress, Paper, Stack, Typography } from "@mui/material";
-import ClientLayout from "../../components/layout/ClientLayout";
+import {
+  Alert,
+  Box,
+  Chip,
+  CircularProgress,
+  LinearProgress,
+  Paper,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { fetchClientProjects } from "../../services/clientService";
 
 export default function ClientProjectList() {
@@ -35,77 +43,93 @@ export default function ClientProjectList() {
   }, []);
 
   return (
-    <ClientLayout>
-      <Box sx={{ mb: 2.5 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: -0.4 }}>
-          Client Workstreams
-        </Typography>
-        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.66)" }}>
-          Workstreams are grouped from your live support tickets.
-        </Typography>
-      </Box>
+    <>
+      <Stack spacing={3}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 900 }}>
+            Workstreams
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+            Workstreams are grouped from your live support tickets.
+          </Typography>
+        </Box>
 
-      {error ? <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert> : null}
+        {error ? <Alert severity="warning">{error}</Alert> : null}
 
-      {loading ? null : null}
-
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
-        {projects.map((p) => (
-          <Paper
-            key={p.id}
-            sx={{
-              background: "rgba(15,20,40,0.6)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              p: 2.25,
-              borderRadius: "18px",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                background: "rgba(15,20,40,0.8)",
-                borderColor: "rgba(104,81,255,0.3)",
-              },
-            }}
-          >
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 2, mb: 1.5 }}>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {p.name}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)" }}>
-                  Manager: {p.manager}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.48)", display: "block", mt: 0.5 }}>
-                  {p.tickets?.length || 0} live tickets
-                </Typography>
-              </Box>
-              <Chip label={p.status} size="small" sx={{ bgcolor: "rgba(104,81,255,0.2)", color: "#e7e9ee" }} />
+        <Paper
+          sx={{
+            p: 2.2,
+            borderRadius: 3,
+            bgcolor: "#0b1628",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "none",
+          }}
+        >
+          {loading ? (
+            <Box sx={{ display: "grid", placeItems: "center", minHeight: 150 }}>
+              <CircularProgress sx={{ color: "#6d5dfc" }} />
             </Box>
-
-            <Box>
-              <LinearProgress
-                variant="determinate"
-                value={p.progress}
-                sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  bgcolor: "rgba(255,255,255,0.1)",
-                  "& .MuiLinearProgress-bar": {
-                    background: "linear-gradient(90deg, rgba(34,197,94,0.95), rgba(59,130,246,0.95))",
-                  },
-                }}
-              />
-            </Box>
-            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", mt: 1, display: "block" }}>
-              {p.progress}% complete • ETA {p.eta}
+          ) : projects.length === 0 ? (
+            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              No workstreams found.
             </Typography>
+          ) : (
+            <Stack spacing={1.5}>
+              {projects.map((project) => (
+                <Box
+                  key={project.id}
+                  sx={{
+                    p: 1.8,
+                    borderRadius: 2,
+                    bgcolor: "#0f1b2f",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 2,
+                      flexWrap: "wrap",
+                      mb: 1.5,
+                    }}
+                  >
+                    <Box>
+                      <Typography sx={{ fontWeight: 900 }}>
+                        {project.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                        Manager: {project.manager} • {project.tickets?.length || 0} tickets
+                      </Typography>
+                    </Box>
 
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1.25 }}>
-              <Chip size="small" label={`Done ${p.progress}%`} sx={{ bgcolor: "rgba(16,185,129,0.14)", color: "#e7e9ee" }} />
-              <Chip size="small" label={p.tickets?.length || 0 ? `${p.tickets.length} tickets` : "No tickets"} sx={{ bgcolor: "rgba(255,255,255,0.06)", color: "#e7e9ee" }} />
+                    <StatusBadge label={project.status} />
+                  </Box>
+
+                  <LinearProgress
+                    variant="determinate"
+                    value={project.progress}
+                    sx={{
+                      height: 7,
+                      borderRadius: 999,
+                      bgcolor: "rgba(255,255,255,0.08)",
+                      "& .MuiLinearProgress-bar": {
+                        bgcolor: "#6d5dfc",
+                      },
+                    }}
+                  />
+
+                  <Typography variant="caption" sx={{ color: "#94a3b8", mt: 1, display: "block" }}>
+                    {project.progress}% complete • Last update {project.eta}
+                  </Typography>
+                </Box>
+              ))}
             </Stack>
-          </Paper>
-        ))}
-      </Box>
-    </ClientLayout>
+          )}
+        </Paper>
+      </Stack>
+    </>
   );
 }
+
+
