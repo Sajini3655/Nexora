@@ -28,6 +28,10 @@ public class DeveloperProfile {
     @Column(nullable = false)
     private ExperienceLevel experienceLevel;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AvailabilityStatus availabilityStatus;
+
     /**
      * Capacity in story points (or "effort points") for active work.
      * Used by the matching algorithm as a simple workload cap.
@@ -35,9 +39,17 @@ public class DeveloperProfile {
     @Column(nullable = false)
     private Integer capacityPoints;
 
+    @Column(nullable = false)
+    private Integer weeklyCapacityHours;
+
+    @Column(nullable = false)
+    private Integer yearsOfExperience;
+
     // Extra profile fields (developer UI)
     private String phone;
     private String location;
+    private String specialization;
+    private String timezone;
 
     @Column(columnDefinition = "TEXT")
     private String bio;
@@ -56,7 +68,10 @@ public class DeveloperProfile {
         createdAt = LocalDateTime.now();
         updatedAt = createdAt;
         if (experienceLevel == null) experienceLevel = ExperienceLevel.JUNIOR;
+        if (availabilityStatus == null) availabilityStatus = AvailabilityStatus.AVAILABLE;
         if (capacityPoints == null) capacityPoints = 20;
+        if (weeklyCapacityHours == null) weeklyCapacityHours = 40;
+        if (yearsOfExperience == null) yearsOfExperience = 1;
     }
 
     @PreUpdate

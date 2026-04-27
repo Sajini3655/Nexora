@@ -119,6 +119,7 @@ export default function ProjectManagementDetails() {
   const [newTask, setNewTask] = useState(emptyTaskForm);
 
   const [loading, setLoading] = useState(true);
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [savingProjectDetails, setSavingProjectDetails] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
 
@@ -138,13 +139,21 @@ export default function ProjectManagementDetails() {
   const [editingStoryPointId, setEditingStoryPointId] = useState(null);
   const [loadingStoryPoints, setLoadingStoryPoints] = useState(false);
   const [savingStoryPoint, setSavingStoryPoint] = useState(false);
+  const [savingAllChanges, setSavingAllChanges] = useState(false);
+
+  const [originalTaskDraft, setOriginalTaskDraft] = useState(null);
+  const [originalDeveloperId, setOriginalDeveloperId] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const loadProject = async () => {
+  const loadProject = async (background = false) => {
     try {
-      setLoading(true);
+      if (background) {
+        setBackgroundLoading(true);
+      } else {
+        setLoading(true);
+      }
       setError("");
 
       const [projectData, developersData] = await Promise.all([
@@ -166,7 +175,11 @@ export default function ProjectManagementDetails() {
       setError(getErrorMessage(err, "Failed to load project details."));
       setProject(null);
     } finally {
-      setLoading(false);
+      if (background) {
+        setBackgroundLoading(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -179,7 +192,7 @@ export default function ProjectManagementDetails() {
     () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"],
     []
   );
-  useLiveRefresh(liveTopics, loadProject, { debounceMs: 650 });
+  useLiveRefresh(liveTopics, () => loadProject(true), { debounceMs: 650 });
 
   const tasks = useMemo(() => (Array.isArray(project?.tasks) ? project.tasks : []), [project]);
 
@@ -224,14 +237,18 @@ export default function ProjectManagementDetails() {
   const openTaskModal = async (task) => {
     setTaskModalOpen(true);
     setSelectedTask(task);
-    setTaskDraft({
+    const newTaskDraft = {
       title: getTaskTitle(task),
       description: getTaskDescription(task),
       priority: getTaskPriority(task),
       dueDate: task?.dueDate || "",
       status: getTaskStatus(task),
-    });
-    setSelectedDeveloperId(String(task?.assignedToId || ""));
+    };
+    setTaskDraft(newTaskDraft);
+    setOriginalTaskDraft(JSON.parse(JSON.stringify(newTaskDraft)));
+    const devId = String(task?.assignedToId || "");
+    setSelectedDeveloperId(devId);
+    setOriginalDeveloperId(devId);
     setSuggestion(null);
     setStoryPointForm(emptyStoryPointForm);
     setEditingStoryPointId(null);
@@ -239,15 +256,90 @@ export default function ProjectManagementDetails() {
   };
 
   const closeTaskModal = () => {
-    if (savingAssignment || savingStoryPoint) return;
+    if (savingAssignment || savingStoryPoint || savingAllChanges) return;
     setTaskModalOpen(false);
     setSelectedTask(null);
     setTaskDraft(null);
+    setOriginalTaskDraft(null);
     setSelectedDeveloperId("");
+    setOriginalDeveloperId("");
     setSuggestion(null);
     setStoryPoints([]);
     setStoryPointForm(emptyStoryPointForm);
     setEditingStoryPointId(null);
+    // Reload project to ensure developer dashboard reflects latest changes
+    loadProject();
+  };
+
+  const hasUnsavedChanges = () => {
+    if (!selectedTask || !originalTaskDraft) return false;
+    
+    const taskDetailsChanged = 
+      taskDraft?.title !== originalTaskDraft.title ||
+      taskDraft?.description !== originalTaskDraft.description ||
+      taskDraft?.priority !== originalTaskDraft.priority ||
+      taskDraft?.dueDate !== originalTaskDraft.dueDate ||
+      taskDraft?.status !== originalTaskDraft.status;
+    
+    const developerChanged = selectedDeveloperId !== originalDeveloperId;
+    
+    return taskDetailsChanged || developerChanged;
+  };
+
+  const handleSaveAllChanges = async () => {
+    if (!selectedTask || !selectedTask.id || savingAllChanges) return;
+
+    setSavingAllChanges(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const savePromises = [];
+
+      // Save task details if changed
+      const taskDetailsChanged = 
+        taskDraft?.title !== originalTaskDraft?.title ||
+        taskDraft?.description !== originalTaskDraft?.description ||
+        taskDraft?.priority !== originalTaskDraft?.priority ||
+        taskDraft?.dueDate !== originalTaskDraft?.dueDate ||
+        taskDraft?.status !== originalTaskDraft?.status;
+
+      if (taskDetailsChanged) {
+        savePromises.push(
+          updateManagerTask(Number(selectedTask.id), {
+            title: (taskDraft?.title || "").trim(),
+            description: taskDraft?.description || "",
+            priority: (taskDraft?.priority || "MEDIUM").toUpperCase(),
+            dueDate: taskDraft?.dueDate || null,
+            status: (taskDraft?.status || "TODO").toUpperCase(),
+          })
+        );
+      }
+
+      // Save developer assignment if changed
+      const developerChanged = selectedDeveloperId !== originalDeveloperId;
+      if (developerChanged && selectedDeveloperId) {
+        savePromises.push(
+          assignManagerTaskAssignee(Number(selectedTask.id), Number(selectedDeveloperId))
+        );
+      }
+
+      // Wait for all saves to complete
+      if (savePromises.length > 0) {
+        await Promise.all(savePromises);
+      }
+
+      setSuccess("All changes saved successfully.");
+      setOriginalTaskDraft(JSON.parse(JSON.stringify(taskDraft)));
+      setOriginalDeveloperId(selectedDeveloperId);
+      
+      // Single reload after all saves are done
+      await loadProject();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to save changes."));
+    } finally {
+      setSavingAllChanges(false);
+    }
   };
 
   const loadStoryPoints = async (taskId) => {
@@ -456,7 +548,7 @@ export default function ProjectManagementDetails() {
       setStoryPointForm(emptyStoryPointForm);
       setSuccess("Story point added.");
       await loadStoryPoints(selectedTask.id);
-      await loadProject();
+      // Don't reload project here - let user save all changes at once
     } catch (err) {
       setError(getErrorMessage(err, "Failed to add story point."));
     } finally {
@@ -491,7 +583,7 @@ export default function ProjectManagementDetails() {
       setStoryPointForm(emptyStoryPointForm);
       setSuccess("Story point updated.");
       await loadStoryPoints(selectedTask.id);
-      await loadProject();
+      // Don't reload project here - let user save all changes at once
     } catch (err) {
       setError(getErrorMessage(err, "Failed to update story point."));
     } finally {
@@ -509,7 +601,7 @@ export default function ProjectManagementDetails() {
       await api.delete(`/story-points/${storyPointId}`);
       setSuccess("Story point deleted.");
       await loadStoryPoints(selectedTask.id);
-      await loadProject();
+      // Don't reload project here - let user save all changes at once
     } catch (err) {
       setError(getErrorMessage(err, "Failed to delete story point."));
     }
@@ -676,6 +768,13 @@ export default function ProjectManagementDetails() {
         </Paper>
       </Stack>
 
+      {backgroundLoading && (
+        <Box sx={{ position: "fixed", top: 16, right: 16, display: "flex", alignItems: "center", gap: 1, bgcolor: "rgba(15,23,42,0.9)", p: 1, borderRadius: 1, border: "1px solid rgba(148,163,184,0.16)" }}>
+          <CircularProgress size={16} />
+          <Typography variant="caption" sx={{ color: "#94a3b8" }}>Updating...</Typography>
+        </Box>
+      )}
+
       <Dialog open={taskModalOpen} onClose={closeTaskModal} fullWidth maxWidth="lg">
         <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box>
@@ -812,7 +911,16 @@ export default function ProjectManagementDetails() {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={closeTaskModal}>Close</Button>
+          <Button onClick={closeTaskModal} disabled={hasUnsavedChanges() || savingAllChanges}>
+            Close
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveAllChanges} 
+            disabled={!hasUnsavedChanges() || savingAllChanges}
+          >
+            {savingAllChanges ? "Saving..." : "Save Changes"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

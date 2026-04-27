@@ -11,6 +11,12 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Divider,
 } from "@mui/material";
 import {
   Activity,
@@ -25,6 +31,8 @@ import {
   UserRound,
   UserX,
   Users,
+  X,
+  RotateCcw,
 } from "lucide-react";
 import { getAdminDashboard, getSystemHealth } from "../../../services/api";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
@@ -35,6 +43,8 @@ export default function AdminDashboard() {
   const [systemHealth, setSystemHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedHealthItem, setSelectedHealthItem] = useState(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   const fetching = useRef(false);
 
@@ -110,6 +120,14 @@ export default function AdminDashboard() {
         icon: <Activity size={18} />,
         badge: systemHealth?.apiStatus === "OK" ? "LIVE" : "CHECK",
         badgeTone: systemHealth?.apiStatus === "OK" ? "success" : "warning",
+        description: "Backend API server for handling requests and data operations",
+        details: [
+          { label: "Service URL", value: systemHealth?.backendUrl ?? "-" },
+          { label: "Status", value: systemHealth?.apiStatus ?? "-" },
+          { label: "Response", value: systemHealth?.apiMessage ?? "No information" },
+        ],
+        issue: systemHealth?.apiStatus === "OK" ? null : (systemHealth?.apiMessage ?? "API is not responding"),
+        action: systemHealth?.apiStatus === "OK" ? "System is running normally" : "Restart backend service and check server logs",
       },
       {
         title: "Database",
@@ -120,6 +138,15 @@ export default function AdminDashboard() {
         icon: <Database size={18} />,
         badge: systemHealth?.databaseStatus === "OK" ? "LIVE" : "CHECK",
         badgeTone: systemHealth?.databaseStatus === "OK" ? "success" : "warning",
+        description: "Primary data storage and query service",
+        details: [
+          { label: "Type", value: systemHealth?.databaseType ?? "Unknown" },
+          { label: "Status", value: systemHealth?.databaseStatus ?? "-" },
+          { label: "Latency", value: `${systemHealth?.databaseLatencyMs ?? 0}ms` },
+          { label: "Response", value: systemHealth?.databaseMessage ?? "No information" },
+        ],
+        issue: systemHealth?.databaseStatus === "OK" ? null : (systemHealth?.databaseMessage ?? "Database connection failed"),
+        action: systemHealth?.databaseStatus === "OK" ? "Database is responding normally" : "Check database connectivity and credentials",
       },
       {
         title: "Mail",
@@ -127,6 +154,14 @@ export default function AdminDashboard() {
         icon: <Mail size={18} />,
         badge: systemHealth?.mailStatus === "OK" ? "LIVE" : "CHECK",
         badgeTone: systemHealth?.mailStatus === "OK" ? "success" : "warning",
+        description: "Email service for sending notifications and alerts",
+        details: [
+          { label: "Provider", value: systemHealth?.mailProvider ?? "Unknown" },
+          { label: "Status", value: systemHealth?.mailStatus ?? "-" },
+          { label: "Response", value: systemHealth?.mailMessage ?? "No information" },
+        ],
+        issue: systemHealth?.mailStatus === "OK" ? null : (systemHealth?.mailMessage ?? "Mail service unavailable"),
+        action: systemHealth?.mailStatus === "OK" ? "Email service is operational" : "Verify SMTP credentials and mail server connectivity",
       },
       {
         title: "AI Service",
@@ -134,6 +169,15 @@ export default function AdminDashboard() {
         icon: <Activity size={18} />,
         badge: systemHealth?.aiServiceStatus === "OK" ? "LIVE" : "CHECK",
         badgeTone: systemHealth?.aiServiceStatus === "OK" ? "success" : "warning",
+        description: "Handles chat summaries and AI task suggestions",
+        details: [
+          { label: "Service URL", value: systemHealth?.aiServiceUrl ?? "-" },
+          { label: "Model", value: systemHealth?.aiModel ?? "Unknown" },
+          { label: "Status", value: systemHealth?.aiServiceStatus ?? "-" },
+          { label: "Response", value: systemHealth?.aiServiceMessage ?? "No information" },
+        ],
+        issue: systemHealth?.aiServiceStatus === "OK" ? null : (systemHealth?.aiServiceMessage ?? "AI service not responding"),
+        action: systemHealth?.aiServiceStatus === "OK" ? "AI service is operational" : "Start AI service: cd ai-service && uvicorn main:app --reload",
       },
       {
         title: "Uptime",
@@ -141,6 +185,14 @@ export default function AdminDashboard() {
         icon: <Clock3 size={18} />,
         badge: "INFO",
         badgeTone: "info",
+        description: "System availability and continuous operation time",
+        details: [
+          { label: "Total Uptime", value: systemHealth?.uptime ?? "-" },
+          { label: "Last Check", value: systemHealth?.lastCheckedAt ? new Date(systemHealth.lastCheckedAt).toLocaleString() : "-" },
+          { label: "Check Interval", value: `${systemHealth?.refreshIntervalSeconds ?? 60}s` },
+        ],
+        issue: null,
+        action: "Uptime metric is informational only",
       },
       {
         title: "Overall",
@@ -148,6 +200,16 @@ export default function AdminDashboard() {
         icon: <HeartPulse size={18} />,
         badge: systemHealth?.overallStatus === "UP" ? "OK" : "CHECK",
         badgeTone: systemHealth?.overallStatus === "UP" ? "success" : "warning",
+        description: "Aggregate health status of all system components",
+        details: [
+          { label: "API Status", value: systemHealth?.apiStatus ?? "-" },
+          { label: "Database Status", value: systemHealth?.databaseStatus ?? "-" },
+          { label: "Mail Status", value: systemHealth?.mailStatus ?? "-" },
+          { label: "AI Service Status", value: systemHealth?.aiServiceStatus ?? "-" },
+          { label: "Overall Status", value: systemHealth?.overallStatus ?? "-" },
+        ],
+        issue: systemHealth?.overallStatus === "UP" ? null : "One or more critical services are down",
+        action: systemHealth?.overallStatus === "UP" ? "All systems operational" : "Review individual service status and take corrective action",
       },
     ];
   }, [systemHealth]);
@@ -269,14 +331,29 @@ export default function AdminDashboard() {
             }}
           >
             {healthCards.map((item) => (
-              <SmallInfoCard
+              <Box
                 key={item.title}
-                title={item.title}
-                value={item.value}
-                icon={item.icon}
-                badge={item.badge}
-                badgeTone={item.badgeTone}
-              />
+                onClick={() => {
+                  setSelectedHealthItem(item);
+                  setDetailDialogOpen(true);
+                }}
+                sx={{ cursor: "pointer" }}
+              >
+                <SmallInfoCard
+                  title={item.title}
+                  value={item.value}
+                  icon={item.icon}
+                  badge={item.badge}
+                  badgeTone={item.badgeTone}
+                  sx={{
+                    transition: "all 0.2s ease-in-out",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: 4,
+                    },
+                  }}
+                />
+              </Box>
             ))}
           </Box>
         </SectionCard>
@@ -340,6 +417,13 @@ export default function AdminDashboard() {
           </Table>
         </Box>
       </SectionCard>
+
+      <HealthDetailDialog
+        item={selectedHealthItem}
+        open={detailDialogOpen}
+        onClose={() => setDetailDialogOpen(false)}
+        onRefresh={loadDashboard}
+      />
     </Stack>
   );
 }
@@ -611,3 +695,240 @@ const tableCellRight = {
   borderBottomRightRadius: 14,
   color: "#94a3b8",
 };
+
+function HealthDetailDialog({ item, open, onClose, onRefresh }) {
+  if (!item) return null;
+
+  const getStatusColor = (status) => {
+    if (status === "OK" || status === "LIVE" || status === "UP") return "#10b981";
+    if (status === "DOWN" || status === "ERROR") return "#ef4444";
+    return "#f59e0b";
+  };
+
+  const handleRefresh = async () => {
+    await onRefresh();
+    onClose();
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          bgcolor: "#0b1628",
+          border: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+          width: { xs: "90%", sm: "420px" },
+          maxHeight: "75vh",
+          mt: 8,
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          pb: 1.5,
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: 2,
+            display: "grid",
+            placeItems: "center",
+            bgcolor: "rgba(124,92,255,0.14)",
+            color: "#c4b5fd",
+            flexShrink: 0,
+          }}
+        >
+          {item.icon}
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <Typography sx={{ fontWeight: 900, fontSize: 16 }}>
+            {item.title}
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            px: 1.2,
+            py: 0.4,
+            borderRadius: 999,
+            bgcolor: `${getStatusColor(item.value)}20`,
+            border: `1px solid ${getStatusColor(item.value)}40`,
+            color: getStatusColor(item.value),
+            fontSize: 12,
+            fontWeight: 900,
+            flexShrink: 0,
+          }}
+        >
+          {item.badge}
+        </Box>
+        <Button
+          size="small"
+          onClick={onClose}
+          sx={{
+            minWidth: "auto",
+            p: 0.5,
+            color: "#94a3b8",
+            "&:hover": { color: "#e5e7eb" },
+          }}
+        >
+          <X size={18} />
+        </Button>
+      </DialogTitle>
+
+      <DialogContent sx={{ pt: 2 }}>
+        <Stack spacing={2.5}>
+          {/* Service Overview */}
+          <Box>
+            <Typography
+              sx={{ fontWeight: 700, fontSize: 12, color: "#94a3b8", mb: 0.8 }}
+            >
+              SERVICE OVERVIEW
+            </Typography>
+            <Typography sx={{ color: "#e5e7eb", fontSize: 14 }}>
+              {item.description}
+            </Typography>
+          </Box>
+
+          <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+
+          {/* Details List */}
+          <Box>
+            <Typography
+              sx={{ fontWeight: 700, fontSize: 12, color: "#94a3b8", mb: 1 }}
+            >
+              SERVICE DETAILS
+            </Typography>
+            <Stack spacing={1.2}>
+              {item.details && item.details.map((detail, idx) => (
+                <Box key={idx} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                    {detail.label}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "#e5e7eb",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      textAlign: "right",
+                      maxWidth: "60%",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {detail.value}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+
+          {/* Issue Section */}
+          {item.issue && (
+            <>
+              <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: `${getStatusColor(item.value)}15`,
+                  border: `1px solid ${getStatusColor(item.value)}30`,
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: 12,
+                    color: getStatusColor(item.value),
+                    mb: 0.6,
+                  }}
+                >
+                  ⚠ ISSUE
+                </Typography>
+                <Typography sx={{ color: "#e5e7eb", fontSize: 13 }}>
+                  {item.issue}
+                </Typography>
+              </Box>
+            </>
+          )}
+
+          {/* Action Section */}
+          {item.action && (
+            <>
+              <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: "rgba(59,130,246,0.12)",
+                  border: "1px solid rgba(59,130,246,0.25)",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: 12,
+                    color: "#93c5fd",
+                    mb: 0.6,
+                  }}
+                >
+                  💡 RECOMMENDED ACTION
+                </Typography>
+                <Typography sx={{ color: "#e5e7eb", fontSize: 13 }}>
+                  {item.action}
+                </Typography>
+              </Box>
+            </>
+          )}
+        </Stack>
+      </DialogContent>
+
+      <DialogActions
+        sx={{
+          pt: 1.5,
+          px: 3,
+          pb: 2.5,
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          gap: 1,
+        }}
+      >
+        <Button
+          onClick={onClose}
+          sx={{
+            textTransform: "none",
+            fontWeight: 600,
+            color: "#94a3b8",
+            "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
+          }}
+        >
+          Close
+        </Button>
+        <Button
+          onClick={handleRefresh}
+          startIcon={<RotateCcw size={16} />}
+          sx={{
+            textTransform: "none",
+            fontWeight: 600,
+            bgcolor: "rgba(124,92,255,0.16)",
+            color: "#c4b5fd",
+            border: "1px solid rgba(124,92,255,0.3)",
+            "&:hover": {
+              bgcolor: "rgba(124,92,255,0.25)",
+              borderColor: "rgba(124,92,255,0.5)",
+            },
+          }}
+        >
+          Refresh
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
