@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Alert, Box, Button, Grid, MenuItem, TextField, Typography } from "@mui/material";
-import DevLayout from "../../components/layout/DevLayout";
 import Card from "../../../components/ui/Card.jsx";
 import { getChatThread } from "../../data/chatStore";
 import { createDeveloperTicketOnBackendSafe } from "../../data/ticketApi";
@@ -58,7 +57,7 @@ export default function DevTicketCreate() {
   };
 
   return (
-    <DevLayout>
+    <>
       <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mb: 3 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>Ticket</Typography>
@@ -119,6 +118,6 @@ export default function DevTicketCreate() {
           </Grid>
         </Grid>
       </Card>
-    </DevLayout>
+    </>
   );
 }

@@ -24,3 +24,4 @@ export function hasAnyRole(user, allowedRoles = []) {
 
   return allowedRoles.some((role) => roleSet.has(normalizeRole(role)));
 }
+

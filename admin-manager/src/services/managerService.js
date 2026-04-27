@@ -26,8 +26,6 @@ export const fetchProjects = async () => {
   return normalizeArray(response.data);
 };
 
-export const getMyProjects = fetchProjects;
-
 export const fetchManagerTasks = async () => {
   const response = await api.get("/manager/tasks");
   return normalizeArray(response.data);
@@ -52,6 +50,21 @@ export const assignManagerTaskAssignee = async (taskId, assignedToId) => {
   const response = await api.patch(`/manager/tasks/${taskId}/assignee`, {
     assignedToId,
   });
+  return response.data;
+};
+
+export const updateProject = async (projectId, payload) => {
+  const response = await api.put(`/manager/projects/${projectId}`, payload);
+  return response.data;
+};
+
+export const updateManagerTask = async (taskId, payload) => {
+  const response = await api.put(`/manager/tasks/${taskId}`, payload);
+  return response.data;
+};
+
+export const fetchDeveloperProgressSummary = async (developerId) => {
+  const response = await api.get(`/developers/${developerId}/progress`);
   return response.data;
 };
 

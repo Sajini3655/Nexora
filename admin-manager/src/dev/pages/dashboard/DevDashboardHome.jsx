@@ -10,12 +10,12 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import DevLayout from "../../components/layout/DevLayout";
-import TicketWidget from "../../components/tickets/TicketWidget";
+
+import DeveloperTaskProgress from "../../components/tasks/DeveloperTaskProgress";
 import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
-import { loadDeveloperTicketsFromBackendSafe } from "../../data/ticketApi";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
 function isCompletedTask(task) {
   const status = String(task?.status || "").toLowerCase();
@@ -24,150 +24,205 @@ function isCompletedTask(task) {
 
 function isActiveTask(task) {
   const status = String(task?.status || "").toLowerCase();
-  return status === "assigned" || status === "in progress";
+  return (
+    status === "assigned" ||
+    status === "in progress" ||
+    status === "todo" ||
+    status === "in_progress"
+  );
 }
 
-function buildProjectSnapshot(tasks) {
-  const firstTask = tasks[0] || {};
-  const projectId = Number(firstTask.projectId);
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter((task) => isCompletedTask(task)).length;
-  const activeTasks = tasks.filter((task) => !isCompletedTask(task)).length;
-  const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+function getPointTotals(task) {
+  const totalPointValue = Number(
+    task?.totalPointValue ?? task?.estimatedPoints ?? task?.pointValue ?? 0
+  );
 
-  return {
-    id: Number.isFinite(projectId) ? projectId : null,
-    name: firstTask.projectName || "Assigned Work",
-    code: Number.isFinite(projectId) ? `#${projectId}` : "Not provided",
-    dueDate: firstTask.dueDate || "-",
-    progress,
-    totalTasks,
-    completedTasks,
-    activeTasks,
-  };
+  const completedPointValue = Number(
+    task?.completedPointValue ?? task?.completedPoints ?? 0
+  );
+
+  const fallbackTotal = Number(task?.totalStoryPoints ?? 0);
+  const fallbackCompleted = Number(task?.completedStoryPoints ?? 0);
+
+  const total = totalPointValue > 0 ? totalPointValue : fallbackTotal;
+  const completed =
+    totalPointValue > 0 ? completedPointValue : fallbackCompleted;
+
+  const progress =
+    total > 0 ? Math.round((completed * 100) / total) : isCompletedTask(task) ? 100 : 0;
+
+  return { total, completed, progress };
+}
+
+function getProjectKey(task) {
+  return String(
+    task?.projectId ||
+      task?.project?.id ||
+      task?.projectName ||
+      task?.project?.name ||
+      "project"
+  );
+}
+
+function getProjectName(task) {
+  return task?.projectName || task?.project?.name || "Assigned work";
+}
+
+function buildProjectSummaries(tasks) {
+  const summaries = new Map();
+
+  tasks.forEach((task) => {
+    const key = getProjectKey(task);
+
+    const current = summaries.get(key) || {
+      key,
+      id: task?.projectId || task?.project?.id || null,
+      name: getProjectName(task),
+      tasks: 0,
+      active: 0,
+      completed: 0,
+      totalPoints: 0,
+      completedPoints: 0,
+      progress: 0,
+    };
+
+    const totals = getPointTotals(task);
+
+    current.tasks += 1;
+    current.active += isCompletedTask(task) ? 0 : 1;
+    current.completed += isCompletedTask(task) ? 1 : 0;
+    current.totalPoints += totals.total;
+    current.completedPoints += totals.completed;
+
+    current.progress =
+      current.totalPoints > 0
+        ? Math.round((current.completedPoints * 100) / current.totalPoints)
+        : Math.round((current.completed * 100) / Math.max(current.tasks, 1));
+
+    summaries.set(key, current);
+  });
+
+  return Array.from(summaries.values()).sort(
+    (a, b) => b.completedPoints - a.completedPoints
+  );
 }
 
 export default function DevDashboardHome() {
   const [tasks, setTasks] = useState(() => loadTasks());
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => loadTasks().length === 0);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (options = {}) => {
+    const isBackground = Boolean(options.background);
+
     try {
-      setLoading(true);
+      if (isBackground) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError("");
 
-      const [syncedTasks, syncedTickets] = await Promise.all([
-        syncAssignedTasksToLocalStoreSafe(),
-        loadDeveloperTicketsFromBackendSafe(),
-      ]);
-
+      const syncedTasks = await syncAssignedTasksToLocalStoreSafe();
       setTasks(Array.isArray(syncedTasks) ? syncedTasks : loadTasks());
-      setTickets(Array.isArray(syncedTickets) ? syncedTickets : []);
     } catch (err) {
       setError(err?.message || "Failed to load developer dashboard data.");
       setTasks(loadTasks());
-      setTickets([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    loadDashboard();
+    loadDashboard({ background: tasks.length > 0 });
   }, [loadDashboard]);
 
   const liveTopics = useMemo(
-    () => ["/topic/developer.dashboard", "/topic/tasks", "/topic/tickets"],
+    () => ["/topic/developer.dashboard", "/topic/tasks"],
     []
   );
 
-  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 500 });
+  const refreshDashboard = useCallback(() => {
+    loadDashboard({ background: true });
+  }, [loadDashboard]);
 
-  const project = useMemo(() => buildProjectSnapshot(tasks), [tasks]);
+  useLiveRefresh(liveTopics, refreshDashboard, { debounceMs: 900 });
 
-  const stats = useMemo(() => {
-    const completed = tasks.filter((task) => isCompletedTask(task)).length;
-    const active = tasks.filter((task) => isActiveTask(task)).length;
-    const rate = tasks.length === 0 ? 0 : Math.round((completed / tasks.length) * 100);
+  const activeTasks = useMemo(
+    () => tasks.filter((task) => !isCompletedTask(task)),
+    [tasks]
+  );
 
-    return [
-      { title: "Assigned Tasks", value: tasks.length },
-      { title: "Active Tasks", value: active },
-      { title: "Completed", value: completed },
-      { title: "Tickets", value: tickets.length },
-      { title: "Completion", value: `${rate}%` },
-    ];
-  }, [tasks, tickets.length]);
+  const completedTasks = useMemo(
+    () => tasks.filter((task) => isCompletedTask(task)),
+    [tasks]
+  );
 
-  const recentTasks = tasks.slice(0, 5);
+  const projectSummaries = useMemo(() => buildProjectSummaries(tasks), [tasks]);
+
+  const totals = useMemo(() => {
+    const aggregate = tasks.reduce(
+      (acc, task) => {
+        const pointTotals = getPointTotals(task);
+        acc.totalPoints += pointTotals.total;
+        acc.completedPoints += pointTotals.completed;
+        return acc;
+      },
+      { totalPoints: 0, completedPoints: 0 }
+    );
+
+    const progress =
+      aggregate.totalPoints > 0
+        ? Math.round((aggregate.completedPoints * 100) / aggregate.totalPoints)
+        : tasks.length > 0
+          ? Math.round((completedTasks.length * 100) / tasks.length)
+          : 0;
+
+    return {
+      tasks: tasks.length,
+      activeTasks: activeTasks.length,
+      completedTasks: completedTasks.length,
+      totalPoints: aggregate.totalPoints,
+      completedPoints: aggregate.completedPoints,
+      progress,
+    };
+  }, [tasks, activeTasks.length, completedTasks.length]);
+
+  const topActiveTasks = activeTasks.slice(0, 4);
+  const topProjects = projectSummaries.slice(0, 4);
 
   return (
-    <DevLayout>
-      <Stack spacing={3}>
-        <Box
-          sx={{
-            p: { xs: 2.5, md: 3 },
-            borderRadius: 4,
-            border: "1px solid rgba(148,163,184,0.16)",
-            background:
-              "linear-gradient(135deg, rgba(109,93,252,0.22) 0%, rgba(15,23,42,0.92) 48%, rgba(8,15,29,0.96) 100%)",
-            boxShadow: "0 26px 80px rgba(0,0,0,0.35)",
-          }}
-        >
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            alignItems={{ xs: "flex-start", md: "center" }}
-            justifyContent="space-between"
-          >
-            <Box sx={{ maxWidth: 760 }}>
-              <Chip
-                size="small"
-                label="Developer Overview"
-                sx={{
-                  mb: 1.2,
-                  bgcolor: "rgba(124,92,255,0.16)",
-                  color: "#ddd6fe",
-                  border: "1px solid rgba(124,92,255,0.24)",
-                  fontWeight: 800,
-                }}
-              />
-              <Typography variant="h4" sx={{ fontWeight: 950, letterSpacing: -0.8 }}>
-                Your work, tickets, and live progress in one place.
-              </Typography>
-              <Typography variant="body2" sx={{ color: "#cbd5e1", mt: 1 }}>
-                A cleaner view of assigned tasks, ticket intake, and project momentum powered by the backend.
-              </Typography>
-            </Box>
-
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-              <Button
-                variant="contained"
-                sx={{
-                  bgcolor: "#6d5dfc",
-                  fontWeight: 800,
-                  "&:hover": { bgcolor: "#5a4de0" },
-                }}
-              >
-                Refresh data
-              </Button>
-              <Button
-                variant="outlined"
-                sx={{
-                  color: "#e2e8f0",
-                  borderColor: "rgba(226,232,240,0.18)",
-                  fontWeight: 800,
-                }}
-              >
-                Open tasks
-              </Button>
-            </Stack>
-          </Stack>
+    <Stack
+        spacing={3}
+        sx={{
+          pt: { xs: 0, md: 0 },
+          "& .MuiTypography-caption": { fontSize: 13.5 },
+          "& .MuiTypography-body2": { fontSize: 14.5 },
+        }}
+      >
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
+            Developer Dashboard
+          </Typography>
+          <Typography variant="body1" sx={{ color: "#94a3b8", fontSize: 15 }}>
+            Overview of assigned tasks, progress, and active projects.
+          </Typography>
         </Box>
 
         {error ? <Alert severity="warning">{error}</Alert> : null}
+
+        {refreshing && !loading ? (
+          <LinearProgress
+            sx={{
+              height: 4,
+              borderRadius: 999,
+              bgcolor: "rgba(255,255,255,0.08)",
+              "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+            }}
+          />
+        ) : null}
 
         {loading ? (
           <Box sx={{ display: "grid", placeItems: "center", minHeight: 260 }}>
@@ -181,154 +236,201 @@ export default function DevDashboardHome() {
                 gridTemplateColumns: {
                   xs: "1fr",
                   sm: "repeat(2, 1fr)",
-                  lg: "repeat(5, 1fr)",
+                  lg: "repeat(4, 1fr)",
                 },
                 gap: 2,
               }}
             >
-              {stats.map((stat) => (
-                <StatCard key={stat.title} title={stat.title} value={stat.value} />
-              ))}
+              <StatCard
+                title="Assigned Tasks"
+                value={totals.tasks}
+                hint={`${totals.activeTasks} active`}
+                badge="Live"
+                tone="blue"
+              />
+
+              <StatCard
+                title="Completed Tasks"
+                value={totals.completedTasks}
+                hint={`${totals.completedPoints} points done`}
+                badge="Done"
+                tone="green"
+              />
+
+              <StatCard
+                title="Weighted Progress"
+                value={`${totals.progress}%`}
+                hint={`${totals.completedPoints}/${totals.totalPoints} points`}
+                badge="Story Points"
+                tone="purple"
+              />
+
+              <StatCard
+                title="Ticket Tasks"
+                value={totals.tasks}
+                hint="Converted tickets appear as tasks"
+                badge="Backend"
+                tone="cyan"
+              />
             </Box>
 
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", lg: "0.8fr 1.2fr" },
+                gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
                 gap: 2,
               }}
             >
-              <Panel title="Current Work">
-                <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
-                  {project.name}
-                </Typography>
-
-                <Typography sx={{ color: "#94a3b8", fontSize: 13, mt: 0.5 }}>
-                  ID: {project.code} • Due: {project.dueDate}
-                </Typography>
-
-                <Box sx={{ mt: 2 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      mb: 0.8,
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                      Progress
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
-                      {project.progress}%
-                    </Typography>
-                  </Box>
-
-                  <LinearProgress
-                    variant="determinate"
-                    value={project.progress}
-                    sx={{
-                      height: 7,
-                      borderRadius: 999,
-                      bgcolor: "rgba(255,255,255,0.08)",
-                      "& .MuiLinearProgress-bar": {
-                        bgcolor: "#6d5dfc",
-                      },
-                    }}
-                  />
-                </Box>
-
-                <Typography variant="caption" sx={{ color: "#94a3b8", mt: 1.2, display: "block" }}>
-                  {project.totalTasks} tasks • {project.completedTasks} completed • {project.activeTasks} active
-                </Typography>
-              </Panel>
-
-              <Panel title="Recent Tasks">
-                {recentTasks.length === 0 ? (
+              <Panel title="Active Task List" subtitle="Compact list of your current work.">
+                {topActiveTasks.length === 0 ? (
                   <EmptyText>No assigned tasks found.</EmptyText>
                 ) : (
-                  <Box sx={{ overflowX: "auto" }}>
-                    <Box sx={{ minWidth: 650 }}>
-                      <TableHeader />
+                  <Stack spacing={1.25}>
+                    {topActiveTasks.map((task) => {
+                      const pointTotals = getPointTotals(task);
 
-                      {recentTasks.map((task) => (
-                        <Box
+                      return (
+                        <TaskCard
                           key={task.id}
-                          sx={{
-                            display: "grid",
-                            gridTemplateColumns: "1.3fr 1fr 0.8fr 0.8fr",
-                            gap: 1.5,
-                            alignItems: "center",
-                            py: 1.35,
-                            borderBottom: "1px solid rgba(255,255,255,0.06)",
-                          }}
-                        >
-                          <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
-                            {task.title}
-                          </Typography>
+                          task={task}
+                          totalPoints={pointTotals.total}
+                          completedPoints={pointTotals.completed}
+                          progress={pointTotals.progress}
+                        />
+                      );
+                    })}
+                  </Stack>
+                )}
+              </Panel>
 
-                          <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
-                            {task.projectName || "Backend Project"}
-                          </Typography>
-
-                          <StatusChip status={task.status || "Assigned"} />
-
-                          <Typography sx={{ color: "#cbd5e1", fontSize: 13 }}>
-                            {task.priority || "Medium"}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
+              <Panel title="My Projects" subtitle="Projects containing your assigned tasks.">
+                {topProjects.length === 0 ? (
+                  <EmptyText>No project data available yet.</EmptyText>
+                ) : (
+                  <Stack spacing={1.25}>
+                    {topProjects.map((project) => (
+                      <ProjectCard key={project.key} project={project} />
+                    ))}
+                  </Stack>
                 )}
               </Panel>
             </Box>
 
-            <TicketWidget
-              title="Tickets"
-              hint="Backend-visible tickets for this developer session"
-              tickets={tickets}
-            />
+            <DeveloperTaskProgress />
           </>
         )}
       </Stack>
-    </DevLayout>
   );
 }
 
-function StatCard({ title, value }) {
+function StatCard({ title, value, hint, badge, tone = "purple" }) {
+  const colors = {
+    blue: {
+      text: "#93c5fd",
+      bg: "rgba(59,130,246,0.14)",
+      border: "rgba(59,130,246,0.26)",
+    },
+    green: {
+      text: "#86efac",
+      bg: "rgba(34,197,94,0.12)",
+      border: "rgba(34,197,94,0.24)",
+    },
+    purple: {
+      text: "#c4b5fd",
+      bg: "rgba(124,92,255,0.14)",
+      border: "rgba(124,92,255,0.26)",
+    },
+    cyan: {
+      text: "#67e8f9",
+      bg: "rgba(6,182,212,0.12)",
+      border: "rgba(6,182,212,0.24)",
+    },
+  };
+
+  const color = colors[tone] || colors.purple;
+
   return (
     <Paper
+      elevation={0}
       sx={{
         p: 2.2,
+        minHeight: 132,
         borderRadius: 3,
-        bgcolor: "rgba(11,22,40,0.78)",
-        border: "1px solid rgba(148,163,184,0.12)",
-        boxShadow: "0 16px 40px rgba(0,0,0,0.18)",
+        background:
+          "linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035))",
+        border: "1px solid rgba(148,163,184,0.16)",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.24)",
       }}
     >
-      <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 700 }}>
-        {title}
-      </Typography>
-      <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.8, color: "#f8fafc" }}>
-        {value}
-      </Typography>
+      <Stack spacing={1.1}>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#94a3b8",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: 0.6,
+              fontSize: 12.5,
+            }}
+          >
+            {title}
+          </Typography>
+
+          {badge ? (
+            <Chip
+              size="small"
+              label={badge}
+              sx={{
+                height: 22,
+                color: color.text,
+                bgcolor: color.bg,
+                border: `1px solid ${color.border}`,
+                fontWeight: 900,
+                fontSize: 11.5,
+              }}
+            />
+          ) : null}
+        </Stack>
+
+        <Typography sx={{ fontWeight: 950, color: "#f8fafc", fontSize: 30, lineHeight: 1.15 }}>
+          {value}
+        </Typography>
+
+        <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: 14 }}>
+          {hint}
+        </Typography>
+      </Stack>
     </Paper>
   );
 }
 
-function Panel({ title, children }) {
+function Panel({ title, subtitle, children }) {
   return (
     <Paper
+      elevation={0}
       sx={{
-        p: 2.4,
+        p: 2.5,
         borderRadius: 3,
-        bgcolor: "rgba(11,22,40,0.8)",
-        border: "1px solid rgba(148,163,184,0.12)",
-        boxShadow: "0 18px 55px rgba(0,0,0,0.22)",
+        background:
+          "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.035))",
+        border: "1px solid rgba(148,163,184,0.14)",
+        boxShadow: "0 20px 55px rgba(0,0,0,0.24)",
       }}
     >
-      <Box sx={{ mb: 1.5 }}>
-        <Typography sx={{ fontWeight: 900 }}>{title}</Typography>
+      <Box sx={{ mb: 1.8 }}>
+        <Typography sx={{ fontWeight: 950, fontSize: 19 }}>
+          {title}
+        </Typography>
+
+        {subtitle ? (
+          <Typography
+            variant="body2"
+            sx={{ color: "#94a3b8", display: "block", mt: 0.4, fontSize: 14 }}
+          >
+            {subtitle}
+          </Typography>
+        ) : null}
       </Box>
 
       {children}
@@ -336,59 +438,111 @@ function Panel({ title, children }) {
   );
 }
 
-function TableHeader() {
+function TaskCard({ task, totalPoints, completedPoints, progress }) {
   return (
-    <Box
+    <Paper
+      elevation={0}
       sx={{
-        display: "grid",
-        gridTemplateColumns: "1.3fr 1fr 0.8fr 0.8fr",
-        gap: 1.5,
-        pb: 1,
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        p: 1.7,
+        borderRadius: 2.5,
+        bgcolor: "rgba(15,23,42,0.62)",
+        border: "1px solid rgba(148,163,184,0.12)",
       }}
     >
-      {["Task", "Project", "Status", "Priority"].map((heading) => (
-        <Typography
-          key={heading}
-          variant="caption"
-          sx={{ color: "#64748b", fontWeight: 900, textTransform: "uppercase" }}
-        >
-          {heading}
+      <Stack spacing={1.1}>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 900, fontSize: 15.5 }}>
+              {task.title || "Untitled task"}
+            </Typography>
+
+            <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.25, fontSize: 14 }}>
+              {getProjectName(task)} • {task.priority || "Medium"}
+            </Typography>
+          </Box>
+
+          <StatusBadge label={task.status || "Assigned"} />
+        </Stack>
+
+        <Box>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.6 }}>
+            <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: 13.5 }}>
+              Weighted progress
+            </Typography>
+
+            <Typography variant="body2" sx={{ color: "#cbd5e1", fontSize: 13.5 }}>
+              {progress}%
+            </Typography>
+          </Box>
+
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{
+              height: 7,
+              borderRadius: 999,
+              bgcolor: "rgba(255,255,255,0.08)",
+              "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+            }}
+          />
+        </Box>
+
+        <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: 13.5 }}>
+          {completedPoints}/{totalPoints} point value completed
         </Typography>
-      ))}
-    </Box>
+      </Stack>
+    </Paper>
   );
 }
 
-function StatusChip({ status }) {
-  const normalized = String(status || "").toLowerCase();
-
-  const color =
-    normalized === "completed" || normalized === "done"
-      ? "rgba(34,197,94,0.15)"
-      : normalized === "in progress"
-        ? "rgba(245,158,11,0.15)"
-        : "rgba(124,92,255,0.16)";
-
+function ProjectCard({ project }) {
   return (
-    <Chip
-      size="small"
-      label={status}
+    <Paper
+      elevation={0}
       sx={{
-        bgcolor: color,
-        color: "#e5e7eb",
-        border: "1px solid rgba(255,255,255,0.08)",
-        fontWeight: 700,
-        width: "fit-content",
+        p: 1.7,
+        borderRadius: 2.5,
+        bgcolor: "rgba(15,23,42,0.62)",
+        border: "1px solid rgba(148,163,184,0.12)",
       }}
-    />
+    >
+      <Stack spacing={1}>
+        <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="flex-start">
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 900, fontSize: 15.5 }}>
+              {project.name}
+            </Typography>
+
+            <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.25, fontSize: 14 }}>
+              {project.tasks} tasks • {project.active} active • {project.completed} completed
+            </Typography>
+          </Box>
+
+          <Typography sx={{ fontWeight: 950, color: "#c4b5fd", fontSize: 20 }}>
+            {project.progress}%
+          </Typography>
+        </Stack>
+
+        <LinearProgress
+          variant="determinate"
+          value={project.progress}
+          sx={{
+            height: 7,
+            borderRadius: 999,
+            bgcolor: "rgba(255,255,255,0.08)",
+            "& .MuiLinearProgress-bar": { bgcolor: "#a78bfa" },
+          }}
+        />
+      </Stack>
+    </Paper>
   );
 }
 
 function EmptyText({ children }) {
   return (
-    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+    <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: 14 }}>
       {children}
     </Typography>
   );
 }
+

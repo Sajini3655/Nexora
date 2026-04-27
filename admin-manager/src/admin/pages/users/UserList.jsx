@@ -87,7 +87,6 @@ export default function UserList() {
       setItems(data?.items ?? []);
       setTotalPages(Math.max(data?.totalPages ?? 1, 1));
     } catch (e) {
-      console.error(e);
       setError(extractError(e));
     } finally {
       fetching.current = false;
@@ -641,7 +640,7 @@ const headCell = {
 };
 
 const tableCellBase = {
-  background: "rgba(255,255,255,0.03)",
+  background: "#0f1b2f",
   borderBottom: "none",
   whiteSpace: "nowrap",
 };
@@ -668,5 +667,6 @@ const tableEmptyCell = {
   borderBottom: "none",
   py: 4,
 };
+
 
 

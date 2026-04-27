@@ -1,9 +1,11 @@
 package com.admin.controller;
 
 import com.admin.dto.AssignTicketRequest;
+import com.admin.dto.TaskDto;
 import com.admin.dto.TicketDto;
 import com.admin.entity.Ticket;
 import com.admin.service.TicketService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +43,9 @@ public class TicketController {
                     COALESCE(t.title, 'Untitled ticket') AS title,
                     COALESCE(t.priority, 'MEDIUM') AS priority,
                     COALESCE(t.status, 'OPEN') AS status,
+                    t.project_id AS project_id,
                     t.assigned_to AS assigned_to_id,
+                    t.assigned_task_id AS assigned_task_id,
                     t.created_at,
                     t.description,
                     t.source_channel,
@@ -49,9 +53,20 @@ public class TicketController {
                     p.name AS project_name
                 FROM tickets t
                 LEFT JOIN projects p ON p.id = t.project_id
-                WHERE t.description ILIKE '%Source: EMAIL%'
-                   OR UPPER(COALESCE(t.source_channel, '')) = 'EMAIL'
-                   OR UPPER(COALESCE(t.source_channel, '')) = 'CHAT_SUMMARY'
+                WHERE (
+                        t.description ILIKE '%Source: EMAIL%'
+                        OR UPPER(TRIM(COALESCE(t.source_channel, ''))) = 'EMAIL'
+                        OR UPPER(TRIM(COALESCE(t.source_channel, ''))) = 'CHAT_SUMMARY'
+                    )
+                    AND UPPER(TRIM(COALESCE(t.status, 'OPEN'))) = 'OPEN'
+                    AND t.assigned_task_id IS NULL
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM tasks task_check
+                        WHERE task_check.title = t.title
+                          AND task_check.project_id = t.project_id
+                          AND task_check.assigned_to_id IS NOT NULL
+                    )
                 ORDER BY t.created_at DESC NULLS LAST
                 LIMIT 5
                 """;
@@ -64,11 +79,14 @@ public class TicketController {
             ticket.put("title", rs.getString("title"));
             ticket.put("priority", rs.getString("priority"));
             ticket.put("status", rs.getString("status"));
+            ticket.put("projectId", rs.getObject("project_id", Long.class));
             ticket.put("sourceEmail", fallbackSourceEmail(rs.getString("source_email"), description));
             ticket.put("sourceChannel", fallbackSourceChannel(rs.getString("source_channel"), description));
             ticket.put("assignedToId", rs.getObject("assigned_to_id", Long.class));
+            ticket.put("assignedTaskId", rs.getObject("assigned_task_id", Long.class));
             ticket.put("createdAt", rs.getObject("created_at"));
             ticket.put("projectName", rs.getString("project_name"));
+            ticket.put("description", description);
 
             return ticket;
         });
@@ -136,15 +154,27 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.updateTicket(authentication.getName(), id, ticket));
     }
 
-    @PatchMapping("/{id}/assign")
+    @PostMapping("/{id}/assign")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public ResponseEntity<TicketDto> assignTicket(
+    public ResponseEntity<TaskDto> assignTicketPost(
             @PathVariable Long id,
-            @RequestBody AssignTicketRequest request,
+            @Valid @RequestBody AssignTicketRequest request,
             Authentication authentication
     ) {
         return ResponseEntity.ok(
-                ticketService.assignTicket(authentication.getName(), id, request.getAssignedToId())
+                ticketService.convertTicketToTask(authentication.getName(), id, request)
+        );
+    }
+
+    @PatchMapping("/{id}/assign")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ResponseEntity<TaskDto> assignTicketPatch(
+            @PathVariable Long id,
+            @Valid @RequestBody AssignTicketRequest request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                ticketService.convertTicketToTask(authentication.getName(), id, request)
         );
     }
 
@@ -157,3 +187,4 @@ public class TicketController {
         return ResponseEntity.ok().build();
     }
 }
+

@@ -5,6 +5,7 @@ import com.admin.entity.*;
 import com.admin.exception.ResourceNotFoundException;
 import com.admin.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,10 +17,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TaskAssignmentService {
 
+    private static final List<TaskStatus> COMPLETED_TASK_STATUSES = List.of(TaskStatus.DONE, TaskStatus.COMPLETED);
+
     private final UserRepository userRepository;
     private final DeveloperProfileRepository profileRepository;
     private final DeveloperSkillRepository skillRepository;
     private final TaskRepository taskRepository;
+    private final TaskStoryPointRepository storyPointRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
 
     /**
@@ -151,6 +155,34 @@ public class TaskAssignmentService {
         return dto;
     }
 
+    @Transactional
+    public TaskDto updateTaskDetails(String managerEmail, Long taskId, UpdateTaskRequest req) {
+        User manager = userRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
+        TaskItem task = taskRepository.findById(Objects.requireNonNull(taskId))
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (task.getCreatedBy() == null || task.getCreatedBy().getId() == null
+                || !task.getCreatedBy().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only update your own tasks");
+        }
+
+        task.setTitle(req.getTitle().trim());
+        task.setDescription(req.getDescription());
+        task.setPriority(req.getPriority() == null ? TaskPriority.MEDIUM : req.getPriority());
+        task.setDueDate(req.getDueDate());
+        if (req.getStatus() != null) {
+            task.setStatus(req.getStatus());
+        }
+        task.setUpdatedAt(LocalDateTime.now());
+
+        TaskItem saved = taskRepository.save(task);
+        TaskDto dto = toTaskDto(saved);
+        liveUpdatePublisher.publishTasksChanged("updated");
+        return dto;
+    }
+
     @Transactional(readOnly = true)
     public List<TaskDto> listManagerTasks(String managerEmail) {
         User manager = userRepository.findByEmail(managerEmail)
@@ -171,7 +203,7 @@ public class TaskAssignmentService {
                         .capacityPoints(20)
                         .build());
 
-        Integer workload = taskRepository.sumActivePoints(devUser.getId(), TaskStatus.DONE);
+        Integer workload = taskRepository.sumActivePoints(devUser.getId(), COMPLETED_TASK_STATUSES);
         List<DeveloperSkill> skills = profile.getId() == null ? List.of() : skillRepository.findByProfileId(profile.getId());
 
         List<SkillDto> skillDtos = skills.stream()
@@ -191,6 +223,19 @@ public class TaskAssignmentService {
     }
 
     private TaskDto toTaskDto(TaskItem t) {
+        long totalStoryPoints = storyPointRepository.countByTaskId(t.getId());
+        long completedStoryPoints = storyPointRepository.countByTaskIdAndStatus(t.getId(), StoryPointStatus.DONE);
+        long totalPointValue = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(t.getId()).stream()
+            .mapToLong(point -> point.getPointValue() == null ? 0 : point.getPointValue())
+            .sum();
+        long completedPointValue = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(t.getId()).stream()
+            .filter(point -> point.getStatus() == StoryPointStatus.DONE)
+            .mapToLong(point -> point.getPointValue() == null ? 0 : point.getPointValue())
+            .sum();
+        int progressPercentage = totalPointValue > 0
+            ? (int) Math.round((completedPointValue * 100.0) / totalPointValue)
+            : (totalStoryPoints == 0 ? 0 : (int) Math.round((completedStoryPoints * 100.0) / totalStoryPoints));
+
         return TaskDto.builder()
                 .id(t.getId())
                 .title(t.getTitle())
@@ -205,6 +250,11 @@ public class TaskAssignmentService {
                 .createdAt(t.getCreatedAt())
                 .projectId(t.getProject() == null ? null : t.getProject().getId())
                 .projectName(t.getProject() == null ? null : t.getProject().getName())
+                .totalStoryPoints(totalStoryPoints)
+                .completedStoryPoints(completedStoryPoints)
+                .totalPointValue(totalPointValue)
+                .completedPointValue(completedPointValue)
+                .progressPercentage(progressPercentage)
                 .build();
     }
 

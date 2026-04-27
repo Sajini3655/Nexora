@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Box, CircularProgress, Paper, Stack, Typography } from "@mui/material";
-import ClientLayout from "../../components/layout/ClientLayout";
 import { fetchClientProfile } from "../../services/clientService";
 
 export default function ClientProfile() {
@@ -11,7 +10,7 @@ export default function ClientProfile() {
   }, []);
 
   return (
-    <ClientLayout>
+    <>
       <Stack spacing={3}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 900 }}>
@@ -46,7 +45,7 @@ export default function ClientProfile() {
           )}
         </Paper>
       </Stack>
-    </ClientLayout>
+    </>
   );
 }
 
@@ -70,3 +69,4 @@ function ProfileRow({ label, value }) {
     </Box>
   );
 }
+

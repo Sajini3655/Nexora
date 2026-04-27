@@ -9,7 +9,6 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import ClientLayout from "../../components/layout/ClientLayout";
 import { fetchClientProjects } from "../../services/clientService";
 
 export default function ClientProjectList() {
@@ -44,7 +43,7 @@ export default function ClientProjectList() {
   }, []);
 
   return (
-    <ClientLayout>
+    <>
       <Stack spacing={3}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 900 }}>
@@ -82,7 +81,7 @@ export default function ClientProjectList() {
                   sx={{
                     p: 1.8,
                     borderRadius: 2,
-                    bgcolor: "rgba(255,255,255,0.03)",
+                    bgcolor: "#0f1b2f",
                     border: "1px solid rgba(255,255,255,0.07)",
                   }}
                 >
@@ -104,16 +103,7 @@ export default function ClientProjectList() {
                       </Typography>
                     </Box>
 
-                    <Chip
-                      size="small"
-                      label={project.status}
-                      sx={{
-                        bgcolor: "rgba(124,92,255,0.16)",
-                        color: "#e5e7eb",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        fontWeight: 700,
-                      }}
-                    />
+                    <StatusBadge label={project.status} />
                   </Box>
 
                   <LinearProgress
@@ -138,6 +128,8 @@ export default function ClientProjectList() {
           )}
         </Paper>
       </Stack>
-    </ClientLayout>
+    </>
   );
 }
+
+

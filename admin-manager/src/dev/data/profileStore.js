@@ -149,3 +149,4 @@ export async function syncProfileToBackend(profile) {
   saveProfile(merged);
   return merged;
 }
+

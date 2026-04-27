@@ -32,3 +32,4 @@ export default function useLiveRefresh(topics, onRefresh, options = {}) {
     };
   }, [topics, onRefresh, debounceMs, enabled]);
 }
+

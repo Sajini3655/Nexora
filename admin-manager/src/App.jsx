@@ -12,7 +12,6 @@ import UserList from "./admin/pages/users/UserList.jsx";
 
 import ManagerDashboard from "./manager/pages/dashboard/ManagerDashboard.jsx";
 import AddProject from "./manager/pages/projects/AddProject.jsx";
-import ProjectDetails from "./manager/pages/projects/ProjectDetails.jsx";
 import ProjectManagement from "./manager/pages/projects/ProjectManagement.jsx";
 import ProjectManagementDetails from "./manager/pages/projects/ProjectManagementDetails.jsx";
 import AIAssignment from "./manager/pages/ai/AIAssignment.jsx";
@@ -40,12 +39,41 @@ import ClientSettings from "./client/pages/settings/ClientSettings.jsx";
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
 import Sidebar from "./components/layout/Sidebar.jsx";
 import ManagerSidebar from "./components/layout/ManagerSidebar.jsx";
-import ManagerTopbar from "./components/layout/ManagerTopbar.jsx";
+import DevSidebar from "./dev/components/layout/DevSidebar.jsx";
+import ClientSidebar from "./client/components/layout/ClientSidebar.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
+import { layoutGaps } from "./theme/layoutGaps.js";
 
 import { useAuth } from "./context/AuthContext.jsx";
+import { useLayout } from "./context/LayoutContext.jsx";
 
-function AdminShell({ children }) {
+/**
+ * Unified shell component for all roles (Admin, Manager, Developer, Client)
+ * Uses consistent spacing from layoutGaps for visual alignment
+ */
+function UnifiedShell({ children, role }) {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const { openSidebar: adminOpenSidebar } = useLayout();
+
+  // Determine which sidebar to render
+  const renderSidebar = () => {
+    switch (role?.toUpperCase()) {
+      case "ADMIN":
+        return <Sidebar />;
+      case "MANAGER":
+        return <ManagerSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />;
+      case "DEVELOPER":
+        return <DevSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />;
+      case "CLIENT":
+        return <ClientSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />;
+      default:
+        return null;
+    }
+  };
+
+  // Admin uses context for sidebar, others use state
+  const handleMenuClick = role?.toUpperCase() === "ADMIN" ? adminOpenSidebar : () => setSidebarOpen(true);
+
   return (
     <div
       style={{
@@ -55,36 +83,16 @@ function AdminShell({ children }) {
           "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.08), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
       }}
     >
-      <Sidebar />
+      {renderSidebar()}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <Topbar />
-        <div style={{ minHeight: 72 }} />
-        <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ManagerShell({ children }) {
-  const [open, setOpen] = React.useState(false);
-  const handleToggle = () => setOpen((prev) => !prev);
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.08), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
-      }}
-    >
-      <ManagerSidebar open={open} onClose={() => setOpen(false)} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <ManagerTopbar onMenuClick={handleToggle} />
-        <div style={{ minHeight: 72 }} />
-        <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
+        <Topbar onMenuClick={handleMenuClick} />
+        <div
+          style={{
+            padding: `${layoutGaps.adminManager.top}px ${layoutGaps.adminManager.side}px ${layoutGaps.adminManager.bottom}px`,
+            maxWidth: `${layoutGaps.maxContentWidth}px`,
+            margin: "0 auto",
+          }}
+        >
           {children}
         </div>
       </div>
@@ -103,13 +111,7 @@ function RoleShell({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  const role = user.role?.toUpperCase();
-
-  return role === "ADMIN" ? (
-    <AdminShell>{children}</AdminShell>
-  ) : (
-    <ManagerShell>{children}</ManagerShell>
-  );
+  return <UnifiedShell role={user.role}>{children}</UnifiedShell>;
 }
 
 export default function App() {
@@ -125,25 +127,25 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <AdminShell>
+            <UnifiedShell role="ADMIN">
               <AdminDashboard />
-            </AdminShell>
+            </UnifiedShell>
           }
         />
         <Route
           path="/access"
           element={
-            <AdminShell>
+            <UnifiedShell role="ADMIN">
               <AccessControl />
-            </AdminShell>
+            </UnifiedShell>
           }
         />
         <Route
           path="/settings"
           element={
-            <AdminShell>
+            <UnifiedShell role="ADMIN">
               <AdminSettingsPage />
-            </AdminShell>
+            </UnifiedShell>
           }
         />
       </Route>
@@ -152,9 +154,9 @@ export default function App() {
         <Route
           path="/manager"
           element={
-            <ManagerShell>
+            <UnifiedShell role="MANAGER">
               <ManagerDashboard />
-            </ManagerShell>
+            </UnifiedShell>
           }
         />
       </Route>
@@ -163,41 +165,41 @@ export default function App() {
         <Route
           path="/manager/projects"
           element={
-            <ManagerShell>
-              <AddProject />
-            </ManagerShell>
+            <UnifiedShell role="MANAGER">
+              <ProjectManagement />
+            </UnifiedShell>
           }
         />
         <Route
           path="/manager/projects/:projectId"
           element={
-            <ManagerShell>
-              <ProjectDetails />
-            </ManagerShell>
+            <UnifiedShell role="MANAGER">
+              <ProjectManagementDetails />
+            </UnifiedShell>
           }
         />
         <Route
           path="/manager/project-management"
           element={
-            <ManagerShell>
+            <UnifiedShell role="MANAGER">
               <ProjectManagement />
-            </ManagerShell>
+            </UnifiedShell>
           }
         />
         <Route
           path="/manager/project-management/:projectId"
           element={
-            <ManagerShell>
+            <UnifiedShell role="MANAGER">
               <ProjectManagementDetails />
-            </ManagerShell>
+            </UnifiedShell>
           }
         />
         <Route
           path="/manager/add-project"
           element={
-            <ManagerShell>
+            <UnifiedShell role="MANAGER">
               <AddProject />
-            </ManagerShell>
+            </UnifiedShell>
           }
         />
       </Route>
@@ -206,9 +208,9 @@ export default function App() {
         <Route
           path="/manager/ai-assignment"
           element={
-            <ManagerShell>
+            <UnifiedShell role="MANAGER">
               <AIAssignment />
-            </ManagerShell>
+            </UnifiedShell>
           }
         />
       </Route>
@@ -233,49 +235,50 @@ export default function App() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="DASHBOARD" />}>
-        <Route path="/dev" element={<DevDashboardHome />} />
+        <Route path="/dev" element={<UnifiedShell role="DEVELOPER"><DevDashboardHome /></UnifiedShell>} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="FILES" />}>
-        <Route path="/dev/project/:id" element={<DevWorkspace />} />
+        <Route path="/dev/project/:id" element={<UnifiedShell role="DEVELOPER"><DevWorkspace /></UnifiedShell>} />
 
-        <Route path="/dev/projects" element={<DevProjectList />} />
-        <Route path="/dev/projects/:id" element={<DevProjectView />} />
+        <Route path="/dev/projects" element={<UnifiedShell role="DEVELOPER"><DevProjectList /></UnifiedShell>} />
+        <Route path="/dev/projects/:id" element={<UnifiedShell role="DEVELOPER"><DevProjectView /></UnifiedShell>} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="TASKS" />}>
-        <Route path="/dev/tasks" element={<DevTaskList />} />
-        <Route path="/dev/tasks/:id" element={<DevTaskView />} />
+        <Route path="/dev/tasks" element={<UnifiedShell role="DEVELOPER"><DevTaskList /></UnifiedShell>} />
+        <Route path="/dev/tasks/:id" element={<UnifiedShell role="DEVELOPER"><DevTaskView /></UnifiedShell>} />
 
-        <Route path="/dev/tickets/new" element={<DevTicketCreate />} />
-        <Route path="/dev/tickets/:id" element={<DevTicketView />} />
+        <Route path="/dev/tickets/new" element={<UnifiedShell role="DEVELOPER"><DevTicketCreate /></UnifiedShell>} />
+        <Route path="/dev/tickets/:id" element={<UnifiedShell role="DEVELOPER"><DevTicketView /></UnifiedShell>} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} />}>
 
-        <Route path="/dev/profile" element={<DevProfile />} />
+        <Route path="/dev/profile" element={<UnifiedShell role="DEVELOPER"><DevProfile /></UnifiedShell>} />
 
-        <Route path="/dev/settings" element={<DevSettings />} />
+        <Route path="/dev/settings" element={<UnifiedShell role="DEVELOPER"><DevSettings /></UnifiedShell>} />
 
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="CHAT" />}>
 
-        <Route path="/dev/chat" element={<DevChat />} />
-        <Route path="/dev/chat/:projectId" element={<DevChat />} />
+        <Route path="/dev/chat" element={<UnifiedShell role="DEVELOPER"><DevChat /></UnifiedShell>} />
+        <Route path="/dev/chat/:projectId" element={<UnifiedShell role="DEVELOPER"><DevChat /></UnifiedShell>} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
-        <Route path="/client" element={<ClientDashboardHome />} />
-        <Route path="/client/projects" element={<ClientProjectList />} />
-        <Route path="/client/tickets" element={<ClientTicketList />} />
-        <Route path="/client/profile" element={<ClientProfile />} />
-        <Route path="/client/settings" element={<ClientSettings />} />
+        <Route path="/client" element={<UnifiedShell role="CLIENT"><ClientDashboardHome /></UnifiedShell>} />
+        <Route path="/client/projects" element={<UnifiedShell role="CLIENT"><ClientProjectList /></UnifiedShell>} />
+        <Route path="/client/tickets" element={<UnifiedShell role="CLIENT"><ClientTicketList /></UnifiedShell>} />
+        <Route path="/client/profile" element={<UnifiedShell role="CLIENT"><ClientProfile /></UnifiedShell>} />
+        <Route path="/client/settings" element={<UnifiedShell role="CLIENT"><ClientSettings /></UnifiedShell>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
+
 
 

@@ -1,35 +1,72 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Box, Chip, CircularProgress, Grid, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Chip,
+  CircularProgress,
+  Grid,
+  LinearProgress,
+  TextField,
+  Typography,
+} from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import DevLayout from "../../components/layout/DevLayout";
 import Card from "../../../components/ui/Card.jsx";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
+
+function numberOrZero(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function isDone(task) {
+  const status = String(task?.status || "").toLowerCase();
+  return status === "completed" || status === "done";
+}
+
+function getTaskProjectKey(task) {
+  return String(task.projectId || task.projectName || "project-unknown");
+}
+
+function getTaskProjectName(task) {
+  return task.projectName || `Project ${task.projectId || "Unknown"}`;
+}
 
 function buildProjects(tasks) {
   const groups = new Map();
 
   tasks.forEach((task) => {
-    const key = String(task.projectId || task.projectName || "project-unknown");
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
+    const key = getTaskProjectKey(task);
+    if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(task);
   });
 
   return [...groups.entries()].map(([key, list]) => {
-    const total = list.length;
-    const done = list.filter((task) => String(task.status).toLowerCase() === "completed" || String(task.status).toLowerCase() === "done").length;
-    const progress = total === 0 ? 0 : Math.round((done / total) * 100);
+    const taskCount = list.length;
+    const completedTasks = list.filter(isDone).length;
+
+    const totalPointValue = list.reduce((sum, task) => sum + numberOrZero(task.totalPointValue), 0);
+    const completedPointValue = list.reduce((sum, task) => sum + numberOrZero(task.completedPointValue), 0);
+
+    const progress =
+      totalPointValue > 0
+        ? Math.round((completedPointValue * 100) / totalPointValue)
+        : taskCount > 0
+          ? Math.round((completedTasks * 100) / taskCount)
+          : 0;
+
     return {
       id: String(list[0]?.projectId || key),
-      name: list[0]?.projectName || `Project ${key}`,
-      manager: "Backend",
+      name: getTaskProjectName(list[0]),
       progress,
-      taskCount: total,
+      taskCount,
+      completedTasks,
+      totalPointValue,
+      completedPointValue,
       status: progress === 100 ? "Completed" : progress > 0 ? "Active" : "Planning",
-      description: list[0]?.description || "Backend-derived project grouped from assigned tasks.",
+      description: "Projects containing your assigned tasks.",
     };
   });
 }
@@ -43,6 +80,7 @@ export default function DevProjectList() {
 
   useEffect(() => {
     let active = true;
+
     const loadData = async () => {
       try {
         setLoading(true);
@@ -60,19 +98,23 @@ export default function DevProjectList() {
     };
 
     loadData();
+
     return () => {
       active = false;
     };
   }, []);
 
   const projects = useMemo(() => buildProjects(tasks), [tasks]);
+
   const filteredProjects = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return projects.filter((project) => `${project.name} ${project.manager} ${project.id}`.toLowerCase().includes(q));
+    return projects.filter((project) =>
+      `${project.name} ${project.id}`.toLowerCase().includes(q)
+    );
   }, [projects, search]);
 
   return (
-    <DevLayout>
+    <>
       <Box
         sx={{
           mb: 3,
@@ -84,10 +126,10 @@ export default function DevProjectList() {
         }}
       >
         <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.5 }}>
-          Projects
+          My Projects
         </Typography>
         <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.75 }}>
-          Projects are grouped from backend tasks assigned to you.
+          Projects containing your assigned tasks.
         </Typography>
       </Box>
 
@@ -96,7 +138,7 @@ export default function DevProjectList() {
       <TextField
         fullWidth
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(event) => setSearch(event.target.value)}
         placeholder="Search projects or ids..."
         sx={{
           mb: 3,
@@ -117,37 +159,39 @@ export default function DevProjectList() {
           {filteredProjects.map((project) => (
             <Grid item xs={12} md={6} lg={4} key={project.id}>
               <Card
-                sx={{
-                  p: 2.5,
-                  height: "100%",
-                  cursor: "pointer",
-                }}
+                sx={{ p: 2.5, height: "100%", cursor: "pointer" }}
                 onClick={() => navigate(`/dev/projects/${project.id}`)}
               >
-                <Chip
-                  label={project.status}
-                  size="small"
-                  sx={{
-                    mb: 1.5,
-                    bgcolor:
-                      project.status === "Completed"
-                        ? "rgba(34,197,94,0.16)"
-                        : project.status === "Active"
-                          ? "rgba(59,130,246,0.16)"
-                          : "rgba(124,92,255,0.16)",
-                    color: "#e5e7eb",
-                    fontWeight: 800,
-                  }}
-                />
+                <StatusBadge label={project.status} sx={{ mb: 1.5 }} />
+
                 <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
                   {project.name}
                 </Typography>
+
                 <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.76)" }}>
                   {project.description}
                 </Typography>
-                <Box sx={{ mt: 2, display: "flex", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
-                  <Typography variant="caption">Tasks: {project.taskCount}</Typography>
-                  <Typography variant="caption">Progress: {project.progress}%</Typography>
+
+                <Box sx={{ mt: 2 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.7 }}>
+                    <Typography variant="caption">Tasks: {project.taskCount}</Typography>
+                    <Typography variant="caption">{project.progress}%</Typography>
+                  </Box>
+
+                  <LinearProgress
+                    variant="determinate"
+                    value={project.progress}
+                    sx={{
+                      height: 7,
+                      borderRadius: 999,
+                      bgcolor: "rgba(255,255,255,0.08)",
+                      "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+                    }}
+                  />
+
+                  <Typography variant="caption" sx={{ display: "block", mt: 0.8, color: "#94a3b8" }}>
+                    Weighted Points: {project.completedPointValue} / {project.totalPointValue}
+                  </Typography>
                 </Box>
               </Card>
             </Grid>
@@ -156,7 +200,7 @@ export default function DevProjectList() {
           {filteredProjects.length === 0 ? (
             <Grid item xs={12}>
               <Card sx={{ p: 3, textAlign: "center" }}>
-                <Typography variant="body1">No backend projects found.</Typography>
+                <Typography variant="body1">No assigned project work found.</Typography>
               </Card>
             </Grid>
           ) : null}
@@ -165,3 +209,7 @@ export default function DevProjectList() {
     </DevLayout>
   );
 }
+
+
+
+

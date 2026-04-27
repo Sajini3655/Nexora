@@ -58,3 +58,4 @@ export function getActiveRole(user) {
 
   return getDefaultRole(user);
 }
+

@@ -17,8 +17,22 @@ def get_first_available_model():
     try:
         available_models = client.models.list()
         for m in available_models:
-            if m.id in SAFE_CHAT_MODELS:
-                return m.id
+            # Some SDK responses can include tuples or plain dict-like entries.
+            model_id = None
+
+            if hasattr(m, "id"):
+                model_id = m.id
+            elif isinstance(m, tuple) and len(m) > 0:
+                first = m[0]
+                if hasattr(first, "id"):
+                    model_id = first.id
+                elif isinstance(first, str):
+                    model_id = first
+            elif isinstance(m, dict):
+                model_id = m.get("id")
+
+            if model_id in SAFE_CHAT_MODELS:
+                return model_id
     except Exception as e:
         print("Error fetching models:", e)
 

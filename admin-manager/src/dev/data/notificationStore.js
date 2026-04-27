@@ -80,3 +80,4 @@ export function markRead(id) {
   saveNotifications(next);
   return next;
 }
+

@@ -10,7 +10,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import ClientLayout from "../../components/layout/ClientLayout";
 import CategoryPicker from "../../components/tickets/CategoryPicker";
 import {
   clientTicketCategories,
@@ -81,7 +80,7 @@ export default function ClientTicketList() {
   };
 
   return (
-    <ClientLayout>
+    <>
       <Stack spacing={3}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 900 }}>
@@ -262,7 +261,7 @@ export default function ClientTicketList() {
           )}
         </Paper>
       </Stack>
-    </ClientLayout>
+    </>
   );
 }
 
@@ -275,16 +274,8 @@ function StatusChip({ status }) {
         : "rgba(124,92,255,0.16)";
 
   return (
-    <Chip
-      size="small"
-      label={status}
-      sx={{
-        bgcolor: color,
-        color: "#e5e7eb",
-        border: "1px solid rgba(255,255,255,0.08)",
-        fontWeight: 700,
-        width: "fit-content",
-      }}
-    />
+    <StatusBadge label={status} />
   );
 }
+
+

@@ -122,7 +122,6 @@ export default function AccessControl() {
         setSelectedUserId((prev) => prev ?? usersData[0].id);
       }
     } catch (err) {
-      console.error(err);
       setError("Failed to load access control data.");
     } finally {
       setLoading(false);
@@ -140,7 +139,6 @@ export default function AccessControl() {
       }
       setOverrides(shaped);
     } catch (err) {
-      console.error(err);
       setError("Failed to load user overrides.");
     }
   };
@@ -199,7 +197,6 @@ export default function AccessControl() {
 
       setSuccess("Access control changes saved.");
     } catch (err) {
-      console.error(err);
       setError("Failed to save access control changes.");
     } finally {
       setSaving(false);
@@ -441,3 +438,4 @@ function UserOverrides({
     </Box>
   );
 }
+

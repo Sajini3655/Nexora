@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
-import DevLayout from "../../components/layout/DevLayout";
 import Card from "../../../components/ui/Card.jsx";
 import { loadUserTickets } from "../../data/ticketStore";
 import { fetchDeveloperTicketByIdFromBackend, loadDeveloperTicketByIdFromBackendSafe } from "../../data/ticketApi";
@@ -63,17 +62,15 @@ export default function DevTicketView() {
 
   if (loading) {
     return (
-      <DevLayout>
-        <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
-          <CircularProgress sx={{ color: "#6b51ff" }} />
-        </Box>
-      </DevLayout>
+      <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
+        <CircularProgress sx={{ color: "#6b51ff" }} />
+      </Box>
     );
   }
 
   if (!ticket) {
     return (
-      <DevLayout>
+      <>
         {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
         <Card sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 900 }}>Ticket not found</Typography>
@@ -84,12 +81,12 @@ export default function DevTicketView() {
             <Chip component={Link} clickable to="/dev" label="Back to dashboard" />
           </Box>
         </Card>
-      </DevLayout>
+      </>
     );
   }
 
   return (
-    <DevLayout>
+    <>
       <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mb: 3 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>Ticket</Typography>
@@ -146,7 +143,7 @@ export default function DevTicketView() {
           </Card>
         </Grid>
       </Grid>
-    </DevLayout>
+    </>
   );
 }
 

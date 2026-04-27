@@ -28,9 +28,6 @@ function extractErrorMessage(error) {
   const data = error?.response?.data;
   const status = error?.response?.status;
 
-  console.error("Invite API status:", status);
-  console.error("Invite API response data:", data);
-
   if (status === 401 || status === 403) {
     return "Your session expired. Please log in again.";
   }
@@ -128,7 +125,6 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
     } catch (e) {
       const message = extractErrorMessage(e);
       setErr(message);
-      console.error("Invite failed:", e);
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ package com.admin.controller;
 
 import com.admin.dto.CreateProjectRequest;
 import com.admin.dto.ProjectResponse;
+import com.admin.dto.UpdateProjectRequest;
 import com.admin.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,5 +32,15 @@ public class ProjectController {
     @GetMapping("/mine")
     public ResponseEntity<List<ProjectResponse>> getMyProjects(Authentication authentication) {
         return ResponseEntity.ok(projectService.getMyProjects(authentication));
+    }
+
+    @PutMapping("/{projectId}")
+    public ResponseEntity<ProjectResponse> updateProject(
+            @PathVariable Long projectId,
+            @Valid @RequestBody UpdateProjectRequest request,
+            Authentication authentication
+    ) {
+        ProjectResponse response = projectService.updateProject(projectId, request, authentication);
+        return ResponseEntity.ok(response);
     }
 }

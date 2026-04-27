@@ -27,4 +27,10 @@ public class TaskDto {
 
     private Long projectId;
     private String projectName;
+
+    private Long totalStoryPoints;
+    private Long completedStoryPoints;
+    private Long totalPointValue;
+    private Long completedPointValue;
+    private Integer progressPercentage;
 }

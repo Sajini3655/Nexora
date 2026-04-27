@@ -21,3 +21,4 @@ export default function CategoryPicker({ value, categories, onSelect }) {
     </TextField>
   );
 }
+

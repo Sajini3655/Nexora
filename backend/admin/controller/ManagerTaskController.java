@@ -47,4 +47,13 @@ public class ManagerTaskController {
     public ResponseEntity<List<TaskDto>> listMyTasks(Authentication authentication) {
         return ResponseEntity.ok(taskAssignmentService.listManagerTasks(authentication.getName()));
     }
+
+    @PutMapping("/tasks/{taskId}")
+    public ResponseEntity<TaskDto> updateTaskDetails(
+            Authentication authentication,
+            @PathVariable Long taskId,
+            @Valid @RequestBody UpdateTaskRequest request
+    ) {
+        return ResponseEntity.ok(taskAssignmentService.updateTaskDetails(authentication.getName(), taskId, request));
+    }
 }

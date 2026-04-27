@@ -34,3 +34,4 @@ function SummaryModal({ data, onClose }: any) {
 }
 
 export default SummaryModal;
+

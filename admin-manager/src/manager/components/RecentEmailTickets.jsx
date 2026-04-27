@@ -1,17 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   FormControl,
+  IconButton,
   MenuItem,
   Paper,
   Select,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import api from "../../services/api";
-import { fetchManagerDevelopers } from "../../services/managerService";
+import StatusBadge from "../../components/ui/StatusBadge.jsx";
+import { fetchManagerDevelopers, fetchProjects, suggestManagerTaskAssignment } from "../../services/managerService";
 import { getAdminUsers } from "../../services/api";
 
 function normalizeTicketList(data) {
@@ -30,13 +39,42 @@ function normalizeDeveloperList(data) {
   return [];
 }
 
+function normalizeProjectList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+function buildDefaultStoryPoints(ticket) {
+  return [
+    {
+      title: ticket?.title ? `${ticket.title} task` : "Follow-up task",
+      description: ticket?.description || "",
+      pointValue: 1,
+    },
+  ];
+}
+
+function isOpenTicket(ticket) {
+  return String(ticket?.status || "OPEN").toUpperCase() === "OPEN";
+}
+
 export default function RecentEmailTickets() {
   const [tickets, setTickets] = useState([]);
   const [developers, setDevelopers] = useState([]);
-  const [selectedDeveloperByTicket, setSelectedDeveloperByTicket] = useState({});
-  const [assigningTicketId, setAssigningTicketId] = useState(null);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedDeveloperId, setSelectedDeveloperId] = useState("");
+  const [storyPoints, setStoryPoints] = useState(buildDefaultStoryPoints({}));
+  const [suggestion, setSuggestion] = useState(null);
+  const [suggestingDeveloper, setSuggestingDeveloper] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   async function loadAssignableDevelopers() {
     try {
@@ -59,27 +97,18 @@ export default function RecentEmailTickets() {
         setLoading(true);
         setError("");
 
-        const [ticketsResponse, developersResponse] = await Promise.all([
+        const [ticketsResponse, developersResponse, projectsResponse] = await Promise.all([
           api.get("/tickets/email/recent"),
           loadAssignableDevelopers(),
+          fetchProjects(),
         ]);
 
-        const list = normalizeTicketList(ticketsResponse.data);
-        const developerList = normalizeDeveloperList(developersResponse);
-
-        const defaults = list.reduce((acc, ticket) => {
-          if (ticket?.id != null && ticket?.assignedToId != null) {
-            acc[ticket.id] = String(ticket.assignedToId);
-          }
-          return acc;
-        }, {});
-
+        const list = normalizeTicketList(ticketsResponse.data).filter(isOpenTicket);
         setTickets(list);
-        setDevelopers(developerList);
-        setSelectedDeveloperByTicket(defaults);
+        setDevelopers(normalizeDeveloperList(developersResponse));
+        setProjects(normalizeProjectList(projectsResponse));
       } catch (err) {
         console.error("Recent email tickets error:", err);
-
         const status = err?.response?.status;
         const message =
           err?.response?.data?.message ||
@@ -96,31 +125,46 @@ export default function RecentEmailTickets() {
     loadEmailTickets();
   }, []);
 
-  async function handleAssignDeveloper(ticketId) {
-    const selectedDeveloperId = selectedDeveloperByTicket[ticketId];
-    if (!selectedDeveloperId) {
-      setError("Please select a developer before assigning.");
-      return;
-    }
+  const openCount = useMemo(() => tickets.filter(isOpenTicket).length, [tickets]);
+
+  const openConvertModal = (ticket) => {
+    setSelectedTicket(ticket);
+    setSelectedProjectId(String(ticket?.projectId || ""));
+    setSelectedDeveloperId(String(ticket?.assignedToId || ""));
+    setStoryPoints(buildDefaultStoryPoints(ticket));
+    setSuggestion(null);
+    setConvertOpen(true);
+  };
+
+  const closeConvertModal = () => {
+    if (submitting) return;
+    setConvertOpen(false);
+    setSelectedTicket(null);
+    setSelectedProjectId("");
+    setSelectedDeveloperId("");
+    setStoryPoints(buildDefaultStoryPoints({}));
+    setSuggestion(null);
+  };
+
+  const handleSuggestDeveloper = async () => {
+    if (!selectedTicket) return;
+
+    setSuggestingDeveloper(true);
+    setError("");
 
     try {
-      setAssigningTicketId(ticketId);
-      setError("");
-
-      await api.patch(`/tickets/${ticketId}/assign`, {
-        assignedToId: Number(selectedDeveloperId),
+      const estimatedPoints = storyPoints.reduce((sum, row) => sum + Number(row?.pointValue || 0), 0);
+      const result = await suggestManagerTaskAssignment({
+        title: selectedTicket?.title || "",
+        description: selectedTicket?.description || "",
+        estimatedPoints,
       });
 
-      // Remove assigned ticket from the list and refresh
-      setTickets((prev) =>
-        prev.filter((ticket) => ticket.id !== ticketId)
-      );
-      
-      setSelectedDeveloperByTicket((prev) => {
-        const updated = { ...prev };
-        delete updated[ticketId];
-        return updated;
-      });
+      setSuggestion(result || null);
+      const recommendedId = result?.recommendedDeveloper?.id;
+      if (recommendedId) {
+        setSelectedDeveloperId(String(recommendedId));
+      }
     } catch (err) {
       const status = err?.response?.status;
       const message =
@@ -128,23 +172,104 @@ export default function RecentEmailTickets() {
         err?.response?.data ||
         err?.message ||
         "Unknown error";
-
-      setError(`Could not assign developer${status ? ` (${status})` : ""}: ${message}`);
+      setError(`Could not get AI suggestion${status ? ` (${status})` : ""}: ${message}`);
     } finally {
-      setAssigningTicketId(null);
+      setSuggestingDeveloper(false);
     }
-  }
+  };
+
+  const updateStoryPoint = (rowIndex, field, value) => {
+    setStoryPoints((prev) =>
+      prev.map((row, index) => (index === rowIndex ? { ...row, [field]: value } : row))
+    );
+  };
+
+  const addStoryPoint = () => {
+    setStoryPoints((prev) => [...prev, { title: "", description: "", pointValue: 1 }]);
+  };
+
+  const removeStoryPoint = (rowIndex) => {
+    setStoryPoints((prev) => (prev.length <= 1 ? prev : prev.filter((_, index) => index !== rowIndex)));
+  };
+
+  const handleConvert = async () => {
+    if (!selectedTicket) return;
+
+    const normalizedStoryPoints = storyPoints
+      .map((row) => ({
+        title: String(row.title || "").trim(),
+        description: String(row.description || "").trim(),
+        pointValue: Number(row.pointValue),
+      }))
+      .filter((row) => row.title || row.description || Number.isFinite(row.pointValue));
+
+    if (!selectedProjectId) {
+      setError("Please select a project before converting this ticket.");
+      return;
+    }
+
+    if (!selectedDeveloperId) {
+      setError("Please select a developer before converting this ticket.");
+      return;
+    }
+
+    if (normalizedStoryPoints.length === 0) {
+      setError("Add at least one story point before converting this ticket.");
+      return;
+    }
+
+    if (normalizedStoryPoints.some((row) => !row.title || !Number.isFinite(row.pointValue) || row.pointValue < 1)) {
+      setError("Each story point needs a title and a point value greater than 0.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError("");
+
+      try {
+        await api.patch(`/tickets/${selectedTicket.id}/assign`, {
+          projectId: Number(selectedProjectId),
+          developerId: Number(selectedDeveloperId),
+          storyPoints: normalizedStoryPoints,
+        });
+      } catch (patchErr) {
+        if (patchErr?.response?.status === 404 || patchErr?.response?.status === 405) {
+          await api.post(`/tickets/${selectedTicket.id}/assign`, {
+            projectId: Number(selectedProjectId),
+            developerId: Number(selectedDeveloperId),
+            storyPoints: normalizedStoryPoints,
+          });
+        } else {
+          throw patchErr;
+        }
+      }
+
+      setTickets((prev) => prev.filter((ticket) => String(ticket.id) !== String(selectedTicket.id)));
+      closeConvertModal();
+    } catch (err) {
+      const status = err?.response?.status;
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Unknown error";
+      setError(`Could not convert ticket${status ? ` (${status})` : ""}: ${message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Paper
       sx={{
-        mb: 4,
-        p: 2.8,
-        borderRadius: 3,
+        mb: 2,
+        p: 1.8,
+        borderRadius: 2.5,
         bgcolor: "rgba(255,255,255,0.05)",
         backdropFilter: "blur(10px)",
         border: "1px solid rgba(255,255,255,0.11)",
-        boxShadow: "0 16px 45px rgba(0,0,0,0.22)",
+        boxShadow: "0 10px 28px rgba(0,0,0,0.2)",
       }}
     >
       <Stack
@@ -155,16 +280,16 @@ export default function RecentEmailTickets() {
         sx={{ mb: 2 }}
       >
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 850, color: "#f8fafc" }}>
+          <Typography sx={{ fontWeight: 900, color: "#f8fafc" }}>
             Recent Inbound Tickets
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
-            Tickets created from inbound emails and project chat summaries
+            OPEN tickets only. Convert them into tasks from a modal.
           </Typography>
         </Box>
 
         <Chip
-          label="EMAIL + CHAT"
+          label={`OPEN: ${openCount}`}
           size="small"
           sx={{
             bgcolor: "rgba(59,130,246,0.25)",
@@ -188,18 +313,18 @@ export default function RecentEmailTickets() {
 
       {!loading && !error && tickets.length === 0 && (
         <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
-          No email tickets yet
+          No open inbound tickets.
         </Typography>
       )}
 
       {!loading && !error && tickets.length > 0 && (
-        <Stack spacing={1.5}>
+        <Stack spacing={1.2}>
           {tickets.map((ticket) => (
             <Box
-              key={ticket.id || ticket.ticketId}
+              key={ticket.id}
               sx={{
-                p: 2,
-                borderRadius: 3,
+                p: 1.2,
+                borderRadius: 2,
                 bgcolor: "rgba(255,255,255,0.045)",
                 border: "1px solid rgba(255,255,255,0.1)",
               }}
@@ -207,128 +332,216 @@ export default function RecentEmailTickets() {
               <Stack
                 direction={{ xs: "column", md: "row" }}
                 justifyContent="space-between"
-                alignItems={{ xs: "flex-start", md: "center" }}
                 spacing={1.2}
               >
-                <Box>
-                  <Typography sx={{ fontWeight: 800, color: "#f8fafc" }}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 800, color: "#f8fafc" }} noWrap>
                     {ticket.title || "Untitled ticket"}
                   </Typography>
 
-                  <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
-                    Project: {ticket.projectName || "Not assigned"}
+                  <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1", mt: 0.35 }}>
+                    {ticket.projectName || "No project"} • {ticket.sourceChannel || "EMAIL"}
                   </Typography>
 
                   <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
-                    From: {ticket.sourceEmail || "Unknown"}
-                  </Typography>
-
-                  <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
-                    Source: {ticket.sourceChannel || "EMAIL"}
+                    {ticket.sourceEmail || "Unknown sender"}
                   </Typography>
                 </Box>
 
-                <Stack direction="row" spacing={1}>
-                  <Chip
-                    label={ticket.priority || "MEDIUM"}
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+                  <StatusBadge label={ticket.priority || "MEDIUM"} />
+                  <StatusBadge label={ticket.status || "OPEN"} />
+                  <Button
+                    variant="contained"
                     size="small"
+                    onClick={() => openConvertModal(ticket)}
                     sx={{
-                      bgcolor: "rgba(239,83,80,0.18)",
-                      color: "#ef9a9a",
-                      fontWeight: 800,
-                    }}
-                  />
-
-                  <Chip
-                    label={ticket.status || "OPEN"}
-                    size="small"
-                    sx={{
-                      bgcolor: "rgba(76,175,80,0.18)",
-                      color: "#a5d6a7",
-                      fontWeight: 800,
-                    }}
-                  />
-                </Stack>
-              </Stack>
-
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={1}
-                sx={{ mt: 1.5 }}
-                alignItems={{ xs: "stretch", sm: "center" }}
-              >
-                <FormControl size="small" sx={{ minWidth: 210 }}>
-                  <Select
-                    displayEmpty
-                    value={selectedDeveloperByTicket[ticket.id] || ""}
-                    onChange={(event) =>
-                      setSelectedDeveloperByTicket((prev) => ({
-                        ...prev,
-                        [ticket.id]: event.target.value,
-                      }))
-                    }
-                    sx={{
-                      color: "#f8fafc",
-                      bgcolor: "rgba(15, 23, 42, 0.88)",
-                      borderRadius: 2,
-                      minHeight: 40,
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "rgba(148, 163, 184, 0.45)",
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "rgba(59, 130, 246, 0.8)",
-                      },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#60a5fa",
-                      },
-                      "& .MuiSvgIcon-root": {
-                        color: "#cbd5e1",
-                      },
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          bgcolor: "#0f172a",
-                          color: "#f8fafc",
-                          border: "1px solid rgba(148, 163, 184, 0.2)",
-                        },
-                      },
+                      textTransform: "none",
+                      fontWeight: 700,
+                      bgcolor: "#2563eb",
+                      "&:hover": { bgcolor: "#1d4ed8" },
                     }}
                   >
-                    <MenuItem value="">
-                      <span style={{ color: "#cbd5e1" }}>Select developer</span>
-                    </MenuItem>
-                    {developers.map((developer) => (
-                      <MenuItem
-                        key={developer.id}
-                        value={String(developer.id)}
-                        sx={{ color: "#f8fafc" }}
-                      >
-                        {developer.name || developer.email || `Developer ${developer.id}`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <Button
-                  variant="contained"
-                  size="small"
-                  disabled={assigningTicketId === ticket.id || developers.length === 0}
-                  onClick={() => handleAssignDeveloper(ticket.id)}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 700,
-                    bgcolor: "#2563eb",
-                    "&:hover": { bgcolor: "#1d4ed8" },
-                  }}
-                >
-                  {assigningTicketId === ticket.id ? "Assigning..." : "Assign to Developer"}
-                </Button>
+                    Convert to Task
+                  </Button>
+                </Stack>
               </Stack>
             </Box>
           ))}
         </Stack>
       )}
+
+      <Dialog open={convertOpen} onClose={closeConvertModal} fullWidth maxWidth="md">
+        <DialogTitle sx={{ pr: 7 }}>
+          Convert Ticket to Task
+          <IconButton
+            onClick={closeConvertModal}
+            disabled={submitting}
+            sx={{ position: "absolute", right: 12, top: 10, color: "#cbd5e1" }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ bgcolor: "#09111f" }}>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ color: "#94a3b8" }}>
+                Ticket
+              </Typography>
+              <Typography sx={{ fontWeight: 900, color: "#f8fafc" }}>
+                {selectedTicket?.title || "Untitled ticket"}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#cbd5e1", mt: 0.4, whiteSpace: "pre-wrap" }}>
+                {selectedTicket?.description || "No description provided."}
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#94a3b8", mt: 0.7, display: "block" }}>
+                Source: {selectedTicket?.sourceChannel || "EMAIL"} • Priority: {selectedTicket?.priority || "MEDIUM"}
+              </Typography>
+            </Box>
+
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={selectedProjectId}
+                  onChange={(event) => setSelectedProjectId(event.target.value)}
+                  displayEmpty
+                  sx={{ color: "#f8fafc", bgcolor: "#0f172a", borderRadius: 2 }}
+                >
+                  <MenuItem value="">
+                    <span style={{ color: "#cbd5e1" }}>Select project</span>
+                  </MenuItem>
+                  {projects.map((project) => (
+                    <MenuItem key={project.id} value={String(project.id)}>
+                      {project.name || project.projectName || `Project ${project.id}`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth size="small">
+                <Select
+                  value={selectedDeveloperId}
+                  onChange={(event) => setSelectedDeveloperId(event.target.value)}
+                  displayEmpty
+                  sx={{ color: "#f8fafc", bgcolor: "#0f172a", borderRadius: 2 }}
+                >
+                  <MenuItem value="">
+                    <span style={{ color: "#cbd5e1" }}>Select developer</span>
+                  </MenuItem>
+                  {developers.map((developer) => (
+                    <MenuItem key={developer.id} value={String(developer.id)}>
+                      {developer.name || developer.email || `Developer ${developer.id}`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Button
+                variant="outlined"
+                onClick={handleSuggestDeveloper}
+                disabled={suggestingDeveloper || submitting}
+                sx={{ textTransform: "none", whiteSpace: "nowrap" }}
+              >
+                {suggestingDeveloper ? "Suggesting..." : "AI Suggest Best Developer"}
+              </Button>
+            </Stack>
+
+            {suggestion?.recommendedDeveloper ? (
+              <Box sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(59,130,246,0.35)", background: "rgba(59,130,246,0.12)" }}>
+                <Typography sx={{ fontWeight: 800, color: "#e2e8f0" }}>
+                  Suggested: {suggestion.recommendedDeveloper.name}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                  Confidence: {suggestion.confidence ?? "-"}% {suggestion.explanation ? `• ${suggestion.explanation}` : ""}
+                </Typography>
+              </Box>
+            ) : null}
+
+            <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: "#0f1b2f", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                <Typography sx={{ color: "#e2e8f0", fontWeight: 800 }}>
+                  Story points
+                </Typography>
+                <Button size="small" onClick={addStoryPoint} sx={{ textTransform: "none" }}>
+                  Add story point
+                </Button>
+              </Stack>
+
+              <Stack spacing={1}>
+                {storyPoints.map((row, rowIndex) => (
+                  <Box
+                    key={`${selectedTicket?.id || "ticket"}-sp-${rowIndex}`}
+                    sx={{ p: 1.2, borderRadius: 2, bgcolor: "#0f1b2f", border: "1px solid rgba(255,255,255,0.06)" }}
+                  >
+                    <Stack spacing={1}>
+                      <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          label="Title"
+                          value={row.title}
+                          onChange={(event) => updateStoryPoint(rowIndex, "title", event.target.value)}
+                        />
+                        <TextField
+                          size="small"
+                          fullWidth
+                          type="number"
+                          label="Point value"
+                          value={row.pointValue}
+                          onChange={(event) => updateStoryPoint(rowIndex, "pointValue", event.target.value)}
+                        />
+                      </Stack>
+                      <TextField
+                        size="small"
+                        fullWidth
+                        multiline
+                        minRows={2}
+                        label="Description"
+                        value={row.description}
+                        onChange={(event) => updateStoryPoint(rowIndex, "description", event.target.value)}
+                      />
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                          Row {rowIndex + 1}
+                        </Typography>
+                        <Button
+                          size="small"
+                          color="inherit"
+                          disabled={storyPoints.length <= 1}
+                          onClick={() => removeStoryPoint(rowIndex)}
+                          sx={{ textTransform: "none" }}
+                        >
+                          Remove
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+          </Stack>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2, bgcolor: "#09111f" }}>
+          <Button onClick={closeConvertModal} disabled={submitting} sx={{ textTransform: "none" }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConvert}
+            disabled={submitting}
+            sx={{ textTransform: "none", fontWeight: 800, bgcolor: "#2563eb", "&:hover": { bgcolor: "#1d4ed8" } }}
+          >
+            {submitting ? "Converting..." : "Convert and Assign"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }
+
+
+
+
+

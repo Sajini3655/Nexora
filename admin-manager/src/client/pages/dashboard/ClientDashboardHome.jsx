@@ -11,44 +11,48 @@ import {
   Typography,
 } from "@mui/material";
 import { Link } from "react-router-dom";
-import ClientLayout from "../../components/layout/ClientLayout";
+
 import {
-  fetchClientProjects,
-  fetchClientSummary,
+  buildProjectsFromTickets,
   fetchClientTickets,
+  getCachedClientTickets,
 } from "../../services/clientService";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
 export default function ClientDashboardHome() {
-  const [summary, setSummary] = useState(null);
-  const [tickets, setTickets] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initialTickets = useMemo(() => getCachedClientTickets(), []);
+  const [tickets, setTickets] = useState(initialTickets);
+  const [projects, setProjects] = useState(() => buildProjectsFromTickets(initialTickets));
+  const [loading, setLoading] = useState(initialTickets.length === 0);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options = {}) => {
+    const isBackground = Boolean(options.background);
+
     try {
-      setLoading(true);
+      if (isBackground) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError("");
 
-      const [summaryData, ticketData, projectData] = await Promise.all([
-        fetchClientSummary(),
-        fetchClientTickets(),
-        fetchClientProjects(),
-      ]);
-
-      setSummary(summaryData);
-      setTickets(Array.isArray(ticketData) ? ticketData : []);
-      setProjects(Array.isArray(projectData) ? projectData : []);
+      const ticketData = await fetchClientTickets({ forceRefresh: isBackground });
+      const normalizedTickets = Array.isArray(ticketData) ? ticketData : [];
+      setTickets(normalizedTickets);
+      setProjects(buildProjectsFromTickets(normalizedTickets));
     } catch (err) {
       setError(err?.message || "Failed to load client dashboard.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
+    load({ background: initialTickets.length > 0 });
   }, [load]);
 
   const liveTopics = useMemo(
@@ -56,7 +60,11 @@ export default function ClientDashboardHome() {
     []
   );
 
-  useLiveRefresh(liveTopics, load, { debounceMs: 500 });
+  const refreshDashboard = useCallback(() => {
+    load({ background: true });
+  }, [load]);
+
+  useLiveRefresh(liveTopics, refreshDashboard, { debounceMs: 900 });
 
   const stats = useMemo(() => {
     return [
@@ -83,20 +91,36 @@ export default function ClientDashboardHome() {
   const activeProject = projects[0] || null;
 
   return (
-    <ClientLayout>
-      <Stack spacing={3}>
+    <Stack
+        spacing={3}
+        sx={{
+          "& .MuiTypography-caption": { fontSize: 13.5 },
+          "& .MuiTypography-body2": { fontSize: 14.5 },
+        }}
+      >
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 900 }}>
-            Dashboard
+          <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
+            Client Dashboard
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+          <Typography variant="body1" sx={{ color: "#94a3b8", mt: 0.5, fontSize: 15 }}>
             Simple overview of your tickets and workstreams.
           </Typography>
         </Box>
 
         {error ? <Alert severity="warning">{error}</Alert> : null}
 
-        {loading || !summary ? (
+        {refreshing && !loading ? (
+          <LinearProgress
+            sx={{
+              height: 4,
+              borderRadius: 999,
+              bgcolor: "rgba(255,255,255,0.08)",
+              "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+            }}
+          />
+        ) : null}
+
+        {loading ? (
           <Box sx={{ display: "grid", placeItems: "center", minHeight: 260 }}>
             <CircularProgress sx={{ color: "#6d5dfc" }} />
           </Box>
@@ -121,7 +145,7 @@ export default function ClientDashboardHome() {
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", lg: "1.3fr 0.7fr" },
+                gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
                 gap: 2,
               }}
             >
@@ -145,17 +169,17 @@ export default function ClientDashboardHome() {
                             borderBottom: "1px solid rgba(255,255,255,0.06)",
                           }}
                         >
-                          <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: 15 }}>
                             {ticket.title}
                           </Typography>
 
-                          <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                          <Typography sx={{ color: "#94a3b8", fontSize: 14 }}>
                             {ticket.category || "-"}
                           </Typography>
 
                           <StatusChip status={ticket.status} />
 
-                          <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                          <Typography sx={{ color: "#94a3b8", fontSize: 14 }}>
                             {ticket.updatedAt}
                           </Typography>
                         </Box>
@@ -170,11 +194,11 @@ export default function ClientDashboardHome() {
                   <EmptyText>No workstreams yet.</EmptyText>
                 ) : (
                   <Box>
-                    <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+                    <Typography sx={{ fontWeight: 900, fontSize: 20 }}>
                       {activeProject.name}
                     </Typography>
 
-                    <Typography sx={{ color: "#94a3b8", fontSize: 13, mt: 0.5 }}>
+                    <Typography sx={{ color: "#94a3b8", fontSize: 14, mt: 0.5 }}>
                       Status: {activeProject.status}
                     </Typography>
 
@@ -215,7 +239,6 @@ export default function ClientDashboardHome() {
           </>
         )}
       </Stack>
-    </ClientLayout>
   );
 }
 
@@ -230,11 +253,11 @@ function StatCard({ title, value }) {
         boxShadow: "none",
       }}
     >
-      <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 700 }}>
+      <Typography sx={{ color: "#94a3b8", fontWeight: 800, fontSize: 13 }}>
         {title}
       </Typography>
 
-      <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.8, color: "#f8fafc" }}>
+      <Typography sx={{ fontWeight: 900, mt: 0.8, color: "#f8fafc", fontSize: 30, lineHeight: 1.15 }}>
         {value}
       </Typography>
     </Paper>
@@ -261,14 +284,14 @@ function Panel({ title, children, actionText, actionTo }) {
           mb: 1.5,
         }}
       >
-        <Typography sx={{ fontWeight: 900 }}>{title}</Typography>
+        <Typography sx={{ fontWeight: 900, fontSize: 17 }}>{title}</Typography>
 
         {actionText && actionTo ? (
           <Button
             component={Link}
             to={actionTo}
             size="small"
-            sx={{ textTransform: "none", color: "#a5b4fc", fontWeight: 800 }}
+            sx={{ textTransform: "none", color: "#a5b4fc", fontWeight: 800, fontSize: 13.5 }}
           >
             {actionText}
           </Button>
@@ -299,6 +322,7 @@ function TableHeader({ columns }) {
             color: "#64748b",
             fontWeight: 900,
             textTransform: "uppercase",
+            fontSize: 12,
           }}
         >
           {heading}
@@ -317,24 +341,16 @@ function StatusChip({ status }) {
         : "rgba(124,92,255,0.16)";
 
   return (
-    <Chip
-      size="small"
-      label={status}
-      sx={{
-        bgcolor: color,
-        color: "#e5e7eb",
-        border: "1px solid rgba(255,255,255,0.08)",
-        fontWeight: 700,
-        width: "fit-content",
-      }}
-    />
+    <StatusBadge label={status} />
   );
 }
 
 function EmptyText({ children }) {
   return (
-    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+    <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: 14 }}>
       {children}
     </Typography>
   );
 }
+
+

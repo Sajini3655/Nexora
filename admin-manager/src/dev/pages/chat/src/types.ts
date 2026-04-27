@@ -11,3 +11,4 @@ export interface ChatEndResponse {
   ticket_message: string;
   ticket_prompt_needed: boolean;
 }
+

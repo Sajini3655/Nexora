@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
-  Chip,
   CircularProgress,
   Paper,
   Stack,
@@ -54,7 +53,6 @@ export default function AdminDashboard() {
       setSystemHealth(healthData ?? {});
       setError("");
     } catch (err) {
-      console.error(err);
       setError("Failed to load dashboard data.");
     } finally {
       fetching.current = false;
@@ -111,7 +109,7 @@ export default function AdminDashboard() {
         value: systemHealth?.apiStatus ?? "-",
         icon: <Activity size={18} />,
         badge: systemHealth?.apiStatus === "OK" ? "LIVE" : "CHECK",
-        good: systemHealth?.apiStatus === "OK",
+        badgeTone: systemHealth?.apiStatus === "OK" ? "success" : "warning",
       },
       {
         title: "Database",
@@ -121,35 +119,35 @@ export default function AdminDashboard() {
         ),
         icon: <Database size={18} />,
         badge: systemHealth?.databaseStatus === "OK" ? "LIVE" : "CHECK",
-        good: systemHealth?.databaseStatus === "OK",
+        badgeTone: systemHealth?.databaseStatus === "OK" ? "success" : "warning",
       },
       {
         title: "Mail",
         value: systemHealth?.mailStatus ?? "-",
         icon: <Mail size={18} />,
         badge: systemHealth?.mailStatus === "OK" ? "LIVE" : "CHECK",
-        good: systemHealth?.mailStatus === "OK",
+        badgeTone: systemHealth?.mailStatus === "OK" ? "success" : "warning",
       },
       {
         title: "AI Service",
         value: systemHealth?.aiServiceStatus ?? "-",
         icon: <Activity size={18} />,
         badge: systemHealth?.aiServiceStatus === "OK" ? "LIVE" : "CHECK",
-        good: systemHealth?.aiServiceStatus === "OK",
+        badgeTone: systemHealth?.aiServiceStatus === "OK" ? "success" : "warning",
       },
       {
         title: "Uptime",
         value: systemHealth?.uptime ?? "-",
         icon: <Clock3 size={18} />,
         badge: "INFO",
-        good: true,
+        badgeTone: "info",
       },
       {
         title: "Overall",
         value: systemHealth?.overallStatus ?? "-",
         icon: <HeartPulse size={18} />,
         badge: systemHealth?.overallStatus === "UP" ? "OK" : "CHECK",
-        good: systemHealth?.overallStatus === "UP",
+        badgeTone: systemHealth?.overallStatus === "UP" ? "success" : "warning",
       },
     ];
   }, [systemHealth]);
@@ -215,7 +213,7 @@ export default function AdminDashboard() {
           value={stats?.enabledUsers ?? 0}
           icon={<UserCheck size={20} />}
           badge="Active"
-          good
+          badgeTone="success"
         />
 
         <SummaryCard
@@ -223,6 +221,7 @@ export default function AdminDashboard() {
           value={stats?.disabledUsers ?? 0}
           icon={<UserX size={20} />}
           badge="Review"
+          badgeTone="warning"
         />
 
         <SummaryCard
@@ -276,7 +275,7 @@ export default function AdminDashboard() {
                 value={item.value}
                 icon={item.icon}
                 badge={item.badge}
-                good={item.good}
+                badgeTone={item.badgeTone}
               />
             ))}
           </Box>
@@ -321,32 +320,13 @@ export default function AdminDashboard() {
                     </TableCell>
 
                     <TableCell sx={tableCellMid}>
-                      <Chip
-                        size="small"
-                        label={user.role || "-"}
-                        sx={{
-                          bgcolor: "rgba(124,92,255,0.14)",
-                          color: "#e5e7eb",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          fontWeight: 700,
-                        }}
-                      />
+                      <Badge label={user.role || "-"} tone={getRoleTone(user.role)} />
                     </TableCell>
 
                     <TableCell sx={tableCellMid}>
-                      <Chip
+                      <Badge
                         label={user.enabled ? "Enabled" : "Disabled"}
-                        size="small"
-                        sx={{
-                          fontWeight: 700,
-                          color: user.enabled ? "#86efac" : "#fca5a5",
-                          backgroundColor: user.enabled
-                            ? "rgba(16,185,129,0.12)"
-                            : "rgba(239,68,68,0.12)",
-                          border: user.enabled
-                            ? "1px solid rgba(16,185,129,0.22)"
-                            : "1px solid rgba(239,68,68,0.22)",
-                        }}
+                        tone={user.enabled ? "success" : "danger"}
                       />
                     </TableCell>
 
@@ -364,7 +344,7 @@ export default function AdminDashboard() {
   );
 }
 
-function SummaryCard({ title, value, icon, badge, good }) {
+function SummaryCard({ title, value, icon, badge, badgeTone = "neutral" }) {
   return (
     <Paper
       elevation={0}
@@ -407,21 +387,7 @@ function SummaryCard({ title, value, icon, badge, good }) {
       </Box>
 
       {badge ? (
-        <Chip
-          size="small"
-          label={badge}
-          sx={{
-            mt: 1.5,
-            fontWeight: 800,
-            color: good ? "#86efac" : "#fde68a",
-            backgroundColor: good
-              ? "rgba(16,185,129,0.12)"
-              : "rgba(245,158,11,0.12)",
-            border: good
-              ? "1px solid rgba(16,185,129,0.22)"
-              : "1px solid rgba(245,158,11,0.22)",
-          }}
-        />
+        <Badge label={badge} tone={badgeTone} sx={{ mt: 1.5 }} />
       ) : null}
     </Paper>
   );
@@ -454,13 +420,13 @@ function SectionCard({ title, subtitle, children }) {
   );
 }
 
-function SmallInfoCard({ title, value, icon, badge, good }) {
+function SmallInfoCard({ title, value, icon, badge, badgeTone = "neutral" }) {
   return (
     <Box
       sx={{
         p: 1.6,
         borderRadius: 2,
-        bgcolor: "rgba(255,255,255,0.03)",
+        bgcolor: "#0f1b2f",
         border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
@@ -494,24 +460,102 @@ function SmallInfoCard({ title, value, icon, badge, good }) {
       </Box>
 
       {badge ? (
-        <Chip
-          size="small"
-          label={badge}
-          sx={{
-            mt: 1.2,
-            fontWeight: 800,
-            color: good ? "#86efac" : "#fde68a",
-            backgroundColor: good
-              ? "rgba(16,185,129,0.12)"
-              : "rgba(245,158,11,0.12)",
-            border: good
-              ? "1px solid rgba(16,185,129,0.22)"
-              : "1px solid rgba(245,158,11,0.22)",
-          }}
-        />
+        <Badge label={badge} tone={badgeTone} sx={{ mt: 1.2 }} />
       ) : null}
     </Box>
   );
+}
+
+function Badge({ label, tone = "neutral", sx = {} }) {
+  const styles = getBadgeStyles(tone);
+
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "fit-content",
+        height: 26,
+        px: 1.3,
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 900,
+        lineHeight: 1,
+        letterSpacing: "0.01em",
+        whiteSpace: "nowrap",
+        ...styles,
+        ...sx,
+      }}
+    >
+      {label}
+    </Box>
+  );
+}
+
+function getBadgeStyles(tone) {
+  switch (tone) {
+    case "success":
+      return {
+        backgroundColor: "rgba(34,197,94,0.20)",
+        color: "#86efac",
+        border: "1px solid rgba(34,197,94,0.42)",
+      };
+
+    case "warning":
+      return {
+        backgroundColor: "rgba(245,158,11,0.22)",
+        color: "#fcd34d",
+        border: "1px solid rgba(245,158,11,0.45)",
+      };
+
+    case "danger":
+      return {
+        backgroundColor: "rgba(239,68,68,0.22)",
+        color: "#fca5a5",
+        border: "1px solid rgba(239,68,68,0.45)",
+      };
+
+    case "purple":
+      return {
+        backgroundColor: "rgba(124,92,255,0.24)",
+        color: "#ddd6fe",
+        border: "1px solid rgba(124,92,255,0.45)",
+      };
+
+    case "blue":
+      return {
+        backgroundColor: "rgba(59,130,246,0.22)",
+        color: "#93c5fd",
+        border: "1px solid rgba(59,130,246,0.45)",
+      };
+
+    case "info":
+      return {
+        backgroundColor: "rgba(6,182,212,0.20)",
+        color: "#67e8f9",
+        border: "1px solid rgba(6,182,212,0.42)",
+      };
+
+    default:
+      return {
+        backgroundColor: "rgba(148,163,184,0.18)",
+        color: "#e5e7eb",
+        border: "1px solid rgba(148,163,184,0.32)",
+      };
+  }
+}
+
+function getRoleTone(role) {
+  const normalized = String(role || "").toUpperCase();
+
+  if (normalized === "ADMIN") return "purple";
+  if (normalized === "MANAGER") return "blue";
+  if (normalized === "DEVELOPER") return "info";
+  if (normalized === "CLIENT") return "success";
+
+  return "neutral";
 }
 
 function formatDate(value) {
@@ -545,7 +589,7 @@ const headCell = {
 };
 
 const tableCellBase = {
-  background: "rgba(255,255,255,0.03)",
+  background: "#0f1b2f",
   borderBottom: "none",
   color: "#e5e7eb",
 };
