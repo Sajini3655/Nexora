@@ -4,6 +4,7 @@ import {
   FolderRounded,
   TaskAltRounded,
   BadgeRounded,
+  ScheduleRounded,
 } from "@mui/icons-material";
 import UnifiedSidebar from "../../../components/layout/UnifiedSidebar.jsx";
 
@@ -22,6 +23,11 @@ const menuItems = [
     label: "Tasks",
     path: "/dev/tasks",
     icon: <TaskAltRounded />,
+  },
+  {
+    label: "Timesheets",
+    path: "/dev/timesheets",
+    icon: <ScheduleRounded />,
   },
   {
     label: "My Profile",

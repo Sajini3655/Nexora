@@ -8,6 +8,7 @@ import AccessControl from "./admin/pages/access/AccessControl.jsx";
 import AdminProfile from "./admin/pages/profile/AdminProfile.jsx";
 import AdminSettingsPage from "./admin/pages/settings/AdminSettingsPage.jsx";
 import UserList from "./admin/pages/users/UserList.jsx";
+import AdminTimesheets from "./admin/pages/timesheets/AdminTimesheets.jsx";
 
 import ManagerDashboard from "./manager/pages/dashboard/ManagerDashboard.jsx";
 import AddProject from "./manager/pages/projects/AddProject.jsx";
@@ -15,6 +16,7 @@ import ProjectDetails from "./manager/pages/projects/ProjectDetails.jsx";
 import ProjectManagement from "./manager/pages/projects/ProjectManagement.jsx";
 import ProjectManagementDetails from "./manager/pages/projects/ProjectManagementDetails.jsx";
 import AIAssignment from "./manager/pages/ai/AIAssignment.jsx";
+import ManagerTimesheets from "./manager/pages/timesheets/ManagerTimesheets.jsx";
 
 // Developer dashboard (merged from /developer)
 import DevDashboardHome from "./dev/pages/dashboard/DevDashboardHome.jsx";
@@ -28,6 +30,7 @@ import DevChat from "./dev/pages/chat/DevChat.jsx";
 import DevProjectList from "./dev/pages/projects/DevProjectList.jsx";
 import DevProjectView from "./dev/pages/projects/DevProjectView.jsx";
 import DevSettings from "./dev/pages/settings/DevSettings.jsx";
+import DevTimesheets from "./dev/pages/timesheets/DevTimesheets.jsx";
 
 // Client dashboard
 import ClientDashboardHome from "./client/pages/dashboard/ClientDashboardHome.jsx";
@@ -36,6 +39,7 @@ import ClientTicketList from "./client/pages/tickets/ClientTicketList.jsx";
 import ClientProfile from "./client/pages/profile/ClientProfile.jsx";
 import ClientHistory from "./client/pages/history/ClientHistory.jsx";
 import ClientSettings from "./client/pages/settings/ClientSettings.jsx";
+import ClientTimesheets from "./client/pages/timesheets/ClientTimesheets.jsx";
 
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
 import Sidebar from "./components/layout/Sidebar.jsx";
@@ -146,6 +150,14 @@ export default function App() {
             </AdminShell>
           }
         />
+        <Route
+          path="/admin/timesheets"
+          element={
+            <UnifiedShell role="ADMIN">
+              <AdminTimesheets />
+            </UnifiedShell>
+          }
+        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="DASHBOARD" />}>
@@ -213,6 +225,17 @@ export default function App() {
         />
       </Route>
 
+      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+        <Route
+          path="/manager/timesheets"
+          element={
+            <UnifiedShell role="MANAGER">
+              <ManagerTimesheets />
+            </UnifiedShell>
+          }
+        />
+      </Route>
+
       <Route element={<ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]} />}>
         <Route
           path="/users"
@@ -257,6 +280,8 @@ export default function App() {
 
         <Route path="/dev/settings" element={<DevSettings />} />
 
+        <Route path="/dev/timesheets" element={<UnifiedShell role="DEVELOPER"><DevTimesheets /></UnifiedShell>} />
+
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="CHAT" />}>
@@ -265,14 +290,15 @@ export default function App() {
         <Route path="/dev/chat/:projectId" element={<DevChat />} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
+            <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
         <Route path="/client" element={<ClientLayout><ClientDashboardHome /></ClientLayout>} />
         <Route path="/client/projects" element={<ClientLayout><ClientProjectList /></ClientLayout>} />
         <Route path="/client/tickets" element={<ClientLayout><ClientTicketList /></ClientLayout>} />
         <Route path="/client/history" element={<ClientLayout><ClientHistory /></ClientLayout>} />
         <Route path="/client/profile" element={<ClientLayout><ClientProfile /></ClientLayout>} />
         <Route path="/client/settings" element={<ClientLayout><ClientSettings /></ClientLayout>} />
-      </Route>
+        <Route path="/client/timesheets" element={<ClientLayout><ClientTimesheets /></ClientLayout>} />
+            </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

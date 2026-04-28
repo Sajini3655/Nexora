@@ -4,6 +4,7 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import PeopleIcon from "@mui/icons-material/People";
 import SecurityIcon from "@mui/icons-material/Security";
 import SettingsIcon from "@mui/icons-material/Settings";
+import ScheduleIcon from "@mui/icons-material/Schedule";
 
 import { useLayout } from "../../context/LayoutContext";
 import UnifiedSidebar from "./UnifiedSidebar.jsx";
@@ -14,6 +15,7 @@ export default function Sidebar() {
   const itemsCore = [
     { to: "/admin", label: "Dashboard", icon: <AdminPanelSettingsIcon /> },
     { to: "/users", label: "Users", icon: <PeopleIcon /> },
+    { to: "/admin/timesheets", label: "Timesheets", icon: <ScheduleIcon /> },
   ];
 
   const itemsSecurity = [

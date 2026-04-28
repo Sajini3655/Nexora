@@ -15,6 +15,7 @@ const links = [
   { to: "/client/projects", label: "Projects", short: "PR" },
   { to: "/client/tickets", label: "Tickets", short: "TI" },
   { to: "/client/history", label: "History", short: "HI" },
+  { to: "/client/timesheets", label: "Timesheets", short: "TS" },
   { to: "/client/profile", label: "Profile", short: "PF" },
   { to: "/client/settings", label: "Settings", short: "SE" },
 ];
