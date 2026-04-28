@@ -31,7 +31,7 @@ function buildProjects(tasks) {
     const done = list.filter((task) => String(task.status).toLowerCase() === "completed" || String(task.status).toLowerCase() === "done").length;
     const totalPointValue = list.reduce((sum, task) => sum + Number(task.totalPointValue || 0), 0);
     const completedPointValue = list.reduce((sum, task) => sum + Number(task.completedPointValue || 0), 0);
-    const progress = totalPointValue > 0 ? Math.round((completedPointValue * 100) / totalPointValue) : (total === 0 ? 0 : Math.round((done / total) * 100));
+    const progress = totalPointValue > 0 ? Math.round((completedPointValue * 100) / totalPointValue) : 0;
     return {
       id: String(list[0]?.projectId || key),
       name: list[0]?.projectName || `Project ${key}`,

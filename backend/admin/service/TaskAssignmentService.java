@@ -244,7 +244,7 @@ public class TaskAssignmentService {
             .sum();
         int progressPercentage = totalPointValue > 0
             ? (int) Math.round((completedPointValue * 100.0) / totalPointValue)
-            : (totalStoryPoints == 0 ? 0 : (int) Math.round((completedStoryPoints * 100.0) / totalStoryPoints));
+            : 0;
 
         return TaskDto.builder()
                 .id(t.getId())

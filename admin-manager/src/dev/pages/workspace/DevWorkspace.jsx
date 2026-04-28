@@ -40,8 +40,9 @@ export default function DevWorkspace() {
 
   const projectSnapshot = useMemo(() => {
     const firstTask = tasks[0] || {};
-    const completed = tasks.filter((t) => String(t?.status || "").toLowerCase() === "completed" || String(t?.status || "").toLowerCase() === "done").length;
-    const progress = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+    const totalPointValue = tasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? 0), 0);
+    const completedPointValue = tasks.reduce((sum, task) => sum + Number(task?.completedPointValue ?? 0), 0);
+    const progress = totalPointValue > 0 ? Math.round((completedPointValue * 100) / totalPointValue) : 0;
     return {
       name: firstTask.projectName || "Developer Project",
       id: firstTask.projectId || "Backend",

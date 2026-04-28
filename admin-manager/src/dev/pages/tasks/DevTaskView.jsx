@@ -48,7 +48,7 @@ export default function DevTaskView() {
     const completedPointValue = Number(progress?.completedPointValue ?? fallbackTask?.completedPointValue ?? completedStoryPoints);
     const progressPercentage = totalPointValue > 0
       ? Math.round((completedPointValue * 100) / totalPointValue)
-      : (totalStoryPoints > 0 ? Math.round((completedStoryPoints * 100) / totalStoryPoints) : Number(fallbackTask?.progressPercentage || 0));
+      : 0;
 
     const safeProgress = progress && typeof progress === "object"
       ? {

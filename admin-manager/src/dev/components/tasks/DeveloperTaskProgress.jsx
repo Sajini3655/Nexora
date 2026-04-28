@@ -17,7 +17,7 @@ function normalizeProgress(progress, fallbackTask) {
   const completedPointValue = Number(progress?.completedPointValue ?? fallbackTask?.completedPointValue ?? completedStoryPoints);
   const progressPercentage = totalPointValue > 0
     ? Math.round((completedPointValue * 100) / totalPointValue)
-    : (totalStoryPoints > 0 ? Math.round((completedStoryPoints * 100) / totalStoryPoints) : 0);
+    : 0;
 
   return {
     taskId: fallbackTask?.id,
