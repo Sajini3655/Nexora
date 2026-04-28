@@ -1,16 +1,21 @@
 package com.admin.service;
 
 import com.admin.dto.CreateProjectRequest;
+import com.admin.dto.CreateTaskStoryPointRequest;
 import com.admin.dto.ProjectResponse;
+import com.admin.dto.ProjectTaskRequest;
 import com.admin.dto.ProjectTaskResponse;
 import com.admin.dto.UpdateProjectRequest;
 import com.admin.entity.Project;
 import com.admin.entity.Role;
+import com.admin.entity.StoryPointStatus;
 import com.admin.entity.TaskItem;
+import com.admin.entity.TaskStoryPoint;
 import com.admin.entity.TaskStatus;
 import com.admin.entity.User;
 import com.admin.exception.ResourceNotFoundException;
 import com.admin.repository.ProjectRepository;
+import com.admin.repository.TaskStoryPointRepository;
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -18,6 +23,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -26,7 +33,8 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
-        private final LiveUpdatePublisher liveUpdatePublisher;
+    private final TaskStoryPointRepository taskStoryPointRepository;
+    private final LiveUpdatePublisher liveUpdatePublisher;
 
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request, Authentication authentication) {
@@ -39,22 +47,39 @@ public class ProjectService {
                 .build();
 
         List<TaskItem> taskItems = request.getTasks().stream()
-                .map(task -> TaskItem.builder()
-                        .title(task.getTitle().trim())
-                        .priority(task.getPriority())
-                        .status(TaskStatus.TODO)
-                        .createdBy(manager)
-                        .assignedTo(null)
-                        .project(project)
-                        .build())
+                .map(taskRequest -> {
+                    TaskItem task = TaskItem.builder()
+                            .title(taskRequest.getTitle().trim())
+                            .description(taskRequest.getDescription())
+                            .priority(taskRequest.getPriority())
+                            .status(TaskStatus.TODO)
+                            .createdBy(manager)
+                            .assignedTo(null)
+                            .project(project)
+                            .build();
+                    
+                    // Set due date if provided
+                    if (taskRequest.getDueDate() != null && !taskRequest.getDueDate().isEmpty()) {
+                        try {
+                            task.setDueDate(LocalDate.parse(taskRequest.getDueDate()));
+                        } catch (Exception e) {
+                            // Invalid date format, skip setting dueDate
+                        }
+                    }
+                    
+                    return task;
+                })
                 .toList();
 
         project.getTasks().addAll(taskItems);
-
         Project savedProject = projectRepository.save(project);
-                liveUpdatePublisher.publishProjectsChanged("created");
-                liveUpdatePublisher.publishTasksChanged("created");
-                return mapToResponse(savedProject);
+
+        // Create nested story points for each task
+        createNestedStoryPoints(request.getTasks(), savedProject.getTasks());
+
+        liveUpdatePublisher.publishProjectsChanged("created");
+        liveUpdatePublisher.publishTasksChanged("created");
+        return mapToResponse(savedProject);
     }
 
     @Transactional
@@ -97,6 +122,32 @@ public class ProjectService {
         }
 
         return user;
+    }
+
+    private void createNestedStoryPoints(List<ProjectTaskRequest> taskRequests, List<TaskItem> savedTasks) {
+        for (int i = 0; i < taskRequests.size(); i++) {
+            ProjectTaskRequest taskRequest = taskRequests.get(i);
+            TaskItem task = savedTasks.get(i);
+
+            if (taskRequest.getStoryPoints() != null && !taskRequest.getStoryPoints().isEmpty()) {
+                List<TaskStoryPoint> storyPoints = taskRequest.getStoryPoints().stream()
+                        .map(spRequest -> TaskStoryPoint.builder()
+                                .task(task)
+                                .title(spRequest.getTitle().trim())
+                                .description(spRequest.getDescription())
+                                .pointValue(spRequest.getPointValue())
+                                .status(StoryPointStatus.TODO)
+                                .completed(Boolean.FALSE)
+                                .completedAt(null)
+                                .completedBy(null)
+                                .createdAt(LocalDateTime.now())
+                                .updatedAt(LocalDateTime.now())
+                                .build())
+                        .toList();
+
+                taskStoryPointRepository.saveAll(storyPoints);
+            }
+        }
     }
 
     private ProjectResponse mapToResponse(Project project) {

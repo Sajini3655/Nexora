@@ -18,6 +18,8 @@ import {
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import Tooltip from '@mui/material/Tooltip';
 import api from "../../services/api";
 import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import { fetchManagerDevelopers, fetchProjects, suggestManagerTaskAssignment } from "../../services/managerService";
@@ -437,14 +439,28 @@ export default function RecentEmailTickets() {
                 </Select>
               </FormControl>
 
-              <Button
-                variant="outlined"
-                onClick={handleSuggestDeveloper}
-                disabled={suggestingDeveloper || submitting}
-                sx={{ textTransform: "none", whiteSpace: "nowrap" }}
-              >
-                {suggestingDeveloper ? "Suggesting..." : "AI Suggest Best Developer"}
-              </Button>
+              <Tooltip title={suggestingDeveloper ? "Suggesting best developer..." : "Use AI to suggest the best developer"} arrow>
+                <span>
+                  <Button
+                    variant="contained"
+                    onClick={handleSuggestDeveloper}
+                    disabled={suggestingDeveloper || submitting}
+                    startIcon={<AutoAwesomeIcon sx={{ transform: 'scale(1.05)' }} />}
+                    sx={{
+                      textTransform: "none",
+                      whiteSpace: "nowrap",
+                      borderRadius: 6,
+                      bgcolor: suggestingDeveloper ? 'rgba(99,102,241,0.9)' : 'linear-gradient(90deg,#7c3aed,#4f46e5)',
+                      color: '#fff',
+                      fontWeight: 800,
+                      px: 2,
+                      '&:hover': { opacity: 0.92 },
+                    }}
+                  >
+                    {suggestingDeveloper ? 'Suggesting...' : 'Suggest developer'}
+                  </Button>
+                </span>
+              </Tooltip>
             </Stack>
 
             {suggestion?.recommendedDeveloper ? (

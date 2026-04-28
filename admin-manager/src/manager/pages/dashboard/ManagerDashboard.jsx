@@ -215,7 +215,7 @@ export default function ManagerDashboard() {
       );
       const progress = totalPointValue > 0
         ? Math.round((completedPointValue * 100) / totalPointValue)
-        : (totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0);
+        : 0;
       const status =
         totalTasks === 0 ? "Planning" : doneTasks === totalTasks ? "Completed" : "Active";
 

@@ -75,9 +75,7 @@ function buildSummariesFromTasks(developers, tasks) {
     const averageProgress =
       summary.totalPointValue > 0
         ? Math.round((summary.completedPointValue * 100) / summary.totalPointValue)
-        : summary.assignedTasks > 0
-          ? Math.round((summary.completedTasks * 100) / summary.assignedTasks)
-          : 0;
+        : 0;
 
     return {
       ...summary,

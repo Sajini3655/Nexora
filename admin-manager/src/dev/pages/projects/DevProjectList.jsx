@@ -53,9 +53,7 @@ function buildProjects(tasks) {
     const progress =
       totalPointValue > 0
         ? Math.round((completedPointValue * 100) / totalPointValue)
-        : taskCount > 0
-          ? Math.round((completedTasks * 100) / taskCount)
-          : 0;
+        : 0;
 
     return {
       id: String(list[0]?.projectId || key),

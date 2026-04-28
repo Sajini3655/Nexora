@@ -671,7 +671,7 @@ export default function ProjectManagementDetails() {
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Add New Task</Typography>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr 0.9fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
             <TextField size="small" label="Task title" value={newTask.title} onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))} />
             <TextField size="small" label="Task description" value={newTask.description} onChange={(e) => setNewTask((prev) => ({ ...prev, description: e.target.value }))} />
             <TextField select size="small" label="Priority" value={newTask.priority} onChange={(e) => setNewTask((prev) => ({ ...prev, priority: e.target.value }))}>
@@ -687,40 +687,11 @@ export default function ProjectManagementDetails() {
               onChange={(e) => setNewTask((prev) => ({ ...prev, dueDate: e.target.value }))}
               InputLabelProps={{ shrink: true }}
             />
-            <TextField
-              select
-              size="small"
-              label="Optional developer"
-              value={newTask.assignedToId}
-              onChange={(e) => setNewTask((prev) => ({ ...prev, assignedToId: e.target.value }))}
-            >
-              <MenuItem value="">Unassigned</MenuItem>
-              {developers.map((dev) => (
-                <MenuItem key={dev.id} value={String(dev.id)}>{dev.name || dev.email || `Developer ${dev.id}`}</MenuItem>
-              ))}
-            </TextField>
 
             <Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
               {addingTask ? "Adding..." : "Add Task"}
             </Button>
           </Box>
-
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "auto auto auto" }, gap: 1, alignItems: "center" }}>
-            <Button variant="outlined" size="small" onClick={handleSuggestAssigneeForAddTask} disabled={suggestingAddTask || !newTask.title.trim()}>
-              {suggestingAddTask ? "Suggesting..." : "AI Suggest Developer"}
-            </Button>
-          </Box>
-
-          {addTaskSuggestion?.recommendedDeveloper ? (
-            <Box sx={{ mt: 1.2, p: 1, borderRadius: 1.5, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)" }}>
-              <Typography sx={{ fontWeight: 800, fontSize: 13 }}>
-                Suggested: {addTaskSuggestion.recommendedDeveloper.name}
-              </Typography>
-              <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
-                Confidence: {addTaskSuggestion.confidence ?? "-"}% {addTaskSuggestion.explanation ? `- ${addTaskSuggestion.explanation}` : ""}
-              </Typography>
-            </Box>
-          ) : null}
         </Paper>
 
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>

@@ -6,6 +6,7 @@ export default function CategoryPicker({ value, categories, onSelect }) {
     <TextField
       select
       label="Category"
+      InputLabelProps={{ shrink: true }}
       size="small"
       value={value}
       onChange={(e) => onSelect(e.target.value)}

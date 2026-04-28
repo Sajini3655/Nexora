@@ -41,15 +41,11 @@ function getPointTotals(task) {
     task?.completedPointValue ?? task?.completedPoints ?? 0
   );
 
-  const fallbackTotal = Number(task?.totalStoryPoints ?? 0);
-  const fallbackCompleted = Number(task?.completedStoryPoints ?? 0);
-
-  const total = totalPointValue > 0 ? totalPointValue : fallbackTotal;
-  const completed =
-    totalPointValue > 0 ? completedPointValue : fallbackCompleted;
+  const total = totalPointValue;
+  const completed = completedPointValue;
 
   const progress =
-    total > 0 ? Math.round((completed * 100) / total) : isCompletedTask(task) ? 100 : 0;
+    total > 0 ? Math.round((completed * 100) / total) : 0;
 
   return { total, completed, progress };
 }
@@ -97,7 +93,7 @@ function buildProjectSummaries(tasks) {
     current.progress =
       current.totalPoints > 0
         ? Math.round((current.completedPoints * 100) / current.totalPoints)
-        : Math.round((current.completed * 100) / Math.max(current.tasks, 1));
+        : 0;
 
     summaries.set(key, current);
   });
