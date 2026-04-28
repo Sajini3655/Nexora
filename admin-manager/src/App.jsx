@@ -42,6 +42,7 @@ import Sidebar from "./components/layout/Sidebar.jsx";
 import ManagerSidebar from "./components/layout/ManagerSidebar.jsx";
 import ManagerTopbar from "./components/layout/ManagerTopbar.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
+import ClientLayout from "./client/components/layout/ClientLayout.jsx";
 
 import { useAuth } from "./context/AuthContext.jsx";
 
@@ -265,12 +266,12 @@ export default function App() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
-        <Route path="/client" element={<ClientDashboardHome />} />
-        <Route path="/client/projects" element={<ClientProjectList />} />
-        <Route path="/client/tickets" element={<ClientTicketList />} />
-        <Route path="/client/history" element={<ClientHistory />} />
-        <Route path="/client/profile" element={<ClientProfile />} />
-        <Route path="/client/settings" element={<ClientSettings />} />
+        <Route path="/client" element={<ClientLayout><ClientDashboardHome /></ClientLayout>} />
+        <Route path="/client/projects" element={<ClientLayout><ClientProjectList /></ClientLayout>} />
+        <Route path="/client/tickets" element={<ClientLayout><ClientTicketList /></ClientLayout>} />
+        <Route path="/client/history" element={<ClientLayout><ClientHistory /></ClientLayout>} />
+        <Route path="/client/profile" element={<ClientLayout><ClientProfile /></ClientLayout>} />
+        <Route path="/client/settings" element={<ClientLayout><ClientSettings /></ClientLayout>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import ClientLayout from "../../components/layout/ClientLayout";
 import {
   fetchClientHistory,
   fetchClientProfile
@@ -86,11 +85,9 @@ export default function ClientHistory() {
 
   if (loading) {
     return (
-      <ClientLayout>
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-          <CircularProgress sx={{ color: "rgba(124,92,255,0.8)" }} />
-        </Box>
-      </ClientLayout>
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <CircularProgress sx={{ color: "rgba(124,92,255,0.8)" }} />
+      </Box>
     );
   }
 
@@ -98,8 +95,7 @@ export default function ClientHistory() {
   const completedTickets = history?.tickets || [];
 
   return (
-    <ClientLayout>
-      <Box sx={{ maxWidth: 1000, mx: "auto" }}>
+    <Box sx={{ maxWidth: 1000, mx: "auto" }}>
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
@@ -362,6 +358,5 @@ export default function ClientHistory() {
           </TabPanel>
         </Paper>
       </Box>
-    </ClientLayout>
   );
 }

@@ -11,6 +11,9 @@ export default function CategoryPicker({ value, categories, onSelect }) {
       onChange={(e) => onSelect(e.target.value)}
       SelectProps={{ native: true }}
       fullWidth
+      InputLabelProps={{
+        shrink: true,
+      }}
     >
       <option value="">Select category</option>
       {categories.map((category) => (
@@ -21,4 +24,3 @@ export default function CategoryPicker({ value, categories, onSelect }) {
     </TextField>
   );
 }
-

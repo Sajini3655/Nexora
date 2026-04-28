@@ -9,6 +9,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import StatusBadge from "../../../components/ui/StatusBadge";
 import { fetchClientProjects } from "../../services/clientService";
 
 export default function ClientProjectList() {

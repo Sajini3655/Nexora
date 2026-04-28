@@ -11,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import CategoryPicker from "../../components/tickets/CategoryPicker";
+import StatusBadge from "../../../components/ui/StatusBadge";
 import {
   clientTicketCategories,
   createClientTicket,

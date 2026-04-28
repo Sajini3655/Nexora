@@ -66,7 +66,7 @@ async function ticketFetch(path = "", options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}/tickets${path}`, {
+  const res = await fetch(`${API_BASE_URL}/api/tickets${path}`, {
     ...options,
     headers,
   });
