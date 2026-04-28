@@ -257,11 +257,7 @@ public class TicketService {
         savedTicket = ticketRepository.findById(ticket.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found after assignment"));
 
-        System.out.println("Ticket converted successfully:");
-        System.out.println("Ticket ID: " + savedTicket.getId());
-        System.out.println("Ticket status: " + savedTicket.getStatus());
-        System.out.println("Assigned developer ID: " + developer.getId());
-        System.out.println("Created task ID: " + savedTask.getId());
+        // Ticket conversion complete
 
         liveUpdatePublisher.publishTicketsChanged("assigned");
         liveUpdatePublisher.publishTasksChanged("created");
