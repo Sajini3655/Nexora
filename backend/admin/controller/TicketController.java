@@ -57,6 +57,7 @@ public class TicketController {
                         t.description ILIKE '%Source: EMAIL%'
                         OR UPPER(TRIM(COALESCE(t.source_channel, ''))) = 'EMAIL'
                         OR UPPER(TRIM(COALESCE(t.source_channel, ''))) = 'CHAT_SUMMARY'
+                        OR UPPER(TRIM(COALESCE(t.source_channel, ''))) = 'CLIENT'
                     )
                     AND UPPER(TRIM(COALESCE(t.status, 'OPEN'))) = 'OPEN'
                     AND t.assigned_task_id IS NULL
