@@ -18,7 +18,9 @@ function ensureClient() {
   if (client) return client;
 
   client = new Client({
-    webSocketFactory: () => new SockJS(getWsEndpoint()),
+    webSocketFactory: () => new SockJS(getWsEndpoint(), undefined, {
+      transports: ["websocket", "xhr-streaming", "xhr-polling"],
+    }),
     reconnectDelay: 5000,
     onConnect: () => {
       isConnected = true;

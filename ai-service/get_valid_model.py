@@ -1,11 +1,12 @@
-from groq import Groq
 import os
 
-api_key = os.getenv("GROQ_API_KEY")
-if not api_key:
-    raise ValueError("GROQ_API_KEY environment variable is not set!")
+try:
+    from groq import Groq
+except Exception:
+    Groq = None
 
-client = Groq(api_key=api_key)
+api_key = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=api_key) if Groq and api_key else None
 
 SAFE_CHAT_MODELS = [
     "openai/gpt-oss-20b",
@@ -14,6 +15,9 @@ SAFE_CHAT_MODELS = [
 
 def get_first_available_model():
     """Return the first safe chat-capable model available."""
+    if client is None:
+        return os.getenv("GROQ_MODEL") or SAFE_CHAT_MODELS[0]
+
     try:
         available_models = client.models.list()
         for m in available_models:
