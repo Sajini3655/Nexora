@@ -17,6 +17,7 @@ import ProjectManagement from "./manager/pages/projects/ProjectManagement.jsx";
 import ProjectManagementDetails from "./manager/pages/projects/ProjectManagementDetails.jsx";
 import AIAssignment from "./manager/pages/ai/AIAssignment.jsx";
 import ManagerTimesheets from "./manager/pages/timesheets/ManagerTimesheets.jsx";
+import ManagerTickets from "./manager/pages/tickets/ManagerTickets.jsx";
 
 // Developer dashboard (merged from /developer)
 import DevDashboardHome from "./dev/pages/dashboard/DevDashboardHome.jsx";
@@ -170,6 +171,17 @@ export default function App() {
             </UnifiedShell>
           }
         />
+      </Route>
+
+       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+         <Route
+         path="/manager/tickets"
+         element={
+         <UnifiedShell role="MANAGER">
+         <ManagerTickets />
+         </UnifiedShell>
+         }
+       />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="FILES" />}>
