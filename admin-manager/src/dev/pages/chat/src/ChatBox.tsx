@@ -174,8 +174,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   const stompClientRef = useRef<Client | null>(null);
 
   const subscriptionTopic = useMemo(
-    () => (sessionId ? `/topic/chat/${sessionId}` : null),
-    [sessionId]
+    () => (projectId ? `/topic/projects/${projectId}/chat` : null),
+    [projectId]
   );
 
   const wsUrlWithToken = useMemo(() => {

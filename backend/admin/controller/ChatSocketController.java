@@ -45,9 +45,11 @@ public class ChatSocketController {
                 trimmed
         );
 
-        messagingTemplate.convertAndSend(
-                "/topic/chat/" + request.getSessionId(),
-                response
-        );
+        // Get projectId from the session to send to project-specific topic
+        var session = chatService.getSession(request.getSessionId());
+        if (session != null && session.getProject() != null) {
+            String destination = "/topic/projects/" + session.getProject().getId() + "/chat";
+            messagingTemplate.convertAndSend(destination, response);
+        }
     }
 }
