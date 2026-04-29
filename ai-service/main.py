@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from summarizer import get_ai_response
-from groq import Groq
 from get_valid_model import get_first_available_model
 
 # ----------------------------
@@ -59,6 +58,21 @@ def build_ai_summary(messages, create_tickets=None):
         f"Chat transcript:\n" + "\n".join(transcript_lines)
     )
 
+    if client is None:
+        blockers = extract_blockers(messages)
+        summary_text = (
+            "Project cannot proceed due to: " + ", ".join(blockers)
+            if blockers else
+            "✅ No blockers detected. Project can continue normally."
+        )
+
+        return {
+            "summary": summary_text,
+            "blockers": blockers,
+            "ticket_prompt_needed": bool(blockers) and create_tickets is None,
+            "ticket_message": "Tickets created for blockers." if blockers and create_tickets is True else "No ticket is needed.",
+        }
+
     try:
         response = client.chat.completions.create(
             model=MODEL,
@@ -108,11 +122,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY is missing!")
+try:
+    from groq import Groq
+except Exception:
+    Groq = None
 
-client = Groq(api_key=GROQ_API_KEY)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=GROQ_API_KEY) if Groq and GROQ_API_KEY else None
 MODEL = get_first_available_model()
 MODEL = os.getenv("GROQ_MODEL") or MODEL
 print("Using model:", MODEL)

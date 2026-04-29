@@ -17,6 +17,7 @@
 - Verify only the chat starter can end a chat session.
 - Verify Groq returns summary + blocker detection before ticket prompt.
 - Verify tickets are visible in the manager ticket queue.
+- **NEW**: Verify multiple developers can see each other's messages in real-time (chat uses project-based WebSocket topics as of commit 1c49adaa).
 
 ## Security
 - Never commit real secrets to `.env` files.

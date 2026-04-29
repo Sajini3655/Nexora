@@ -66,19 +66,42 @@ public class ChatService {
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        ensureCanAccessProject(project, actor);
+        if (!canAccessProjectChat(project, actor)) {
+            throw new AccessDeniedException("You are not a member of this project chat.");
+        }
 
         return sessionRepo.findFirstByProject_IdAndEndedFalseOrderByStartedAtDesc(projectId)
-                .orElseGet(() -> {
-                    ChatSession session = ChatSession.builder()
-                            .project(project)
-                            .startedBy(actor)
-                            .startedAt(LocalDateTime.now())
-                            .ended(false)
-                            .build();
+            .orElseGet(() -> {
+                ChatSession session = ChatSession.builder()
+                    .project(project)
+                    .startedBy(actor)
+                    .startedAt(LocalDateTime.now())
+                    .ended(false)
+                    .build();
 
-                    return sessionRepo.save(session);
-                });
+                return sessionRepo.save(session);
+            });
+    }
+
+    @Transactional
+    public ChatSession createSession(Long projectId, Authentication authentication) {
+        User actor = getAuthenticatedUser(authentication);
+
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        if (!canAccessProjectChat(project, actor)) {
+            throw new AccessDeniedException("You are not a member of this project chat.");
+        }
+
+        ChatSession session = ChatSession.builder()
+                .project(project)
+                .startedBy(actor)
+                .startedAt(LocalDateTime.now())
+                .ended(false)
+                .build();
+
+        return sessionRepo.save(session);
     }
 
     @Transactional
@@ -89,15 +112,22 @@ public class ChatService {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        ensureCanAccessProject(session.getProject(), user);
+        // Ensure the user can access the chat for this project
+        if (!canAccessProjectChat(session.getProject(), user)) {
+            throw new AccessDeniedException("You are not a member of this project chat.");
+        }
+
+        if (session.getEnded() != null && session.getEnded()) {
+            throw new IllegalStateException("Cannot send messages to an ended session.");
+        }
 
         ChatMessage message = ChatMessage.builder()
-                .session(session)
-                .sender(user)
-                .senderName(user.getName())
-                .content(content)
-                .createdAt(LocalDateTime.now())
-                .build();
+            .session(session)
+            .sender(user)
+            .senderName(user.getName())
+            .content(content)
+            .createdAt(LocalDateTime.now())
+            .build();
 
         ChatMessage saved = messageRepo.save(message);
 
@@ -110,18 +140,41 @@ public class ChatService {
     }
 
     @Transactional(readOnly = true)
+    public long getMessageCount(Long sessionId) {
+        return messageRepo.countBySession_Id(sessionId);
+    }
+
+    @Transactional(readOnly = true)
+    public String getLastMessagePreview(Long sessionId) {
+        return messageRepo.findTopBySession_IdOrderByCreatedAtDesc(sessionId)
+                .map(ChatMessage::getContent)
+                .map(content -> {
+                    if (content == null) {
+                        return "";
+                    }
+                    if (content.length() > 100) {
+                        return content.substring(0, 100) + "...";
+                    }
+                    return content;
+                })
+                .orElse("");
+    }
+
+    @Transactional(readOnly = true)
     public List<ChatMessageResponse> getMessageResponses(Long sessionId, Authentication authentication) {
         User actor = getAuthenticatedUser(authentication);
 
         ChatSession session = sessionRepo.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 
-        ensureCanAccessProject(session.getProject(), actor);
+        if (!canAccessProjectChat(session.getProject(), actor)) {
+            throw new AccessDeniedException("You are not a member of this project chat.");
+        }
 
         return messageRepo.findBySession_IdOrderByCreatedAtAsc(sessionId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+            .stream()
+            .map(this::toResponse)
+            .toList();
     }
 
     @Transactional
@@ -130,6 +183,11 @@ public class ChatService {
 
         ChatSession session = sessionRepo.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+
+        if (session.getStartedBy() == null || session.getStartedBy().getId() == null
+                || !session.getStartedBy().getId().equals(actor.getId())) {
+            throw new AccessDeniedException("Only the chat starter can end this session.");
+        }
 
         List<ChatMessage> messages = messageRepo.findBySession_IdOrderByCreatedAtAsc(sessionId);
 
@@ -163,8 +221,9 @@ public class ChatService {
         summary.append("Chat Summary:\n");
 
         int count = Math.min(messages.size(), 6);
+        int start = Math.max(0, messages.size() - count);
 
-        for (int i = 0; i < count; i++) {
+        for (int i = start; i < messages.size(); i++) {
             ChatMessage message = messages.get(i);
             String sender = message.getSenderName() == null || message.getSenderName().isBlank()
                     ? "User"
@@ -256,13 +315,15 @@ public class ChatService {
             }
         }
 
+        User assignee = project.getManager() != null ? project.getManager() : actor;
+
         Ticket ticket = Ticket.builder()
                 .title(ticketTitle)
                 .description(description.toString())
                 .status("OPEN")
                 .priority("HIGH")
                 .createdBy(actor)
-                .assignedTo(project.getManager())
+            .assignedTo(assignee)
                 .project(project)
                 .sourceChannel("CHAT")
                 .sourceSubject("Chat blocker detected")
@@ -326,5 +387,88 @@ public class ChatService {
         if (!isAssignee) {
             throw new AccessDeniedException("You are not a member of this project chat.");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public ChatSession getSession(Long sessionId) {
+        return sessionRepo.findById(sessionId).orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public ChatSession getProjectSession(Long projectId, Authentication authentication) {
+        User actor = getAuthenticatedUser(authentication);
+
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        if (!canAccessProjectChat(project, actor)) {
+            throw new AccessDeniedException("You are not a member of this project chat.");
+        }
+
+        return sessionRepo.findFirstByProject_IdAndEndedFalseOrderByStartedAtDesc(projectId)
+                .orElse(null);
+    }
+
+    /**
+     * Check whether a given user should be allowed to access project chat features.
+     * Does not throw; returns true/false so callers can decide how to respond.
+     */
+    public boolean canAccessProjectChat(Project project, User user) {
+        if (project == null || user == null) {
+            return false;
+        }
+
+        if (user.getRole() == Role.ADMIN) {
+            return true;
+        }
+
+        if (project.getManager() != null
+                && project.getManager().getId() != null
+                && project.getManager().getId().equals(user.getId())) {
+            return true;
+        }
+
+        boolean isAssignee = taskRepository.existsByProject_IdAndAssignedTo_Id(
+                project.getId(),
+                user.getId()
+        );
+
+        return isAssignee;
+    }
+
+    public boolean canEndChat(ChatSession session, User user) {
+        if (session == null || user == null) return false;
+
+        if (session.getStartedBy() == null || session.getStartedBy().getId() == null) return false;
+
+        return session.getStartedBy().getId().equals(user.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatSession> getAllProjectSessions(Long projectId, Authentication authentication) {
+        User actor = getAuthenticatedUser(authentication);
+
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        if (!canAccessProjectChat(project, actor)) {
+            throw new AccessDeniedException("You are not a member of this project chat.");
+        }
+
+        return sessionRepo.findByProject_IdOrderByStartedAtDesc(projectId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatSession> getActiveProjectSessions(Long projectId, Authentication authentication) {
+        User actor = getAuthenticatedUser(authentication);
+
+        Project project = projectRepo.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        if (!canAccessProjectChat(project, actor)) {
+            throw new AccessDeniedException("You are not a member of this project chat.");
+        }
+
+        return sessionRepo.findByProject_IdAndEndedFalseOrderByStartedAtDesc(projectId);
     }
 }

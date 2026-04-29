@@ -11,6 +11,34 @@ function authHeaders(extra?: HeadersInit): HeadersInit {
   };
 }
 
+export async function getProjectSession(projectId: string) {
+  const res = await fetch(`${BACKEND_URL}/project/${projectId}`, {
+    method: "GET",
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to get project session");
+  }
+
+  return res.json();
+}
+
+export async function getSession(sessionId: string) {
+  const res = await fetch(`${BACKEND_URL}/sessions/${sessionId}`, {
+    method: "GET",
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to get chat session");
+  }
+
+  return res.json();
+}
+
 export async function startSession(projectId: string) {
   const res = await fetch(`${BACKEND_URL}/start/${projectId}`, {
     method: "POST",
@@ -34,6 +62,57 @@ export async function getMessages(sessionId: string) {
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || "Failed to fetch messages");
+  }
+
+  return res.json();
+}
+
+export async function getProjectMessages(projectId: string) {
+  const res = await fetch(`${BACKEND_URL}/project/${projectId}/messages`, {
+    method: "GET",
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to fetch project messages");
+  }
+
+  return res.json();
+}
+
+export async function createProjectSession(projectId: string) {
+  const res = await fetch(`${BACKEND_URL}/project/${projectId}/sessions`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to create project session");
+  }
+
+  return res.json();
+}
+
+export async function getProjectSessions(projectId: string) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
+  let res: Response;
+  try {
+    res = await fetch(`${BACKEND_URL}/project/${projectId}/sessions`, {
+      method: "GET",
+      headers: authHeaders(),
+      signal: controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to fetch project sessions");
   }
 
   return res.json();
@@ -110,6 +189,26 @@ export async function createProjectTicket(projectId: string, blocker: string) {
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || "Failed to create project ticket");
+  }
+
+  return res.json();
+}
+
+export async function sendMessage(sessionId: string, content: string) {
+  const res = await fetch(`${BACKEND_URL}/messages`, {
+    method: "POST",
+    headers: authHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      sessionId: Number(sessionId),
+      content: content.trim(),
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to send message");
   }
 
   return res.json();

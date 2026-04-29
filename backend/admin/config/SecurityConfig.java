@@ -2,6 +2,7 @@ package com.admin.config;
 
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,12 +35,14 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers("/api/auth/accept-invite").permitAll()
                 .requestMatchers("/api/inbound/emails/tickets").permitAll()
                 .requestMatchers("/h2/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
-                .requestMatchers("/api/chat/**").permitAll()
+                // Require authentication for chat API so `Authentication` is available to controllers
+                .requestMatchers("/api/chat/**").authenticated()
                 .requestMatchers("/api/timesheets/admin", "/api/timesheets/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/timesheets/team", "/api/timesheets/team/**").hasRole("MANAGER")
                 .requestMatchers("/api/timesheets/my", "/api/timesheets/my/**").hasRole("DEVELOPER")
