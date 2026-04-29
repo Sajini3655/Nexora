@@ -18,10 +18,28 @@ def extract_blockers(messages):
     blockers = []
     combined = " ".join([m["message"].lower() for m in messages])
 
-    if "database server is down" in combined or "db server is down" in combined:
+    # Database-related issues
+    if any(term in combined for term in ["database server is down", "db server is down", "database down", "db down", "database is down"]):
         blockers.append("Database server is down")
-    if "api keys are missing" in combined or "missing api keys" in combined:
+    
+    # API/Service-related issues
+    if any(term in combined for term in ["api keys are missing", "missing api keys", "api key missing"]):
         blockers.append("API keys are missing")
+    
+    # AI Service issues
+    if any(term in combined for term in ["ai service is down", "ai service down", "ai server down"]):
+        blockers.append("AI service is down")
+    
+    # General service/bug keywords
+    if any(term in combined for term in ["service is down", "server is down"]) and "ai service" not in combined and "database" not in combined:
+        if "service is down" in combined:
+            blockers.append("Service is down")
+    
+    # Critical issues
+    if any(term in combined for term in ["critical", "blocker", "blocking", "cannot proceed"]):
+        if not any(b.lower() in combined for b in blockers):
+            blockers.append("Critical issue reported")
+    
     return blockers
 
 

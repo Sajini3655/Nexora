@@ -47,6 +47,7 @@ public class TicketService {
     @Transactional(readOnly = true)
     public List<TicketDto> getTicketsForUser(String userEmail) {
         User user = getUserByEmail(userEmail);
+        System.out.println("[DEBUG] getTicketsForUser: userEmail=" + userEmail + ", user.id=" + user.getId() + ", user.roles=" + user.getAllRoles());
 
         List<Ticket> tickets;
 
@@ -62,6 +63,11 @@ public class TicketService {
             tickets = ticketRepository.findByCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(user.getId(), user.getId());
         }
 
+        System.out.println("[DEBUG] getTicketsForUser returned " + tickets.size() + " tickets");
+        for (Ticket t : tickets) {
+            System.out.println("[DEBUG]   - Ticket id=" + t.getId() + ", title=" + t.getTitle() + ", createdBy.id=" + (t.getCreatedBy() != null ? t.getCreatedBy().getId() : "NULL") + ", status=" + t.getStatus());
+        }
+        
         return tickets.stream().map(this::toDto).collect(Collectors.toList());
     }
 
@@ -88,6 +94,8 @@ public class TicketService {
     @Transactional
     public TicketDto createTicket(String userEmail, Ticket ticket) {
         User user = getUserByEmail(userEmail);
+        System.out.println("[DEBUG] createTicket: userEmail=" + userEmail + ", user.id=" + user.getId() + ", user.roles=" + user.getAllRoles());
+        
         ticket.setCreatedBy(user);
         ticket.setAssignedTo(resolveAssignee(ticket));
         ticket.setProject(resolveProject(ticket));
@@ -100,7 +108,16 @@ public class TicketService {
             ticket.setPriority("MEDIUM");
         }
 
-        TicketDto dto = toDto(ticketRepository.save(ticket));
+        // Set sourceChannel for client-created tickets if not already set
+        if ((ticket.getSourceChannel() == null || ticket.getSourceChannel().isBlank()) &&
+            user.getAllRoles().contains(Role.CLIENT)) {
+            ticket.setSourceChannel("CLIENT");
+        }
+
+        Ticket saved = ticketRepository.save(ticket);
+        System.out.println("[DEBUG] Saved ticket: id=" + saved.getId() + ", title=" + saved.getTitle() + ", createdBy.id=" + (saved.getCreatedBy() != null ? saved.getCreatedBy().getId() : "NULL") + ", status=" + saved.getStatus());
+        
+        TicketDto dto = toDto(saved);
         liveUpdatePublisher.publishTicketsChanged("created");
         return dto;
     }
