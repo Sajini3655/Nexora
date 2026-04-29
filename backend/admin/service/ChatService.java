@@ -327,4 +327,9 @@ public class ChatService {
             throw new AccessDeniedException("You are not a member of this project chat.");
         }
     }
+
+    @Transactional(readOnly = true)
+    public ChatSession getSession(Long sessionId) {
+        return sessionRepo.findById(sessionId).orElse(null);
+    }
 }
