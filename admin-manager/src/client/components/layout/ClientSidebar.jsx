@@ -3,10 +3,12 @@ import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import ConfirmationNumberRoundedIcon from "@mui/icons-material/ConfirmationNumberRounded";
 import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import UnifiedSidebar from "../../../components/layout/UnifiedSidebar.jsx";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 
 const links = [
   { to: "/client", label: "Dashboard", icon: <DashboardRoundedIcon />, end: true },
   { to: "/client/tickets", label: "Tickets", icon: <ConfirmationNumberRoundedIcon /> },
+  { to: "/client/history", label: "History", icon: <HistoryRoundedIcon />, },
   { to: "/client/projects", label: "Workstreams", icon: <FolderOpenRoundedIcon /> },
 ];
 

@@ -39,6 +39,7 @@ import ClientProjectList from "./client/pages/projects/ClientProjectList.jsx";
 import ClientTicketList from "./client/pages/tickets/ClientTicketList.jsx";
 import ClientProfile from "./client/pages/profile/ClientProfile.jsx";
 import ClientSettings from "./client/pages/settings/ClientSettings.jsx";
+import ClientHistory from "./client/pages/history/ClientHistory.jsx";
 
 import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
 import Sidebar from "./components/layout/Sidebar.jsx";
@@ -307,6 +308,7 @@ export default function App() {
         <Route path="/client" element={<UnifiedShell role="CLIENT"><ClientDashboardHome /></UnifiedShell>} />
         <Route path="/client/projects" element={<UnifiedShell role="CLIENT"><ClientProjectList /></UnifiedShell>} />
         <Route path="/client/tickets" element={<UnifiedShell role="CLIENT"><ClientTicketList /></UnifiedShell>} />
+        <Route path="/client/history" element={<UnifiedShell role="CLIENT"><ClientHistory /></UnifiedShell>} />
         <Route path="/client/profile" element={<UnifiedShell role="CLIENT"><ClientProfile /></UnifiedShell>} />
         <Route path="/client/settings" element={<UnifiedShell role="CLIENT"><ClientSettings /></UnifiedShell>} />
       </Route>
