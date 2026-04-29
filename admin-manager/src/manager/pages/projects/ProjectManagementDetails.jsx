@@ -753,7 +753,7 @@ export default function ProjectManagementDetails() {
               Manage Task: {taskDraft?.title || "Task"}
             </Typography>
             <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-              Task details, developer assignment, and story points
+              Task details and story points
             </Typography>
           </Box>
           <IconButton onClick={closeTaskModal}>
