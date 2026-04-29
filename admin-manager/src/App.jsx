@@ -9,12 +9,14 @@ import AccessControl from "./admin/pages/access/AccessControl.jsx";
 import AdminProfile from "./admin/pages/profile/AdminProfile.jsx";
 import AdminSettingsPage from "./admin/pages/settings/AdminSettingsPage.jsx";
 import UserList from "./admin/pages/users/UserList.jsx";
+import AdminTimesheets from "./admin/pages/timesheets/AdminTimesheets.jsx";
 
 import ManagerDashboard from "./manager/pages/dashboard/ManagerDashboard.jsx";
 import AddProject from "./manager/pages/projects/AddProject.jsx";
 import ProjectManagement from "./manager/pages/projects/ProjectManagement.jsx";
 import ProjectManagementDetails from "./manager/pages/projects/ProjectManagementDetails.jsx";
 import AIAssignment from "./manager/pages/ai/AIAssignment.jsx";
+import ManagerTimesheets from "./manager/pages/timesheets/ManagerTimesheets.jsx";
 
 // Developer dashboard (merged from /developer)
 import DevDashboardHome from "./dev/pages/dashboard/DevDashboardHome.jsx";
@@ -28,6 +30,7 @@ import DevChat from "./dev/pages/chat/DevChat.jsx";
 import DevProjectList from "./dev/pages/projects/DevProjectList.jsx";
 import DevProjectView from "./dev/pages/projects/DevProjectView.jsx";
 import DevSettings from "./dev/pages/settings/DevSettings.jsx";
+import DevTimesheets from "./dev/pages/timesheets/DevTimesheets.jsx";
 
 // Client dashboard
 import ClientDashboardHome from "./client/pages/dashboard/ClientDashboardHome.jsx";
@@ -148,6 +151,14 @@ export default function App() {
             </UnifiedShell>
           }
         />
+        <Route
+          path="/admin/timesheets"
+          element={
+            <UnifiedShell role="ADMIN">
+              <AdminTimesheets />
+            </UnifiedShell>
+          }
+        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="DASHBOARD" />}>
@@ -199,6 +210,17 @@ export default function App() {
           element={
             <UnifiedShell role="MANAGER">
               <AddProject />
+            </UnifiedShell>
+          }
+        />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+        <Route
+          path="/manager/timesheets"
+          element={
+            <UnifiedShell role="MANAGER">
+              <ManagerTimesheets />
             </UnifiedShell>
           }
         />
@@ -258,6 +280,8 @@ export default function App() {
         <Route path="/dev/profile" element={<UnifiedShell role="DEVELOPER"><DevProfile /></UnifiedShell>} />
 
         <Route path="/dev/settings" element={<UnifiedShell role="DEVELOPER"><DevSettings /></UnifiedShell>} />
+
+        <Route path="/dev/timesheets" element={<UnifiedShell role="DEVELOPER"><DevTimesheets /></UnifiedShell>} />
 
       </Route>
 

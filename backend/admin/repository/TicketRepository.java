@@ -14,6 +14,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     List<Ticket> findAllByOrderByCreatedAtDesc();
 
+    @EntityGraph(attributePaths = {"createdBy", "assignedTo", "project"})
     List<Ticket> findByCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(Long createdById, Long assignedToId);
 
     @Query("""
@@ -23,13 +24,14 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
            OR t.assignedTo.id = :assignedToId
         ORDER BY t.createdAt DESC
     """)
+    @EntityGraph(attributePaths = {"createdBy", "assignedTo", "project"})
     List<Ticket> findByProjectManagerIdOrCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(
             @Param("managerId") Long managerId,
             @Param("createdById") Long createdById,
             @Param("assignedToId") Long assignedToId
     );
 
-    @EntityGraph(attributePaths = {"project"})
+    @EntityGraph(attributePaths = {"project", "createdBy"})
     List<Ticket> findTop5BySourceChannelIgnoreCaseOrSourceEmailIsNotNullOrderByCreatedAtDesc(
             String sourceChannel
     );

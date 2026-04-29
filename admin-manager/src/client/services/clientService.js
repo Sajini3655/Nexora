@@ -148,8 +148,8 @@ function toUiTicket(row, idx) {
     status: mapStatus(row?.status),
     updatedAt: getDateString(row?.updatedAt ?? row?.updated_at ?? row?.createdAt ?? row?.created_at),
     description: row?.description ?? "",
-    createdBy: row?.createdBy?.name ?? null,
-    assignedTo: row?.assignedTo?.name ?? null,
+    createdBy: row?.createdBy?.name ?? row?.createdByName ?? null,
+    assignedTo: row?.assignedTo?.name ?? row?.assignedToName ?? null,
   };
 }
 
@@ -362,15 +362,34 @@ export async function createClientTicket(payload) {
     title: prefixedTitle,
     description: payload.description,
     priority: String(payload.urgency || "Medium").toUpperCase(),
-    status: "Open",
+    status: "OPEN",
   };
 
-  const inserted = await ticketFetch("", {
-    method: "POST",
-    body: JSON.stringify(insertRow),
-  });
+  console.log("[createClientTicket] Sending POST request with:", insertRow);
 
-  const data = await inserted.json();
-  return toUiTicket(data, 0);
+  try {
+    const inserted = await ticketFetch("", {
+      method: "POST",
+      body: JSON.stringify(insertRow),
+    });
+
+    const data = await inserted.json();
+    console.log("[createClientTicket] Response from server:", data);
+    
+    if (!data) {
+      throw new Error("Empty response from server");
+    }
+
+    const uiTicket = toUiTicket(data, 0);
+    console.log("[createClientTicket] Converted to UI format:", uiTicket);
+    
+    // Force refresh tickets from server
+    writeTicketCache([uiTicket]);
+    
+    return uiTicket;
+  } catch (error) {
+    console.error("[createClientTicket] Error:", error);
+    throw error;
+  }
 }
 
