@@ -1,3 +1,36 @@
+# Node
+node_modules/
+**/node_modules/
+
+# Build outputs
+admin-manager/dist/
+admin-manager/build/
+
+# Java / Maven
+backend/target/
+**/target/
+
+# Python virtual env
+.venv/
+venv/
+
+# IDEs
+.idea/
+.vscode/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backup zips
+*.zip
+
+# Environment
+.env
+env.local
 # Logs
 logs
 *.log

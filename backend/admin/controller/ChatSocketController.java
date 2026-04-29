@@ -45,10 +45,16 @@ public class ChatSocketController {
                 trimmed
         );
 
-        // Get projectId from the session to send to project-specific topic
+        // Get session and project info to send to session-scoped topic
         var session = chatService.getSession(request.getSessionId());
         if (session != null && session.getProject() != null) {
-            String destination = "/topic/projects/" + session.getProject().getId() + "/chat";
+            // double-check access
+            if (!chatService.canAccessProjectChat(session.getProject(), authUser)) {
+                return;
+            }
+
+            String destination = "/topic/projects/" + session.getProject().getId() + "/sessions/" + session.getId() + "/chat";
+            System.out.println("ChatSocketController: sending message to projectId=" + session.getProject().getId() + " sessionId=" + session.getId() + " destination=" + destination + " senderId=" + request.getUserId());
             messagingTemplate.convertAndSend(destination, response);
         }
     }

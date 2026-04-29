@@ -1,18 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState, CSSProperties } from "react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Button, Chip, IconButton } from "@mui/material";
+import { Button, Chip, IconButton, Tooltip } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import StopCircleRoundedIcon from "@mui/icons-material/StopCircleRounded";
 import CircleRoundedIcon from "@mui/icons-material/CircleRounded";
 import {
+  getProjectSession,
+  getSession,
   startSession,
   getMessages,
+  getProjectMessages,
+  createProjectSession,
   endChatAI,
   saveSummary,
   createProjectTicket,
+  sendMessage,
 } from "./api";
 
 interface Message {
@@ -43,7 +48,10 @@ interface ChatBoxProps {
   currentUserId: string;
   currentUserName: string;
   onSummary: (data: ChatEndResult) => void;
+  onClose?: () => void;
   hideSidebar?: boolean;
+  hideNewChatButton?: boolean;
+  selectedSessionId?: string | null; // null = new chat, string = specific thread
 }
 
 const WS_URL = "http://localhost:8081/ws";
@@ -157,7 +165,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   currentUserId,
   currentUserName,
   onSummary,
+  onClose,
   hideSidebar = false,
+  hideNewChatButton = false,
+  selectedSessionId = null,
 }) => {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
@@ -167,21 +178,23 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   const [showTicketPrompt, setShowTicketPrompt] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionStartedById, setSessionStartedById] = useState<string | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [wsConnecting, setWsConnecting] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const chatWindowRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
+  const wsActivateTimerRef = useRef<number | null>(null);
 
   const subscriptionTopic = useMemo(
-    () => (projectId ? `/topic/projects/${projectId}/chat` : null),
-    [projectId]
+    () => (projectId && sessionId ? `/topic/projects/${projectId}/sessions/${sessionId}/chat` : null),
+    [projectId, sessionId]
   );
 
-  const wsUrlWithToken = useMemo(() => {
-    const token = localStorage.getItem("token");
-    return token ? `${WS_URL}?token=${encodeURIComponent(token)}` : WS_URL;
-  }, []);
+  const wsToken = localStorage.getItem("token");
+  const wsUrlWithToken = wsToken ? `${WS_URL}?token=${encodeURIComponent(wsToken)}` : WS_URL;
 
   const appendLocalUserMessage = (text: string) => {
     const createdAt = new Date().toISOString();
@@ -244,60 +257,73 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         setErrorMessage("");
         setChat([]);
         setSessionId(null);
+        setSessionStartedById(null);
         setChatEnded(false);
         setSummaryData(null);
         setShowTicketPrompt(false);
         setSocketConnected(false);
 
-        const session = await startSession(projectId);
+        // If selectedSessionId is provided, load that specific session
+        if (selectedSessionId) {
+          const session = await getSession(selectedSessionId);
+          
+          if (cancelled) return;
 
-        if (cancelled) return;
+          if (!session || !session.id) {
+            throw new Error("Chat session not found.");
+          }
 
-        if (!session || !session.id) {
-          throw new Error("Chat session was not created.");
-        }
+          setSessionId(String(session.id));
+          setSessionStartedById(session.startedById != null ? String(session.startedById) : null);
 
-        setSessionId(String(session.id));
+          // Load messages for this specific session
+          let sessionMessages: any[] = [];
+          try {
+            sessionMessages = await getMessages(String(session.id));
+          } catch (e) {
+            console.debug("ChatBox:getMessages failed:", e?.message || e);
+          }
 
-        const storedMessages = await getMessages(String(session.id));
+          if (cancelled) return;
 
-        if (cancelled) return;
+          const mappedMessages: Message[] = Array.isArray(sessionMessages)
+            ? sessionMessages.map((m: any) => {
+                const senderName = m.senderName ?? "Unknown";
+                const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
+                const isMe = String(m.senderId) === String(currentUserId);
 
-        const mappedMessages: Message[] = Array.isArray(storedMessages)
-          ? storedMessages.map((m: any) => {
-              const senderName = m.senderName ?? "Unknown";
-              const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
-              const isMe = String(m.senderId) === String(currentUserId);
+                return {
+                  user: isAi ? "assistant" : isMe ? "me" : "other",
+                  message: m.content ?? "",
+                  senderId: String(m.senderId),
+                  senderName: senderName,
+                  createdAt: m.createdAt,
+                };
+              })
+            : [];
 
-              return {
-                user: isAi ? "assistant" : isMe ? "me" : "other",
-                message: m.content ?? "",
-                senderId: String(m.senderId),
-                senderName: senderName,
-                createdAt: m.createdAt,
+          setChat(mappedMessages);
+
+          if (session.ended) {
+            setChatEnded(true);
+
+            if (session.summary) {
+              const endedSummary: ChatEndResult = {
+                summary: session.summary,
+                blockers: detectBlockers(mappedMessages),
+                tickets_created: [],
+                ticket_message: "",
+                ticket_prompt_needed: false,
+                source: "ai",
               };
-            })
-          : [];
 
-        setChat(mappedMessages);
-
-        if (session.ended) {
-          setChatEnded(true);
-
-          if (session.summary) {
-            const endedSummary: ChatEndResult = {
-              summary: session.summary,
-              blockers: detectBlockers(mappedMessages),
-              tickets_created: [],
-              ticket_message: "",
-              ticket_prompt_needed: false,
-              source: "ai",
-            };
-
-            setSummaryData(endedSummary);
-            onSummary(endedSummary);
+              setSummaryData(endedSummary);
+              onSummary(endedSummary);
+            }
           }
         }
+        // If selectedSessionId is null, we're creating a new chat - don't load anything yet
+        // The session will be created on first message
       } catch (error: any) {
         if (!cancelled) {
           setErrorMessage(error?.message || "Failed to initialize chat session.");
@@ -314,17 +340,22 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [projectId, currentUserId, onSummary]);
+  }, [projectId, selectedSessionId, currentUserId, onSummary]);
 
   useEffect(() => {
     if (!subscriptionTopic || !sessionId || chatEnded) return;
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(wsUrlWithToken),
+      webSocketFactory: () => new SockJS(wsUrlWithToken, undefined, {
+        transports: ["websocket", "xhr-streaming", "xhr-polling"],
+      }),
       reconnectDelay: 5000,
       onConnect: () => {
         setSocketConnected(true);
+        setWsConnecting(false);
         setErrorMessage("");
+
+        console.debug("ChatBox:WebSocket connected. Subscribing to", subscriptionTopic);
 
         client.subscribe(subscriptionTopic, (message) => {
           const payload = JSON.parse(message.body);
@@ -356,10 +387,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       },
     });
 
-    client.activate();
     stompClientRef.current = client;
 
+    wsActivateTimerRef.current = window.setTimeout(() => {
+      client.activate();
+    }, 0);
+
     return () => {
+      if (wsActivateTimerRef.current !== null) {
+        window.clearTimeout(wsActivateTimerRef.current);
+        wsActivateTimerRef.current = null;
+      }
+
       setSocketConnected(false);
 
       if (stompClientRef.current) {
@@ -383,9 +422,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       endingChat ||
       chatEnded ||
       loadingSession ||
-      !sessionId ||
-      !stompClientRef.current ||
-      !socketConnected
+      sending
     ) {
       return;
     }
@@ -394,39 +431,87 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     let localCreatedAt = "";
 
     try {
+      setSending(true);
       setErrorMessage("");
 
-      localCreatedAt = appendLocalUserMessage(messageText);
+      // If no session exists yet (new chat), create one before sending
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        setLoadingSession(true);
+        const newSession = await createProjectSession(projectId);
+        currentSessionId = String(newSession.id);
+        setSessionId(currentSessionId);
+        setSessionStartedById(newSession.startedById != null ? String(newSession.startedById) : null);
+        setLoadingSession(false);
+      }
 
-      stompClientRef.current.publish({
-        destination: "/app/chat.send",
-        body: JSON.stringify({
-          sessionId: Number(sessionId),
-          userId: Number(currentUserId),
-          content: messageText,
-        }),
-      });
+      if (!currentSessionId) {
+        throw new Error("Failed to create chat session.");
+      }
+
+      // Send via HTTP API
+      const savedMessage = await sendMessage(currentSessionId, messageText);
+
+
+      // If WebSocket is connected, the server will broadcast the saved message
+      // back to us via the subscription. To avoid duplicates, only append the
+      // saved HTTP message locally when the stomp client is not connected.
+      const wsIsConnected = Boolean(stompClientRef.current?.connected);
+
+      if (!wsIsConnected) {
+        setChat((prev) => {
+          const exists = prev.some((m) =>
+            m.user === "me" &&
+            m.senderId === currentUserId &&
+            m.message === messageText
+          );
+          if (exists) return prev;
+
+          return [
+            ...prev,
+            {
+              user: "me",
+              message: savedMessage.content,
+              senderId: String(savedMessage.senderId),
+              senderName: savedMessage.senderName,
+              createdAt: savedMessage.createdAt,
+            },
+          ];
+        });
+      }
 
       setInput("");
-    } catch (error: any) {
-      setChat((prev) =>
-        prev.filter(
-          (m) =>
-            !(
-              m.user === "me" &&
-              m.senderId === currentUserId &&
-              m.message === messageText &&
-              m.createdAt === localCreatedAt
-            )
-        )
-      );
 
+      // Also send via WebSocket for live updates if available
+      if (stompClientRef.current?.connected) {
+        try {
+          stompClientRef.current.publish({
+            destination: "/app/chat.send",
+            body: JSON.stringify({
+              sessionId: Number(currentSessionId),
+              userId: Number(currentUserId),
+              content: messageText,
+            }),
+          });
+        } catch (e) {
+          // WebSocket send failed, but HTTP send succeeded
+          console.debug("WebSocket send failed, but HTTP send succeeded:", e);
+        }
+      }
+    } catch (error: any) {
       setErrorMessage(error?.message || "Failed to send message.");
+    } finally {
+      setSending(false);
     }
   };
 
   const handleEndChat = async () => {
     if (!sessionId || chat.length === 0 || endingChat || chatEnded) return;
+
+    if (sessionStartedById && String(sessionStartedById) !== String(currentUserId)) {
+      setErrorMessage("Only the developer who started this chat can end it.");
+      return;
+    }
 
     try {
       setEndingChat(true);
@@ -521,48 +606,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     if (e.key === "Enter") handleSend();
   };
 
+  const canEndChat = Boolean(
+    sessionStartedById && String(sessionStartedById) === String(currentUserId)
+  );
+
   const styles: { [key: string]: CSSProperties } = {
-    shell: {
-      minHeight: 360,
-      display: "grid",
-      gridTemplateColumns: hideSidebar ? "minmax(0, 1fr)" : "270px minmax(0, 1fr)",
-      borderRadius: 22,
-      overflow: "hidden",
-      background: "linear-gradient(180deg, #0f1b2f 0%, #0b1628 100%)",
-      border: "1px solid rgba(148,163,184,0.14)",
-      boxShadow: "0 24px 70px rgba(0,0,0,0.28)",
-    },
-    sidebar: {
-      padding: 18,
-      background: "#0a1222",
-      borderRight: "1px solid rgba(148,163,184,0.12)",
+    // Modal-optimized container (when used in a Dialog/Modal)
+    modalContainer: {
       display: "flex",
       flexDirection: "column",
-      gap: 14,
-    },
-    roomCard: {
-      padding: 14,
-      borderRadius: 16,
-      background: "#111d33",
-      border: "1px solid rgba(148,163,184,0.14)",
-    },
-    memberCard: {
-      padding: "10px 12px",
-      borderRadius: 14,
-      background: "#0f1b2f",
-      border: "1px solid rgba(148,163,184,0.10)",
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-    },
-    main: {
-      minWidth: 0,
-      display: "flex",
-      flexDirection: "column",
+      height: "100%",
+      minHeight: 0,
       background: "#0b1628",
     },
-    header: {
-      minHeight: 74,
+    // Header for modal
+    modalHeader: {
       padding: "16px 18px",
       borderBottom: "1px solid rgba(148,163,184,0.12)",
       display: "flex",
@@ -570,30 +628,35 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       alignItems: "center",
       gap: 14,
       background: "#0d182b",
+      flexShrink: 0,
     },
-    window: {
+    // Messages container - scrollable
+    messageContainer: {
       flex: 1,
-      minHeight: 430,
-      maxHeight: 520,
-      padding: 18,
+      minHeight: 0,
       overflowY: "auto",
+      padding: 18,
       display: "flex",
       flexDirection: "column",
       gap: 12,
       background:
         "radial-gradient(800px 300px at 15% 0%, rgba(109,93,252,0.08), transparent 55%), #081323",
     },
-    inputBar: {
+    // Composer section - always visible at bottom
+    composerSection: {
       padding: 12,
       borderTop: "1px solid rgba(148,163,184,0.12)",
       background: "#0d182b",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      flexShrink: 0,
+    },
+    composerInputRow: {
       display: "grid",
       gridTemplateColumns: "minmax(0, 1fr) auto auto",
       gap: 8,
       alignItems: "center",
-      position: "sticky",
-      bottom: 0,
-      zIndex: 3,
     },
     input: {
       width: "100%",
@@ -707,282 +770,544 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       letterSpacing: 0.7,
       textTransform: "uppercase",
     },
+    // Old full-page styles preserved for backwards compatibility when hideSidebar is false
+    shell: {
+      minHeight: 360,
+      display: "grid",
+      gridTemplateColumns: hideSidebar ? "minmax(0, 1fr)" : "270px minmax(0, 1fr)",
+      borderRadius: 22,
+      overflow: "hidden",
+      background: "linear-gradient(180deg, #0f1b2f 0%, #0b1628 100%)",
+      border: "1px solid rgba(148,163,184,0.14)",
+      boxShadow: "0 24px 70px rgba(0,0,0,0.28)",
+    },
+    sidebar: {
+      padding: 18,
+      background: "#0a1222",
+      borderRight: "1px solid rgba(148,163,184,0.12)",
+      display: "flex",
+      flexDirection: "column",
+      gap: 14,
+    },
+    roomCard: {
+      padding: 14,
+      borderRadius: 16,
+      background: "#111d33",
+      border: "1px solid rgba(148,163,184,0.14)",
+    },
+    memberCard: {
+      padding: "10px 12px",
+      borderRadius: 14,
+      background: "#0f1b2f",
+      border: "1px solid rgba(148,163,184,0.10)",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+    },
+    main: {
+      minWidth: 0,
+      display: "flex",
+      flexDirection: "column",
+      background: "#0b1628",
+    },
+    header: {
+      minHeight: 74,
+      padding: "16px 18px",
+      borderBottom: "1px solid rgba(148,163,184,0.12)",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 14,
+      background: "#0d182b",
+    },
+    window: {
+      flex: 1,
+      minHeight: 430,
+      maxHeight: 520,
+      padding: 18,
+      overflowY: "auto",
+      display: "flex",
+      flexDirection: "column",
+      gap: 12,
+      background:
+        "radial-gradient(800px 300px at 15% 0%, rgba(109,93,252,0.08), transparent 55%), #081323",
+    },
+    inputBar: {
+      padding: 12,
+      borderTop: "1px solid rgba(148,163,184,0.12)",
+      background: "#0d182b",
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) auto auto",
+      gap: 8,
+      alignItems: "center",
+      position: "sticky",
+      bottom: 0,
+      zIndex: 3,
+    },
   };
 
   return (
-    <div style={styles.shell} className="nx-chat-shell">
-      {!hideSidebar && (
-        <aside style={styles.sidebar} className="nx-chat-sidebar">
-          <div>
-            <div style={styles.smallLabel}>Workspace</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#f8fafc", marginTop: 4 }}>
-              AI Shadow Chat
+    <div style={hideSidebar ? styles.modalContainer : styles.shell} className="nx-chat-shell">
+      {/* Modal-optimized render path when hideSidebar is true */}
+      {hideSidebar ? (
+        <>
+          {/* Modal Header */}
+          <div style={styles.modalHeader}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#f8fafc" }}>
+                Team Chat
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+                {projectName}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
-              Project discussion with live updates.
-            </div>
-          </div>
-
-          <div style={styles.roomCard}>
-            <div style={styles.smallLabel}>Active room</div>
-            <div style={{ color: "#f8fafc", fontWeight: 900, marginTop: 6 }}>
-              {projectName}
-            </div>
-            <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
-              Project ID: {projectId}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ ...styles.smallLabel, marginBottom: 8 }}>Members</div>
-            <div style={styles.memberCard}>
-              <div
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #6d5dfc, #22c55e)",
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <Chip
+                size="small"
+                label={socketConnected ? "Live" : wsConnecting ? "Connecting…" : "Offline"}
+                sx={{
+                  bgcolor: socketConnected ? "rgba(34,197,94,0.14)" : wsConnecting ? "rgba(100,116,139,0.16)" : "rgba(239,68,68,0.14)",
+                  color: socketConnected ? "#86efac" : wsConnecting ? "#cbd5e1" : "#fecaca",
+                  fontWeight: 900,
                 }}
               />
-              <div>
-                <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
-                  {currentUserName}
-                </div>
-                <div style={{ color: "#64748b", fontSize: 12 }}>Developer</div>
-              </div>
-            </div>
-            <div style={{ ...styles.memberCard, marginTop: 8 }}>
-              <div
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  background: "#1e293b",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#a78bfa",
-                  fontWeight: 900,
-                  fontSize: 12,
-                }}
-              >
-                AI
-              </div>
-              <div>
-                <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
-                  AI Shadow
-                </div>
-                <div style={{ color: "#64748b", fontSize: 12 }}>Summary assistant</div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ marginTop: "auto" }}>
-            <div style={styles.smallLabel}>Status</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#cbd5e1", fontSize: 13, marginTop: 8 }}>
-              <CircleRoundedIcon sx={{ fontSize: 10, color: socketConnected ? "#22c55e" : "#64748b" }} />
-              {socketConnected ? "Live connection" : "Offline"}
-            </div>
-            <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>
-              {chatEnded ? "Chat ended. Summary processed." : "Messages sync in real time."}
-            </div>
-          </div>
-        </aside>
-      )}
-
-      <main style={styles.main}>
-        <header style={styles.header}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: "#f8fafc" }}>
-              {projectName}
-            </div>
-            <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
-              {chatEnded ? "Chat ended" : "Live project discussion"}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <Chip
-              size="small"
-              label={socketConnected ? "Live" : "Offline"}
-              sx={{
-                bgcolor: socketConnected ? "rgba(34,197,94,0.14)" : "rgba(100,116,139,0.16)",
-                color: socketConnected ? "#86efac" : "#cbd5e1",
-                fontWeight: 900,
-              }}
-            />
-            <Chip
-              size="small"
-              label={`${chat.length} messages`}
-              sx={{
-                bgcolor: "rgba(96,165,250,0.14)",
-                color: "#bfdbfe",
-                fontWeight: 900,
-              }}
-            />
-            {chatEnded && (
-              <Button
+              <Chip
                 size="small"
-                variant="contained"
-                onClick={async () => {
-                  try {
-                    setLoadingSession(true);
-                    setErrorMessage("");
-                    setChat([]);
-                    setSummaryData(null);
-                    setShowTicketPrompt(false);
-
-                    const session = await startSession(projectId);
-                    if (!session || !session.id) throw new Error("Failed to start new chat session");
-                    setSessionId(String(session.id));
-
-                    const stored = await getMessages(String(session.id));
-                    const mapped: Message[] = Array.isArray(stored)
-                      ? stored.map((m: any) => {
-                          const senderName = m.senderName ?? "Unknown";
-                          const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
-                          const isMe = String(m.senderId) === String(currentUserId);
-
-                          return {
-                            user: isAi ? "assistant" : isMe ? "me" : "other",
-                            message: m.content ?? "",
-                            senderId: String(m.senderId),
-                            senderName: senderName,
-                            createdAt: m.createdAt,
-                          };
-                        })
-                      : [];
-
-                    setChat(mapped);
-                    setChatEnded(false);
-                    setShowTicketPrompt(false);
-                  } catch (e: any) {
-                    setErrorMessage(e?.message || "Failed to start new chat.");
-                  } finally {
-                    setLoadingSession(false);
-                  }
+                label={chatEnded ? "Ended" : "Active"}
+                sx={{
+                  bgcolor: chatEnded ? "rgba(107,114,128,0.16)" : "rgba(34,197,94,0.14)",
+                  color: chatEnded ? "#d1d5db" : "#86efac",
+                  fontWeight: 900,
                 }}
-                disabled={loadingSession}
-                sx={{ fontWeight: 900 }}
-              >
-                Start new chat
-              </Button>
-            )}
+              />
+            </div>
           </div>
-        </header>
 
-        <section style={styles.window} ref={chatWindowRef}>
-          {loadingSession ? (
-            <div style={styles.emptyState}>Loading chat session...</div>
-          ) : (
-            <>
-              {chat.length === 0 && (
-                <div style={styles.emptyState}>
-                  <div style={{ fontWeight: 900, color: "#f8fafc", marginBottom: 6 }}>
-                    Start the project conversation
+          {/* Messages Area */}
+          <section style={styles.messageContainer} ref={chatWindowRef}>
+            {loadingSession ? (
+              <div style={styles.emptyState}>Loading chat session...</div>
+            ) : (
+              <>
+                {chat.length === 0 && (
+                  <div style={styles.emptyState}>
+                    <div style={{ fontWeight: 900, color: "#f8fafc", marginBottom: 6 }}>
+                      Start the project conversation
+                    </div>
+                    <div>
+                      Send the first message to begin this thread.
+                    </div>
+                  </div>
+                )}
+
+                {chat.map((m, idx) => {
+                  const isMe = m.user === "me";
+                  const isAssistant = m.user === "assistant";
+
+                  const wrapStyle = isMe ? styles.bubbleWrapUser : styles.bubbleWrapAssistant;
+                  const bubbleStyle = isAssistant ? styles.bubbleAI : isMe ? styles.bubbleUser : styles.bubbleOther;
+
+                  return (
+                    <div key={`${m.createdAt || "msg"}-${idx}`} style={wrapStyle}>
+                      <div style={styles.meta}>
+                        <span>{m.senderName || (isMe ? currentUserName : isAssistant ? "AI Shadow" : "User")}</span>
+                        <span>{formatTime(m.createdAt)}</span>
+                      </div>
+                      <div style={bubbleStyle}>{m.message}</div>
+                    </div>
+                  );
+                })}
+
+                {showTicketPrompt && (
+                  <div style={styles.ticketPrompt}>
+                    <div>
+                      <div style={{ color: "#f8fafc", fontWeight: 900 }}>
+                        Create a ticket from this summary?
+                      </div>
+                      <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+                        The manager can review and assign it as a task.
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <IconButton
+                        style={{ color: "#22c55e", background: "rgba(34,197,94,0.12)" }}
+                        onClick={() => handleTicketChoice(true)}
+                        size="small"
+                      >
+                        <CheckIcon />
+                      </IconButton>
+
+                      <IconButton
+                        style={{ color: "#ef4444", background: "rgba(239,68,68,0.12)" }}
+                        onClick={() => handleTicketChoice(false)}
+                        size="small"
+                      >
+                        <CloseIcon />
+                      </IconButton>
+                    </div>
+                  </div>
+                )}
+
+                {summaryData && (
+                  <div style={styles.summaryBox}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ fontWeight: 900 }}>Chat summary</div>
+                      <div style={{ fontSize: 12, color: "#86efac", fontWeight: 800 }}>
+                        {summaryData.source === "ai" ? "AI Summary" : "Local Summary"}
+                      </div>
+                    </div>
+                    <div style={{ color: "#cbd5e1", fontSize: 13, whiteSpace: "pre-wrap" }}>{summaryData.summary}</div>
+
+                    {chatEnded && !showTicketPrompt && onClose ? (
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={onClose}
+                          sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+                        >
+                          Close window
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                {errorMessage && <div style={styles.errorBox}>{errorMessage}</div>}
+              </>
+            )}
+          </section>
+
+          {/* Composer Section - Always visible */}
+          <div style={styles.composerSection}>
+            <div style={styles.composerInputRow}>
+              <input
+                style={styles.input}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                placeholder={loadingSession ? "Loading chat…" : chatEnded ? "Chat ended" : sending ? "Sending…" : "Type a message…"}
+                disabled={chatEnded || endingChat || loadingSession || sending}
+              />
+
+              <Button
+                variant="contained"
+                onClick={handleSend}
+                startIcon={<SendRoundedIcon />}
+                disabled={!input.trim() || endingChat || chatEnded || loadingSession || sending}
+                sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+              >
+                Send
+              </Button>
+
+              <Tooltip
+                title={canEndChat ? "" : "Only the chat starter can end this chat."}
+                disableHoverListener={canEndChat}
+                disableFocusListener={canEndChat}
+                disableTouchListener={canEndChat}
+              >
+                <span>
+                  <Button
+                    variant="outlined"
+                    onClick={handleEndChat}
+                    startIcon={<StopCircleRoundedIcon />}
+                    disabled={chat.length === 0 || endingChat || chatEnded || loadingSession || !canEndChat}
+                    sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+                  >
+                    {endingChat ? "Ending..." : "End"}
+                  </Button>
+                </span>
+              </Tooltip>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Full-page render path (original implementation) */
+        <>
+          {!hideSidebar && (
+            <aside style={styles.sidebar} className="nx-chat-sidebar">
+              <div>
+                <div style={styles.smallLabel}>Workspace</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#f8fafc", marginTop: 4 }}>
+                  AI Shadow Chat
+                </div>
+                <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
+                  Project discussion with live updates.
+                </div>
+              </div>
+
+              <div style={styles.roomCard}>
+                <div style={styles.smallLabel}>Active room</div>
+                <div style={{ color: "#f8fafc", fontWeight: 900, marginTop: 6 }}>
+                  {projectName}
+                </div>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
+                  Project ID: {projectId}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ ...styles.smallLabel, marginBottom: 8 }}>Members</div>
+                <div style={styles.memberCard}>
+                  <div
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #6d5dfc, #22c55e)",
+                    }}
+                  />
+                  <div>
+                    <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
+                      {currentUserName}
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: 12 }}>Developer</div>
+                  </div>
+                </div>
+                <div style={{ ...styles.memberCard, marginTop: 8 }}>
+                  <div
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: "50%",
+                      background: "#1e293b",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#a78bfa",
+                      fontWeight: 900,
+                      fontSize: 12,
+                    }}
+                  >
+                    AI
                   </div>
                   <div>
-                    Share blockers, implementation notes, or project updates. End the chat to generate an AI summary and create tickets when needed.
+                    <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
+                      AI Shadow
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: 12 }}>Summary assistant</div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {chat.map((m, idx) => {
-                const isMe = m.user === "me";
-                const isAssistant = m.user === "assistant";
-
-                const wrapStyle = isMe ? styles.bubbleWrapUser : styles.bubbleWrapAssistant;
-                const bubbleStyle = isAssistant ? styles.bubbleAI : isMe ? styles.bubbleUser : styles.bubbleOther;
-
-                return (
-                  <div key={`${m.createdAt || "msg"}-${idx}`} style={wrapStyle}>
-                    <div style={styles.meta}>
-                      <span>{m.senderName || (isMe ? currentUserName : isAssistant ? "AI Shadow" : "User")}</span>
-                      <span>{formatTime(m.createdAt)}</span>
-                    </div>
-                    <div style={bubbleStyle}>{m.message}</div>
-                  </div>
-                );
-              })}
-
-              {showTicketPrompt && (
-                <div style={styles.ticketPrompt}>
-                  <div>
-                    <div style={{ color: "#f8fafc", fontWeight: 900 }}>
-                      Create a ticket from this summary?
-                    </div>
-                    <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
-                      The manager can review and assign it as a task.
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <IconButton
-                      style={{ color: "#22c55e", background: "rgba(34,197,94,0.12)" }}
-                      onClick={() => handleTicketChoice(true)}
-                      size="small"
-                    >
-                      <CheckIcon />
-                    </IconButton>
-
-                    <IconButton
-                      style={{ color: "#ef4444", background: "rgba(239,68,68,0.12)" }}
-                      onClick={() => handleTicketChoice(false)}
-                      size="small"
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </div>
+              <div style={{ marginTop: "auto" }}>
+                <div style={styles.smallLabel}>Status</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#cbd5e1", fontSize: 13, marginTop: 8 }}>
+                  <CircleRoundedIcon sx={{ fontSize: 10, color: socketConnected ? "#22c55e" : "#64748b" }} />
+                  {socketConnected ? "Live connection" : "Offline"}
                 </div>
-              )}
-
-              {summaryData && (
-                <div style={styles.summaryBox}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ fontWeight: 900 }}>Chat summary</div>
-                    <div style={{ fontSize: 12, color: "#86efac", fontWeight: 800 }}>
-                      {summaryData.source === "ai" ? "AI Summary" : "Local Summary"}
-                    </div>
-                  </div>
-                  <div style={{ color: "#cbd5e1", fontSize: 13, whiteSpace: "pre-wrap" }}>{summaryData.summary}</div>
+                <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>
+                  {chatEnded ? "Chat ended. Summary processed." : "Messages sync in real time."}
                 </div>
-              )}
-
-              {errorMessage && <div style={styles.errorBox}>{errorMessage}</div>}
-            </>
+              </div>
+            </aside>
           )}
-        </section>
 
-        <footer style={styles.inputBar}>
-          <input
-            style={styles.input}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleInputKeyDown}
-            placeholder={chatEnded ? "Chat ended" : socketConnected ? "Type a message..." : "Waiting for live connection..."}
-            disabled={chatEnded || endingChat || loadingSession || !socketConnected}
-          />
+          <main style={styles.main}>
+            <header style={styles.header}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: "#f8fafc" }}>
+                  {projectName}
+                </div>
+                <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+                  {chatEnded ? "Chat ended" : "Live project discussion"}
+                </div>
+              </div>
 
-          <Button
-            variant="contained"
-            onClick={handleSend}
-            startIcon={<SendRoundedIcon />}
-            disabled={!input.trim() || endingChat || chatEnded || loadingSession || !socketConnected}
-            sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
-          >
-            Send
-          </Button>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <Chip
+                  size="small"
+                  label={socketConnected ? "Live" : "Offline"}
+                  sx={{
+                    bgcolor: socketConnected ? "rgba(34,197,94,0.14)" : "rgba(100,116,139,0.16)",
+                    color: socketConnected ? "#86efac" : "#cbd5e1",
+                    fontWeight: 900,
+                  }}
+                />
+                <Chip
+                  size="small"
+                  label={`${chat.length} messages`}
+                  sx={{
+                    bgcolor: "rgba(96,165,250,0.14)",
+                    color: "#bfdbfe",
+                    fontWeight: 900,
+                  }}
+                />
+                {!hideNewChatButton ? (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={async () => {
+                      try {
+                        setLoadingSession(true);
+                        setErrorMessage("");
+                        setChat([]);
+                        setSummaryData(null);
+                        setShowTicketPrompt(false);
 
-          <Button
-            variant="outlined"
-            onClick={handleEndChat}
-            startIcon={<StopCircleRoundedIcon />}
-            disabled={chat.length === 0 || endingChat || chatEnded || loadingSession}
-            sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
-          >
-            {endingChat ? "Ending..." : "End"}
-          </Button>
-        </footer>
-      </main>
+                        const session = await createProjectSession(projectId);
+                        if (!session || !session.id) throw new Error("Failed to start new chat session");
+                        setSessionId(String(session.id));
+                        setSessionStartedById(session.startedById != null ? String(session.startedById) : null);
+
+                        const stored = await getMessages(String(session.id));
+                        const mapped: Message[] = Array.isArray(stored)
+                          ? stored.map((m: any) => {
+                              const senderName = m.senderName ?? "Unknown";
+                              const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
+                              const isMe = String(m.senderId) === String(currentUserId);
+
+                              return {
+                                user: isAi ? "assistant" : isMe ? "me" : "other",
+                                message: m.content ?? "",
+                                senderId: String(m.senderId),
+                                senderName: senderName,
+                                createdAt: m.createdAt,
+                              };
+                            })
+                          : [];
+
+                        setChat(mapped);
+                        setChatEnded(false);
+                        setShowTicketPrompt(false);
+                      } catch (e: any) {
+                        setErrorMessage(e?.message || "Failed to start new chat.");
+                      } finally {
+                        setLoadingSession(false);
+                      }
+                    }}
+                    disabled={loadingSession}
+                    sx={{ fontWeight: 900 }}
+                  >
+                    New chat
+                  </Button>
+                ) : null}
+              </div>
+            </header>
+
+            <section style={styles.window} ref={chatWindowRef}>
+              {loadingSession ? (
+                <div style={styles.emptyState}>Loading chat session...</div>
+              ) : (
+                <>
+                  {chat.length === 0 && (
+                    <div style={styles.emptyState}>
+                      <div style={{ fontWeight: 900, color: "#f8fafc", marginBottom: 6 }}>
+                        Start the project conversation
+                      </div>
+                      <div>
+                        Share blockers, implementation notes, or project updates. End the chat to generate an AI summary and create tickets when needed.
+                      </div>
+                    </div>
+                  )}
+
+                  {chat.map((m, idx) => {
+                    const isMe = m.user === "me";
+                    const isAssistant = m.user === "assistant";
+
+                    const wrapStyle = isMe ? styles.bubbleWrapUser : styles.bubbleWrapAssistant;
+                    const bubbleStyle = isAssistant ? styles.bubbleAI : isMe ? styles.bubbleUser : styles.bubbleOther;
+
+                    return (
+                      <div key={`${m.createdAt || "msg"}-${idx}`} style={wrapStyle}>
+                        <div style={styles.meta}>
+                          <span>{m.senderName || (isMe ? currentUserName : isAssistant ? "AI Shadow" : "User")}</span>
+                          <span>{formatTime(m.createdAt)}</span>
+                        </div>
+                        <div style={bubbleStyle}>{m.message}</div>
+                      </div>
+                    );
+                  })}
+
+                  {showTicketPrompt && (
+                    <div style={styles.ticketPrompt}>
+                      <div>
+                        <div style={{ color: "#f8fafc", fontWeight: 900 }}>
+                          Create a ticket from this summary?
+                        </div>
+                        <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+                          The manager can review and assign it as a task.
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <IconButton
+                          style={{ color: "#22c55e", background: "rgba(34,197,94,0.12)" }}
+                          onClick={() => handleTicketChoice(true)}
+                          size="small"
+                        >
+                          <CheckIcon />
+                        </IconButton>
+
+                        <IconButton
+                          style={{ color: "#ef4444", background: "rgba(239,68,68,0.12)" }}
+                          onClick={() => handleTicketChoice(false)}
+                          size="small"
+                        >
+                          <CloseIcon />
+                        </IconButton>
+                      </div>
+                    </div>
+                  )}
+
+                  {summaryData && (
+                    <div style={styles.summaryBox}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <div style={{ fontWeight: 900 }}>Chat summary</div>
+                        <div style={{ fontSize: 12, color: "#86efac", fontWeight: 800 }}>
+                          {summaryData.source === "ai" ? "AI Summary" : "Local Summary"}
+                        </div>
+                      </div>
+                      <div style={{ color: "#cbd5e1", fontSize: 13, whiteSpace: "pre-wrap" }}>{summaryData.summary}</div>
+                    </div>
+                  )}
+
+                  {errorMessage && <div style={styles.errorBox}>{errorMessage}</div>}
+                </>
+              )}
+            </section>
+
+            <footer style={styles.inputBar}>
+              <input
+                style={styles.input}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                placeholder={loadingSession ? "Loading chat…" : chatEnded ? "Chat ended" : sending ? "Sending…" : "Type a message…"}
+                disabled={chatEnded || endingChat || loadingSession || sending}
+              />
+
+              <Button
+                variant="contained"
+                onClick={handleSend}
+                startIcon={<SendRoundedIcon />}
+                disabled={!input.trim() || endingChat || chatEnded || loadingSession || sending}
+                sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+              >
+                Send
+              </Button>
+
+              <Tooltip
+                title={canEndChat ? "" : "Only the chat starter can end this chat."}
+                disableHoverListener={canEndChat}
+                disableFocusListener={canEndChat}
+                disableTouchListener={canEndChat}
+              >
+                <span>
+                  <Button
+                    variant="outlined"
+                    onClick={handleEndChat}
+                    startIcon={<StopCircleRoundedIcon />}
+                    disabled={chat.length === 0 || endingChat || chatEnded || loadingSession || !canEndChat}
+                    sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+                  >
+                    {endingChat ? "Ending..." : "End"}
+                  </Button>
+                </span>
+              </Tooltip>
+            </footer>
+          </main>
+        </>
+      )}
 
       <style>
         {`
@@ -999,6 +1324,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           /* Improve placeholder visibility and ensure input stays visible when embedded */
           .nx-chat-shell input::placeholder { color: rgba(148,163,184,0.7); }
           .nx-chat-shell input { caret-color: #a78bfa; }
+          
+          /* Scrollbar styling for message container */
+          .nx-chat-shell section::-webkit-scrollbar {
+            width: 8px;
+          }
+          .nx-chat-shell section::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .nx-chat-shell section::-webkit-scrollbar-thumb {
+            background: rgba(148,163,184,0.3);
+            border-radius: 4px;
+          }
+          .nx-chat-shell section::-webkit-scrollbar-thumb:hover {
+            background: rgba(148,163,184,0.5);
+          }
         `}
       </style>
     </div>
