@@ -9,16 +9,38 @@ import {
   Paper,
   Stack,
   Typography,
-  Chip,
 } from "@mui/material";
+import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
+import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
+import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import DoneAllRoundedIcon from "@mui/icons-material/DoneAllRounded";
+import ConfirmationNumberRoundedIcon from "@mui/icons-material/ConfirmationNumberRounded";
+import PriorityHighRoundedIcon from "@mui/icons-material/PriorityHighRounded";
+import FiberNewRoundedIcon from "@mui/icons-material/FiberNewRounded";
+import RadarRoundedIcon from "@mui/icons-material/RadarRounded";
+import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
+import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import { useNavigate } from "react-router-dom";
+import api from "../../../services/api";
 import { fetchManagerTasks, fetchProjects } from "../../../services/managerService";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
-import RecentEmailTickets from "../../components/RecentEmailTickets";
 import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloperProgress";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
 const MANAGER_DASHBOARD_CACHE_KEY = "manager.dashboard.cache.v1";
+
+const sectionCardSx = {
+  p: { xs: 1.6, md: 1.9 },
+  borderRadius: 3,
+  border: "1px solid rgba(148,163,184,0.16)",
+  background:
+    "linear-gradient(180deg, rgba(15,23,42,0.78) 0%, rgba(15,23,42,0.62) 100%)",
+  boxShadow: "0 18px 46px rgba(0,0,0,0.22)",
+  backdropFilter: "blur(18px)",
+};
 
 function readManagerDashboardCache() {
   try {
@@ -29,19 +51,21 @@ function readManagerDashboardCache() {
     const parsed = JSON.parse(raw);
     const projects = Array.isArray(parsed?.projects) ? parsed.projects : [];
     const tasks = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
+    const tickets = Array.isArray(parsed?.tickets) ? parsed.tickets : [];
 
-    return { projects, tasks };
+    return { projects, tasks, tickets };
   } catch {
     return null;
   }
 }
 
-function writeManagerDashboardCache(projects, tasks) {
+function writeManagerDashboardCache(projects, tasks, tickets) {
   try {
     if (typeof window === "undefined") return;
     const payload = {
       projects: Array.isArray(projects) ? projects : [],
       tasks: Array.isArray(tasks) ? tasks : [],
+      tickets: Array.isArray(tickets) ? tickets : [],
       timestamp: Date.now(),
     };
     window.sessionStorage.setItem(MANAGER_DASHBOARD_CACHE_KEY, JSON.stringify(payload));
@@ -50,28 +74,323 @@ function writeManagerDashboardCache(projects, tasks) {
   }
 }
 
-function StatCard({ label, value, hint }) {
+function normalizeTicketList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.tickets)) return data.tickets;
+  return [];
+}
+
+function normalizeText(value) {
+  return String(value ?? "").trim();
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString();
+}
+
+function normalizeTicketStatus(ticket) {
+  return normalizeText(ticket?.status || ticket?.ticketStatus || ticket?.state || ticket?.workflowStatus)
+    .replace(/[\s_-]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeTicketPriority(ticket) {
+  return normalizeText(ticket?.priority || ticket?.severity || ticket?.level || ticket?.importance)
+    .replace(/[\s_-]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function getTicketTimestamp(ticket) {
+  const value =
+    ticket?.updatedAt ||
+    ticket?.createdAt ||
+    ticket?.submittedAt ||
+    ticket?.receivedAt ||
+    ticket?.lastUpdatedAt ||
+    ticket?.created_on ||
+    ticket?.updated_on ||
+    0;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function isClosedTicket(ticket) {
+  const status = normalizeTicketStatus(ticket);
+  return ["done", "completed", "complete", "closed", "resolved", "cancelled", "canceled", "rejected"].includes(status);
+}
+
+function isVisibleSnapshotTicket(ticket) {
+  const status = normalizeTicketStatus(ticket);
+  if (!status) return true;
+
+  return [
+    "open",
+    "new",
+    "todo",
+    "to do",
+    "in progress",
+    "inprogress",
+    "pending",
+    "assigned",
+    "review",
+    "triage",
+    "escalated",
+  ].includes(status) || !isClosedTicket(ticket);
+}
+
+function SmallBadge({ children, color = "#cbd5e1", glow = "rgba(148,163,184,0.12)" }) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 0.55,
+        px: 1.1,
+        py: 0.42,
+        borderRadius: 999,
+        fontSize: "0.72rem",
+        lineHeight: 1,
+        fontWeight: 900,
+        letterSpacing: 0.35,
+        color,
+        background: glow,
+        border: `1px solid ${glow.replace("0.12", "0.26").replace("0.14", "0.28")}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+function IconPill({ icon, color, bg }) {
+  return (
+    <Box
+      sx={{
+        width: 36,
+        height: 36,
+        borderRadius: 2.2,
+        display: "grid",
+        placeItems: "center",
+        color,
+        background: bg,
+        border: `1px solid ${bg.replace("0.14", "0.28").replace("0.16", "0.32").replace("0.18", "0.34")}`,
+        boxShadow: `0 10px 26px ${bg}`,
+        flex: "0 0 auto",
+        "& svg": { fontSize: 20 },
+      }}
+    >
+      {icon}
+    </Box>
+  );
+}
+
+function StatCard({ label, value, hint, icon, color, bg }) {
   return (
     <Paper
       sx={{
-        p: 1.5,
-        minHeight: 102,
-        borderRadius: 2,
+        p: 1.55,
+        minHeight: 134,
+        borderRadius: 3,
         border: "1px solid rgba(148,163,184,0.16)",
-        background: "rgba(15,23,42,0.72)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+        background:
+          "linear-gradient(145deg, rgba(15,23,42,0.82) 0%, rgba(15,23,42,0.62) 100%)",
+        boxShadow: `0 14px 38px rgba(0,0,0,0.23), inset 0 1px 0 rgba(255,255,255,0.035)`,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        gap: 1.15,
+        overflow: "hidden",
+        position: "relative",
+        transition: "all 180ms ease",
+        "&::after": {
+          content: '""',
+          position: "absolute",
+          width: 95,
+          height: 95,
+          right: -34,
+          top: -34,
+          borderRadius: "50%",
+          background: bg,
+          filter: "blur(6px)",
+          opacity: 0.75,
+        },
+        "&:hover": {
+          transform: "translateY(-2px)",
+          borderColor: "rgba(148,163,184,0.26)",
+          boxShadow: "0 20px 48px rgba(0,0,0,0.32)",
+        },
       }}
     >
-      <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>
-        {label}
-      </Typography>
-      <Typography sx={{ mt: 0.6, fontSize: 24, lineHeight: 1.1, fontWeight: 900, color: "#f8fafc" }}>
-        {value}
-      </Typography>
-      <Typography variant="caption" sx={{ mt: 0.45, display: "block", color: "#64748b" }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.2} sx={{ position: "relative", zIndex: 1 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "#94a3b8",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: 0.55,
+              fontSize: "0.7rem",
+            }}
+          >
+            {label}
+          </Typography>
+          <Typography sx={{ mt: 0.75, fontSize: 32, lineHeight: 1, fontWeight: 950, color: "#f8fafc" }}>
+            {value}
+          </Typography>
+        </Box>
+        <IconPill icon={icon} color={color} bg={bg} />
+      </Stack>
+
+      <Typography variant="caption" sx={{ position: "relative", zIndex: 1, color: "#64748b", fontSize: "0.76rem" }}>
         {hint}
       </Typography>
     </Paper>
+  );
+}
+
+function DashboardMetricCard({ label, value, hint, icon, color, bg }) {
+  return (
+    <Paper
+      sx={{
+        p: 1.25,
+        minHeight: 98,
+        borderRadius: 2.6,
+        border: "1px solid rgba(148,163,184,0.13)",
+        borderLeft: `4px solid ${color}`,
+        background: "rgba(15,23,42,0.54)",
+        transition: "all 160ms ease",
+        "&:hover": {
+          background: "rgba(20,29,52,0.72)",
+          borderColor: "rgba(148,163,184,0.22)",
+          boxShadow: "0 12px 28px rgba(0,0,0,0.22)",
+        },
+      }}
+    >
+      <Stack direction="row" alignItems="center" spacing={1.05}>
+        <IconPill icon={icon} color={color} bg={bg} />
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 900, textTransform: "uppercase", fontSize: "0.69rem" }}>
+            {label}
+          </Typography>
+          <Typography sx={{ mt: 0.25, fontSize: 22, lineHeight: 1.05, fontWeight: 950, color: "#f8fafc" }}>
+            {value}
+          </Typography>
+          {hint ? (
+            <Typography variant="caption" sx={{ display: "block", mt: 0.35, color: "#64748b", fontSize: "0.73rem" }}>
+              {hint}
+            </Typography>
+          ) : null}
+        </Box>
+      </Stack>
+    </Paper>
+  );
+}
+
+function TicketMetricCard({ label, value, hint, icon, color, bg }) {
+  return (
+    <Paper
+      sx={{
+        p: 1.35,
+        minHeight: 112,
+        borderRadius: 2.7,
+        border: "1px solid rgba(148,163,184,0.15)",
+        background:
+          "linear-gradient(180deg, rgba(15,23,42,0.82) 0%, rgba(15,23,42,0.58) 100%)",
+        boxShadow: `0 12px 30px rgba(0,0,0,0.2), 0 0 0 1px ${bg}`,
+      }}
+    >
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+        <Box>
+          <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 900, textTransform: "uppercase", letterSpacing: 0.45, fontSize: "0.69rem" }}>
+            {label}
+          </Typography>
+          <Typography sx={{ mt: 0.6, fontSize: 28, lineHeight: 1, fontWeight: 950, color: "#f8fafc" }}>
+            {value}
+          </Typography>
+        </Box>
+        <IconPill icon={icon} color={color} bg={bg} />
+      </Stack>
+      <Typography variant="caption" sx={{ mt: 0.85, display: "block", color: "#64748b", fontSize: "0.75rem" }}>
+        {hint}
+      </Typography>
+    </Paper>
+  );
+}
+
+function EmptyMiniState({ title, text }) {
+  return (
+    <Paper
+      sx={{
+        p: 1.4,
+        borderRadius: 2,
+        background: "rgba(15,23,42,0.42)",
+        border: "1px dashed rgba(148,163,184,0.14)",
+        textAlign: "center",
+      }}
+    >
+      <Typography sx={{ color: "#cbd5e1", fontWeight: 800, fontSize: 13 }}>{title}</Typography>
+      <Typography variant="caption" sx={{ color: "#64748b", display: "block", mt: 0.35 }}>
+        {text}
+      </Typography>
+    </Paper>
+  );
+}
+
+function TaskFocusRow({ task, type, getTaskTitle, getTaskDate }) {
+  const isDone = type === "done";
+  return (
+    <Box
+      sx={{
+        p: 1,
+        borderRadius: 2,
+        border: "1px solid rgba(148,163,184,0.12)",
+        background: "rgba(15,23,42,0.48)",
+        transition: "all 150ms ease",
+        "&:hover": {
+          borderColor: isDone ? "rgba(34,197,94,0.28)" : "rgba(56,189,248,0.3)",
+          background: "rgba(20,29,52,0.66)",
+        },
+      }}
+    >
+      <Stack direction="row" alignItems="center" spacing={0.9}>
+        <Box
+          sx={{
+            width: 28,
+            height: 28,
+            borderRadius: 1.6,
+            display: "grid",
+            placeItems: "center",
+            color: isDone ? "#86efac" : "#7dd3fc",
+            background: isDone ? "rgba(34,197,94,0.13)" : "rgba(56,189,248,0.13)",
+            flex: "0 0 auto",
+            "& svg": { fontSize: 17 },
+          }}
+        >
+          {isDone ? <CheckCircleRoundedIcon /> : <ScheduleRoundedIcon />}
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 850, color: "#f1f5f9" }} noWrap>
+            {getTaskTitle(task)}
+          </Typography>
+          <Typography variant="caption" sx={{ color: "#94a3b8", fontSize: "0.72rem" }}>
+            {isDone
+              ? `Updated: ${formatDate(task?.completedAt || task?.updatedAt || task?.createdAt)}`
+              : `Due: ${formatDate(getTaskDate(task))}`}
+          </Typography>
+        </Box>
+      </Stack>
+    </Box>
   );
 }
 
@@ -81,6 +400,7 @@ export default function ManagerDashboard() {
 
   const [projects, setProjects] = useState(cachedDashboard?.projects || []);
   const [tasks, setTasks] = useState(cachedDashboard?.tasks || []);
+  const [tickets, setTickets] = useState(cachedDashboard?.tickets || []);
   const [loading, setLoading] = useState(!cachedDashboard);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -105,13 +425,6 @@ export default function ManagerDashboard() {
 
   const getTaskDate = (task) => task?.dueDate || task?.deadline || task?.targetDate || null;
 
-  const formatDate = (value) => {
-    if (!value) return "-";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleDateString();
-  };
-
   const getProjectId = (project) =>
     String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
 
@@ -135,13 +448,16 @@ export default function ManagerDashboard() {
         fetchProjects(),
         fetchManagerTasks(),
       ]);
+      const ticketData = await api.get("/tickets/email/recent").catch(() => null);
 
       const normalizedProjects = Array.isArray(projectData) ? projectData : [];
       const normalizedTasks = Array.isArray(taskData) ? taskData : [];
+      const normalizedTickets = ticketData ? normalizeTicketList(ticketData.data) : [];
 
       setProjects(normalizedProjects);
       setTasks(normalizedTasks);
-      writeManagerDashboardCache(normalizedProjects, normalizedTasks);
+      setTickets(normalizedTickets);
+      writeManagerDashboardCache(normalizedProjects, normalizedTasks, normalizedTickets);
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -155,12 +471,13 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     loadDashboard({ background: Boolean(cachedDashboard) });
-  }, [loadDashboard]);
+  }, [cachedDashboard, loadDashboard]);
 
   const liveTopics = useMemo(
-    () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"],
+    () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects", "/topic/tickets"],
     []
   );
+
   const refreshDashboard = useCallback(() => {
     loadDashboard({ background: true });
   }, [loadDashboard]);
@@ -179,14 +496,8 @@ export default function ManagerDashboard() {
           ""
       );
 
-      if (!projectKey) {
-        return;
-      }
-
-      if (!grouped.has(projectKey)) {
-        grouped.set(projectKey, []);
-      }
-
+      if (!projectKey) return;
+      if (!grouped.has(projectKey)) grouped.set(projectKey, []);
       grouped.get(projectKey).push(task);
     });
 
@@ -248,10 +559,7 @@ export default function ManagerDashboard() {
       return sum + Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0);
 
-    if (totalPointValue === 0) {
-      return 0;
-    }
-
+    if (totalPointValue === 0) return 0;
     return Math.round((completedPointValue / totalPointValue) * 100);
   }, [tasks]);
 
@@ -280,7 +588,7 @@ export default function ManagerDashboard() {
         if (!secondDate) return -1;
         return new Date(firstDate) - new Date(secondDate);
       })
-      .slice(0, 5);
+      .slice(0, 3);
   }, [openTasks]);
 
   const recentCompletedTasks = useMemo(() => {
@@ -291,19 +599,50 @@ export default function ManagerDashboard() {
         const secondDate = b?.completedAt || b?.updatedAt || b?.createdAt || 0;
         return new Date(secondDate) - new Date(firstDate);
       })
-      .slice(0, 5);
+      .slice(0, 3);
   }, [tasks]);
 
-  const getStatusChipStyle = (status) => {
-    const normalized = String(status || "").toLowerCase();
-    if (normalized === "completed") {
-      return { bgcolor: "rgba(34,197,94,0.16)", color: "#86efac" };
-    }
-    if (normalized === "planning") {
-      return { bgcolor: "rgba(245,158,11,0.16)", color: "#fcd34d" };
-    }
-    return { bgcolor: "rgba(59,130,246,0.18)", color: "#93c5fd" };
-  };
+  const visibleTickets = useMemo(() => {
+    return [...tickets]
+      .filter(isVisibleSnapshotTicket)
+      .sort((a, b) => getTicketTimestamp(b) - getTicketTimestamp(a));
+  }, [tickets]);
+
+  const openTicketCount = useMemo(
+    () => visibleTickets.filter((ticket) => {
+      const status = normalizeTicketStatus(ticket);
+      return ["open", "new", "todo", "to do", "in progress", "inprogress", "pending", "assigned", "review", "triage", "escalated"].includes(status) || !status;
+    }).length,
+    [visibleTickets]
+  );
+
+  const highPriorityTicketCount = useMemo(
+    () => visibleTickets.filter((ticket) => ["high", "critical", "urgent", "blocker", "blocked"].includes(normalizeTicketPriority(ticket))).length,
+    [visibleTickets]
+  );
+
+  const latestTicketCount = visibleTickets.length;
+  const averageProjectProgress = projectRows.length
+    ? Math.round(projectRows.reduce((sum, project) => sum + project.progress, 0) / projectRows.length)
+    : 0;
+
+  const assignedTaskCount = useMemo(
+    () => tasks.filter((task) => normalizeTaskStatus(task) === "assigned").length,
+    [tasks]
+  );
+
+  const delayedTaskCount = useMemo(
+    () => tasks.filter((task) => {
+      const dateValue = getTaskDate(task);
+      if (!dateValue) return false;
+      const date = new Date(dateValue);
+      return !isCompletedTask(task) && date.getTime() > 0 && date.getTime() < Date.now();
+    }).length,
+    [tasks]
+  );
+
+  const storyPointsLabel = `${doneWeighted}/${totalWeighted}`;
+  const weightedPointsLabel = `${doneWeighted}/${totalWeighted}`;
 
   if (loading) {
     return (
@@ -334,132 +673,252 @@ export default function ManagerDashboard() {
         direction={{ xs: "column", md: "row" }}
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", md: "center" }}
-        spacing={1.2}
-        sx={{ mb: 2 }}
+        spacing={1.4}
+        sx={{ mb: 0.8 }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
-            Manager Dashboard
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.45 }}>
+            <IconPill icon={<DashboardRoundedIcon />} color="#c4b5fd" bg="rgba(124,92,255,0.16)" />
+            <Typography variant="h4" sx={{ fontWeight: 950, letterSpacing: -0.7 }}>
+              Manager Dashboard
+            </Typography>
+          </Stack>
           <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-            Track delivery health, inbound tickets, and developer progress.
+            Track project delivery, inbound tickets, team workload, and developer progress.
           </Typography>
         </Box>
 
-        <Button variant="outlined" onClick={() => navigate("/manager/projects")}>View Projects</Button>
+        <Button
+          variant="outlined"
+          onClick={() => navigate("/manager/projects")}
+          sx={{
+            textTransform: "none",
+            borderColor: "rgba(124,92,255,0.45)",
+            color: "#ddd6fe",
+            backgroundColor: "rgba(124,92,255,0.08)",
+            "&:hover": { borderColor: "rgba(124,92,255,0.72)", backgroundColor: "rgba(124,92,255,0.14)" },
+          }}
+        >
+          View Projects
+        </Button>
       </Stack>
+
+      <Box
+        sx={{
+          height: 2,
+          background: "linear-gradient(90deg, rgba(124,92,255,0.46) 0%, rgba(56,189,248,0.28) 42%, transparent 100%)",
+          borderRadius: 999,
+          mb: 2.35,
+        }}
+      />
 
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
-      <Grid container spacing={1.5} sx={{ mb: 2 }}>
+      <Grid container spacing={1.6} sx={{ mb: 2.4 }}>
         <Grid item xs={12} sm={6} lg={3}>
-          <StatCard label="Total Projects" value={projectRows.length} hint={`${activeProjectCount} active`} />
+          <StatCard
+            label="Total Projects"
+            value={projectRows.length}
+            hint={`${activeProjectCount} active projects`}
+            icon={<FolderRoundedIcon />}
+            color="#7dd3fc"
+            bg="rgba(56,189,248,0.16)"
+          />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
-          <StatCard label="Total Tasks" value={tasks.length} hint={`${tasks.length - (projectRows.reduce((sum, p) => sum + p.doneTasks, 0))} open`} />
+          <StatCard
+            label="Total Tasks"
+            value={tasks.length}
+            hint={`${openTasks.length} open tasks`}
+            icon={<AssignmentTurnedInRoundedIcon />}
+            color="#c4b5fd"
+            bg="rgba(124,92,255,0.16)"
+          />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
-          <StatCard label="Weighted Progress" value={`${completionRate}%`} hint={`${doneWeighted}/${totalWeighted} points`} />
+          <StatCard
+            label="Weighted Progress"
+            value={`${completionRate}%`}
+            hint={`${doneWeighted}/${totalWeighted} points completed`}
+            icon={<TrendingUpRoundedIcon />}
+            color="#a5b4fc"
+            bg="rgba(99,102,241,0.16)"
+          />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
-          <StatCard label="Weighted Done" value={doneWeighted} hint="Point value completed" />
+          <StatCard
+            label="Weighted Done"
+            value={doneWeighted}
+            hint="Point value completed"
+            icon={<DoneAllRoundedIcon />}
+            color="#86efac"
+            bg="rgba(34,197,94,0.16)"
+          />
         </Grid>
       </Grid>
 
-      <Paper
-        sx={{
-          mb: 2,
-          p: 1.8,
-          borderRadius: 2.5,
-          border: "1px solid rgba(148,163,184,0.16)",
-          background: "rgba(15,23,42,0.68)",
-        }}
-      >
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.1 }}>
+      <Paper sx={{ ...sectionCardSx, mb: 2.35 }}>
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={1.2} sx={{ mb: 1.35 }}>
           <Box>
-            <Typography sx={{ fontWeight: 900 }}>Projects Overview</Typography>
-            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-              {projectRows.length} total projects • {activeProjectCount} active
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography sx={{ fontWeight: 950, fontSize: "1rem", color: "#f8fafc" }}>Projects Overview</Typography>
+              <SmallBadge color="#7dd3fc" glow="rgba(56,189,248,0.14)">ACTIVE: {activeProjectCount}</SmallBadge>
+            </Stack>
+            <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mt: 0.35 }}>
+              Project health summary without duplicating the full project list.
             </Typography>
           </Box>
-          <Button variant="outlined" size="small" onClick={() => navigate("/manager/projects")}>
+          <Button variant="outlined" size="small" onClick={() => navigate("/manager/projects")} sx={{ textTransform: "none" }}>
             View All Projects
           </Button>
         </Stack>
 
-        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1 }}>
-          Go to Project Management for detailed list, editing, and task tracking. Click "View All Projects" to manage projects and tasks.
-        </Typography>
+        <Grid container spacing={1.2}>
+          <Grid item xs={12} sm={6} lg={3}>
+            <DashboardMetricCard label="Active Projects" value={activeProjectCount} hint="Currently moving" icon={<BoltRoundedIcon />} color="#60a5fa" bg="rgba(96,165,250,0.14)" />
+          </Grid>
+          <Grid item xs={12} sm={6} lg={3}>
+            <DashboardMetricCard label="Total Tasks" value={tasks.length} hint="Across manager projects" icon={<TaskAltRoundedIcon />} color="#a78bfa" bg="rgba(167,139,250,0.14)" />
+          </Grid>
+          <Grid item xs={12} sm={6} lg={3}>
+            <DashboardMetricCard label="Average Progress" value={`${averageProjectProgress}%`} hint="Project completion average" icon={<TrendingUpRoundedIcon />} color="#22d3ee" bg="rgba(34,211,238,0.14)" />
+          </Grid>
+          <Grid item xs={12} sm={6} lg={3}>
+            <DashboardMetricCard label="Tracked Projects" value={projectRows.length} hint="Visible in workspace" icon={<FolderRoundedIcon />} color="#fb923c" bg="rgba(251,146,60,0.14)" />
+          </Grid>
+        </Grid>
       </Paper>
-
-      <RecentEmailTickets />
 
       <Paper
         sx={{
-          p: 1.6,
-          mb: 2,
-          borderRadius: 2.5,
-          border: "1px solid rgba(148,163,184,0.16)",
-          background: "rgba(15,23,42,0.68)",
+          ...sectionCardSx,
+          mb: 2.35,
+          position: "relative",
+          overflow: "hidden",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(circle at top right, rgba(124,92,255,0.18), transparent 38%), radial-gradient(circle at left, rgba(56,189,248,0.11), transparent 35%)",
+            pointerEvents: "none",
+          },
         }}
       >
-        <Typography sx={{ fontWeight: 900, mb: 1 }}>Developer Progress</Typography>
+        <Box sx={{ position: "relative", zIndex: 1 }}>
+          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={1.2} sx={{ mb: 1.45 }}>
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography sx={{ fontWeight: 950, fontSize: "1rem", color: "#f8fafc" }}>Ticket Snapshot</Typography>
+                <SmallBadge color="#7dd3fc" glow="rgba(56,189,248,0.14)">OPEN: {openTicketCount}</SmallBadge>
+              </Stack>
+              <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mt: 0.35 }}>
+                Compact inbound ticket overview. Full ticket details stay in the Tickets page.
+              </Typography>
+            </Box>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => navigate("/manager/tickets")}
+              sx={{ textTransform: "none", borderColor: "rgba(124,92,255,0.45)", color: "#ddd6fe" }}
+            >
+              View All
+            </Button>
+          </Stack>
+
+          <Grid container spacing={1.2}>
+            <Grid item xs={12} sm={6} lg={3}>
+              <TicketMetricCard label="Open Tickets" value={openTicketCount} hint="Active inbound requests" icon={<ConfirmationNumberRoundedIcon />} color="#7dd3fc" bg="rgba(56,189,248,0.16)" />
+            </Grid>
+            <Grid item xs={12} sm={6} lg={3}>
+              <TicketMetricCard label="High Priority" value={highPriorityTicketCount} hint="Needs manager attention" icon={<PriorityHighRoundedIcon />} color="#fda4af" bg="rgba(244,63,94,0.16)" />
+            </Grid>
+            <Grid item xs={12} sm={6} lg={3}>
+              <TicketMetricCard label="Latest Tickets" value={latestTicketCount} hint="Recent snapshot items" icon={<FiberNewRoundedIcon />} color="#c4b5fd" bg="rgba(124,92,255,0.16)" />
+            </Grid>
+            <Grid item xs={12} sm={6} lg={3}>
+              <TicketMetricCard label="Status" value={latestTicketCount > 0 ? "Active" : "None"} hint="Inbound pipeline" icon={<RadarRoundedIcon />} color="#fdba74" bg="rgba(251,146,60,0.16)" />
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+
+      <Paper sx={{ ...sectionCardSx, mb: 2.35 }}>
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={1.2} sx={{ mb: 1.35 }}>
+          <Box>
+            <Typography sx={{ fontWeight: 950, fontSize: "1rem", color: "#f8fafc" }}>Developer Progress</Typography>
+            <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mt: 0.35 }}>
+              Progress by developer, task weight, and delivery contribution.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
+            <SmallBadge color="#bfdbfe" glow="rgba(96,165,250,0.14)">ASSIGNED: {assignedTaskCount}</SmallBadge>
+            <SmallBadge color="#ddd6fe" glow="rgba(124,92,255,0.14)">STORY: {storyPointsLabel}</SmallBadge>
+            <SmallBadge color="#a7f3d0" glow="rgba(34,197,94,0.14)">WEIGHTED: {weightedPointsLabel}</SmallBadge>
+            <SmallBadge color="#fed7aa" glow="rgba(251,146,60,0.14)">DELAYED: {delayedTaskCount}</SmallBadge>
+          </Stack>
+        </Stack>
         <ManagerDeveloperProgress />
       </Paper>
 
-      <Paper
-        sx={{
-          p: 1.6,
-          borderRadius: 2.5,
-          border: "1px solid rgba(148,163,184,0.16)",
-          background: "rgba(15,23,42,0.68)",
-        }}
-      >
-        <Typography sx={{ fontWeight: 900, mb: 1 }}>Task Focus</Typography>
-
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1.2 }}>
+      <Paper sx={sectionCardSx}>
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={1.2} sx={{ mb: 1.3 }}>
           <Box>
-            <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 800 }}>
-              Upcoming Open Tasks
+            <Typography sx={{ fontWeight: 950, fontSize: "1rem", color: "#f8fafc" }}>Task Focus</Typography>
+            <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mt: 0.35 }}>
+              Compact focus list for upcoming and recently completed work.
             </Typography>
-            <Stack spacing={0.8} sx={{ mt: 0.7 }}>
-              {upcomingTasks.length === 0 ? (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>No open tasks.</Typography>
-              ) : upcomingTasks.map((task, index) => (
-                <Box key={task?.id || `open-${index}`} sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f" }}>
-                  <Typography sx={{ fontSize: 13.5, fontWeight: 800 }} noWrap>{getTaskTitle(task)}</Typography>
-                  <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                    Due: {formatDate(getTaskDate(task))}
-                  </Typography>
-                </Box>
-              ))}
+          </Box>
+          <Stack direction="row" spacing={0.8}>
+            <StatusBadge label={`OPEN ${openTasks.length}`} variant="info" />
+            <StatusBadge label={`DONE ${recentCompletedTasks.length}`} variant="success" />
+          </Stack>
+        </Stack>
+
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1.4 }}>
+          <Box>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
+              <Stack direction="row" alignItems="center" spacing={0.75}>
+                <ScheduleRoundedIcon sx={{ color: "#7dd3fc", fontSize: 18 }} />
+                <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 900, fontSize: "0.72rem" }}>
+                  Upcoming Open Tasks
+                </Typography>
+              </Stack>
+              <SmallBadge color="#7dd3fc" glow="rgba(56,189,248,0.14)">{upcomingTasks.length}</SmallBadge>
             </Stack>
+            {upcomingTasks.length === 0 ? (
+              <EmptyMiniState title="No open tasks." text="Upcoming work will appear here." />
+            ) : (
+              <Stack spacing={0.75}>
+                {upcomingTasks.map((task, index) => (
+                  <TaskFocusRow key={task?.id || `open-${index}`} task={task} type="open" getTaskTitle={getTaskTitle} getTaskDate={getTaskDate} />
+                ))}
+              </Stack>
+            )}
           </Box>
 
           <Box>
-            <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 800 }}>
-              Recently Completed
-            </Typography>
-            <Stack spacing={0.8} sx={{ mt: 0.7 }}>
-              {recentCompletedTasks.length === 0 ? (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>No completed tasks yet.</Typography>
-              ) : recentCompletedTasks.map((task, index) => (
-                <Box key={task?.id || `done-${index}`} sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f" }}>
-                  <Typography sx={{ fontSize: 13.5, fontWeight: 800 }} noWrap>{getTaskTitle(task)}</Typography>
-                  <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                    Updated: {formatDate(task?.completedAt || task?.updatedAt || task?.createdAt)}
-                  </Typography>
-                </Box>
-              ))}
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
+              <Stack direction="row" alignItems="center" spacing={0.75}>
+                <CheckCircleRoundedIcon sx={{ color: "#86efac", fontSize: 18 }} />
+                <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 900, fontSize: "0.72rem" }}>
+                  Recently Completed
+                </Typography>
+              </Stack>
+              <SmallBadge color="#86efac" glow="rgba(34,197,94,0.14)">{recentCompletedTasks.length}</SmallBadge>
             </Stack>
+            {recentCompletedTasks.length === 0 ? (
+              <EmptyMiniState title="No completed tasks yet." text="Completed work will appear here." />
+            ) : (
+              <Stack spacing={0.75}>
+                {recentCompletedTasks.map((task, index) => (
+                  <TaskFocusRow key={task?.id || `done-${index}`} task={task} type="done" getTaskTitle={getTaskTitle} getTaskDate={getTaskDate} />
+                ))}
+              </Stack>
+            )}
           </Box>
         </Box>
       </Paper>
     </Box>
   );
 }
-
-
-
-
-

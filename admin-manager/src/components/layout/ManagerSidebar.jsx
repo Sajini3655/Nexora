@@ -2,7 +2,7 @@ import React from "react";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FolderIcon from "@mui/icons-material/Folder";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+// AutoAwesomeIcon removed — menu entry eliminated
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import ConfirmationNumberRoundedIcon from "@mui/icons-material/ConfirmationNumberRounded";
 import UnifiedSidebar from "./UnifiedSidebar.jsx";
@@ -13,7 +13,6 @@ const navItems = [
   { label: "Add Project", to: "/manager/add-project", icon: <AddCircleIcon /> },
   { label: "Project Management", to: "/manager/project-management", icon: <FolderIcon /> },
   { label: "Timesheets", to: "/manager/timesheets", icon: <AccessTimeRoundedIcon /> },
-  { label: "AI Task Assignment", to: "/manager/ai-assignment", icon: <AutoAwesomeIcon /> },
 ];
 
 export default function ManagerSidebar({ open, onClose }) {
