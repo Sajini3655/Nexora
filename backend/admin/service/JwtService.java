@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import io.jsonwebtoken.security.Keys;
+import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -48,12 +50,14 @@ public class JwtService {
         Date now = new Date();
         Date exp = new Date(now.getTime() + jwtExpirationMs);
 
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(now)
                 .setExpiration(exp)
-                .signWith(SignatureAlgorithm.HS256, jwtSecret.getBytes(StandardCharsets.UTF_8))
+                .signWith(key)
                 .compact();
     }
 
@@ -105,8 +109,11 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .setSigningKey(jwtSecret.getBytes(StandardCharsets.UTF_8))
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+            .build()
                 .parseClaimsJws(token)
                 .getBody();
     }

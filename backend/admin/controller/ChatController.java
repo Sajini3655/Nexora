@@ -50,17 +50,11 @@ public class ChatController {
     // New session-centric endpoints
     @GetMapping("/project/{projectId}/sessions")
     public List<Map<String, Object>> listProjectSessions(@PathVariable Long projectId, Authentication authentication) {
-        List<ChatSession> sessions;
+        List<ChatSession> sessions = chatService.getAllProjectSessions(projectId, authentication);
 
-        try {
-            sessions = chatService.getAllProjectSessions(projectId, authentication);
-        } catch (AccessDeniedException ex) {
-            return List.of();
-        }
-        
         return sessions.stream()
-            .map(this::buildSessionResponse)
-            .toList();
+                .map(this::buildSessionResponse)
+                .toList();
     }
 
     @PostMapping("/project/{projectId}/sessions")
@@ -86,14 +80,7 @@ public class ChatController {
 
     @GetMapping("/sessions/{sessionId}")
     public Map<String, Object> getSession(@PathVariable Long sessionId, Authentication authentication) {
-        ChatSession session = chatService.getSession(sessionId);
-        
-        if (session == null) {
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("id", null);
-            response.put("error", "Session not found");
-            return response;
-        }
+        ChatSession session = chatService.getSessionForUser(sessionId, authentication);
 
         return buildSessionResponse(session);
     }

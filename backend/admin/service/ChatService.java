@@ -15,6 +15,7 @@ import com.admin.repository.TaskRepository;
 import com.admin.repository.TicketRepository;
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class ChatService {
     private final UserRepository userRepo;
     private final TaskRepository taskRepository;
     private final TicketRepository ticketRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private static final Set<String> BLOCKER_KEYWORDS = Set.of(
             "blocked",
@@ -48,6 +50,18 @@ public class ChatService {
             "production down",
             "server down",
             "database down",
+            "database server down",
+            "database server is down",
+            "db down",
+            "db server down",
+            "server is down",
+            "service is down",
+            "ai service is down",
+            "cannot proceed",
+            "can't proceed",
+            "system down",
+            "backend down",
+            "api down",
             "login broken",
             "not working",
             "crash",
@@ -131,7 +145,20 @@ public class ChatService {
 
         ChatMessage saved = messageRepo.save(message);
 
-        return toResponse(saved);
+        // Broadcast the message to all subscribed WebSocket clients
+        ChatMessageResponse response = toResponse(saved);
+        Long projectId = session.getProject().getId();
+        String destination = String.format("/topic/projects/%d/sessions/%d/chat", projectId, sessionId);
+        
+        try {
+            messagingTemplate.convertAndSend(destination, response);
+        } catch (Exception e) {
+            // Log the error but don't fail the save if broadcasting fails
+            System.err.println("Error broadcasting message to " + destination + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -395,6 +422,20 @@ public class ChatService {
     }
 
     @Transactional(readOnly = true)
+    public ChatSession getSessionForUser(Long sessionId, Authentication authentication) {
+        User actor = getAuthenticatedUser(authentication);
+
+        ChatSession session = sessionRepo.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+
+        if (!canAccessProjectChat(session.getProject(), actor)) {
+            throw new AccessDeniedException("You are not a member of this project chat.");
+        }
+
+        return session;
+    }
+
+    @Transactional(readOnly = true)
     public ChatSession getProjectSession(Long projectId, Authentication authentication) {
         User actor = getAuthenticatedUser(authentication);
 
@@ -418,7 +459,7 @@ public class ChatService {
             return false;
         }
 
-        if (user.getRole() == Role.ADMIN) {
+        if (user.getRole() == Role.ADMIN || user.getAllRoles().contains(Role.ADMIN)) {
             return true;
         }
 
@@ -428,12 +469,7 @@ public class ChatService {
             return true;
         }
 
-        boolean isAssignee = taskRepository.existsByProject_IdAndAssignedTo_Id(
-                project.getId(),
-                user.getId()
-        );
-
-        return isAssignee;
+        return taskRepository.existsByProject_IdAndAssignedTo_Id(project.getId(), user.getId());
     }
 
     public boolean canEndChat(ChatSession session, User user) {

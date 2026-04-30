@@ -40,6 +40,8 @@ interface ChatEndResult {
   ticket_message: string;
   ticket_prompt_needed: boolean;
   source?: "ai" | "local";
+  sessionId?: string;
+  endedSession?: any;
 }
 
 interface ChatBoxProps {
@@ -68,6 +70,19 @@ const BLOCKER_KEYWORDS = [
   "production down",
   "server down",
   "database down",
+  "database server down",
+  "database server is down",
+  "db down",
+  "db server down",
+  "server is down",
+  "service is down",
+  "ai service is down",
+  "cannot proceed",
+  "can't proceed",
+  "cannot continue",
+  "system down",
+  "backend down",
+  "api down",
   "login broken",
   "not working",
   "crash",
@@ -358,31 +373,43 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         console.debug("ChatBox:WebSocket connected. Subscribing to", subscriptionTopic);
 
         client.subscribe(subscriptionTopic, (message) => {
-          const payload = JSON.parse(message.body);
+          try {
+            const payload = JSON.parse(message.body);
+            console.debug("ChatBox:Received message via WebSocket:", payload);
 
-          const incomingSenderName = payload.senderName ?? "Unknown";
-          const incomingIsAi = String(incomingSenderName).toLowerCase().includes("ai") || incomingSenderName === "AI Shadow";
-          const incomingIsMe = String(payload.senderId) === String(currentUserId);
+            const incomingSenderName = payload.senderName ?? "Unknown";
+            const incomingIsAi = String(incomingSenderName).toLowerCase().includes("ai") || incomingSenderName === "AI Shadow";
+            const incomingIsMe = String(payload.senderId) === String(currentUserId);
 
-          const incoming: Message = {
-            user: incomingIsAi ? "assistant" : incomingIsMe ? "me" : "other",
-            message: payload.content ?? "",
-            senderId: String(payload.senderId),
-            senderName: incomingSenderName,
-            createdAt: payload.createdAt,
-          };
+            const incoming: Message = {
+              user: incomingIsAi ? "assistant" : incomingIsMe ? "me" : "other",
+              message: payload.content ?? "",
+              senderId: String(payload.senderId),
+              senderName: incomingSenderName,
+              createdAt: payload.createdAt,
+            };
 
-          setChat((prev) => {
-            const exists = prev.some((m) => isRecentDuplicate(m, incoming));
-            return exists ? prev : [...prev, incoming];
-          });
+            setChat((prev) => {
+              const exists = prev.some((m) => isRecentDuplicate(m, incoming));
+              if (exists) {
+                console.debug("ChatBox:Duplicate message detected, skipping");
+                return prev;
+              }
+              console.debug("ChatBox:Adding message to chat");
+              return [...prev, incoming];
+            });
+          } catch (e) {
+            console.error("ChatBox:Error parsing WebSocket message:", e);
+          }
         });
       },
-      onStompError: () => {
-        setErrorMessage("WebSocket error occurred.");
+      onStompError: (error) => {
+        console.error("ChatBox:WebSocket STOMP error:", error);
+        setErrorMessage("WebSocket connection error. Live updates may not work.");
         setSocketConnected(false);
       },
       onWebSocketClose: () => {
+        console.debug("ChatBox:WebSocket closed");
         setSocketConnected(false);
       },
     });
@@ -452,52 +479,30 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       // Send via HTTP API
       const savedMessage = await sendMessage(currentSessionId, messageText);
 
+      // Optimistic update: add message immediately to chat
+      // The WebSocket will broadcast it back from the server for other users
+      setChat((prev) => {
+        const exists = prev.some((m) =>
+          m.user === "me" &&
+          m.senderId === currentUserId &&
+          m.message === messageText &&
+          m.createdAt === savedMessage.createdAt
+        );
+        if (exists) return prev;
 
-      // If WebSocket is connected, the server will broadcast the saved message
-      // back to us via the subscription. To avoid duplicates, only append the
-      // saved HTTP message locally when the stomp client is not connected.
-      const wsIsConnected = Boolean(stompClientRef.current?.connected);
-
-      if (!wsIsConnected) {
-        setChat((prev) => {
-          const exists = prev.some((m) =>
-            m.user === "me" &&
-            m.senderId === currentUserId &&
-            m.message === messageText
-          );
-          if (exists) return prev;
-
-          return [
-            ...prev,
-            {
-              user: "me",
-              message: savedMessage.content,
-              senderId: String(savedMessage.senderId),
-              senderName: savedMessage.senderName,
-              createdAt: savedMessage.createdAt,
-            },
-          ];
-        });
-      }
+        return [
+          ...prev,
+          {
+            user: "me",
+            message: savedMessage.content,
+            senderId: String(savedMessage.senderId),
+            senderName: savedMessage.senderName,
+            createdAt: savedMessage.createdAt,
+          },
+        ];
+      });
 
       setInput("");
-
-      // Also send via WebSocket for live updates if available
-      if (stompClientRef.current?.connected) {
-        try {
-          stompClientRef.current.publish({
-            destination: "/app/chat.send",
-            body: JSON.stringify({
-              sessionId: Number(currentSessionId),
-              userId: Number(currentUserId),
-              content: messageText,
-            }),
-          });
-        } catch (e) {
-          // WebSocket send failed, but HTTP send succeeded
-          console.debug("WebSocket send failed, but HTTP send succeeded:", e);
-        }
-      }
     } catch (error: any) {
       setErrorMessage(error?.message || "Failed to send message.");
     } finally {
@@ -1346,3 +1351,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 };
 
 export default ChatBox;
+
+
+
+
+

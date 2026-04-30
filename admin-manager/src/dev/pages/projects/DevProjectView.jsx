@@ -29,7 +29,7 @@ import { useAuth } from "../../../context/AuthContext.jsx";
 import ChatBox from "../chat/src/ChatBox";
 import { getProjectSessions } from "../chat/src/api";
 import { loadTasks } from "../../data/taskStore";
-import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
+import { fetchProjectTasksFromBackend } from "../../data/taskApi";
 
 function formatChatTime(value) {
   if (!value) return "";
@@ -60,7 +60,7 @@ function buildSummaryPreview(session) {
 function buildProjects(tasks) {
   const groups = new Map();
   tasks.forEach((task) => {
-    const key = String(task.projectId || task.projectName || "project-unknown");
+    const key = String(task.projectId || task.project?.id || "project-unknown");
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(task);
   });
@@ -100,13 +100,13 @@ export default function DevProjectView() {
       try {
         setLoading(true);
         setError("");
-        const synced = await syncAssignedTasksToLocalStoreSafe();
+        const projectTasks = await fetchProjectTasksFromBackend(id);
         if (!active) return;
-        setTasks(Array.isArray(synced) ? synced : loadTasks());
+        setTasks(Array.isArray(projectTasks) ? projectTasks : []);
       } catch (err) {
         if (!active) return;
         setError(err?.message || "Failed to load project.");
-        setTasks(loadTasks());
+        setTasks([]);
       } finally {
         if (active) setLoading(false);
       }
@@ -117,9 +117,51 @@ export default function DevProjectView() {
     };
   }, [id]);
 
-  const project = useMemo(() => buildProjects(tasks).find((item) => String(item.id) === String(id)) || null, [tasks, id]);
+  const project = useMemo(() => {
+    const found = buildProjects(tasks).find((item) => String(item.id) === String(id));
+
+    if (found) return found;
+
+    if (tasks.length > 0) {
+      return {
+        id: String(id),
+        name: tasks[0]?.projectName || `Project ${id}`,
+        description: tasks[0]?.projectDescription || "Read-only project collaboration view.",
+        progress: 0,
+        taskCount: tasks.length,
+        status: "Planning",
+        tasks,
+      };
+    }
+
+    return null;
+  }, [tasks, id]);
   const currentUserId = String(user?.id || user?.email || "");
   const currentUserName = user?.name || user?.email || "Developer";
+
+  const loadProjectSessions = useCallback(async () => {
+    if (!project || authLoading) {
+      return;
+    }
+
+    try {
+      setChatListLoading(true);
+      setChatListError("");
+
+      const allSessions = await getProjectSessions(String(project.id));
+      setSessions(Array.isArray(allSessions) ? allSessions : []);
+    } catch (err) {
+      const aborted =
+        err?.name === "AbortError" ||
+        String(err?.message || "").toLowerCase().includes("aborted");
+
+      if (!aborted) {
+        setChatListError(err?.message || "Failed to load chat sessions");
+      }
+    } finally {
+      setChatListLoading(false);
+    }
+  }, [project, authLoading]);
 
   const releaseFocusedElement = () => {
     const activeElement = document.activeElement;
@@ -132,44 +174,20 @@ export default function DevProjectView() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadSessions = async () => {
-      if (!project || !currentUserId || authLoading) {
-        setSessions([]);
-        setChatListError("");
-        setChatListLoading(false);
-        return;
-      }
-
-      try {
-        setChatListLoading(true);
-        setChatListError("");
-
-        const allSessions = await getProjectSessions(String(project.id));
-        if (cancelled) return;
-
-        setSessions(Array.isArray(allSessions) ? allSessions : []);
-      } catch (err) {
-        if (cancelled) return;
-        const aborted = err?.name === "AbortError" || String(err?.message || "").toLowerCase().includes("aborted");
-
-        if (!aborted) {
-          setSessions([]);
-          setChatListError(err?.message || "Failed to load chat sessions");
-        }
-      } finally {
-        if (!cancelled) setChatListLoading(false);
-      }
+    const run = async () => {
+      if (cancelled) return;
+      await loadProjectSessions();
     };
 
-    loadSessions();
+    run();
 
-    const intervalId = window.setInterval(loadSessions, 12000);
+    const intervalId = window.setInterval(run, 12000);
 
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [project, currentUserId, authLoading]);
+  }, [loadProjectSessions]);
 
   const activeSessions = useMemo(() => sessions.filter((s) => !s.ended), [sessions]);
   const endedSessions = useMemo(() => sessions.filter((s) => Boolean(s.ended)), [sessions]);
@@ -182,9 +200,9 @@ export default function DevProjectView() {
   }, [sessions]);
 
   const handleChatEnd = useCallback(() => {
-    setSessions([]);
     setSelectedSessionId(null);
-  }, []);
+    loadProjectSessions();
+  }, [loadProjectSessions]);
 
   if (loading) {
     return (
@@ -393,7 +411,7 @@ export default function DevProjectView() {
                 </Paper>
               ) : chatListError ? (
                 <Alert severity="warning">{chatListError}</Alert>
-              ) : activeSessions.length === 0 && endedSessions.length === 0 ? (
+              ) : !chatListLoading && activeSessions.length === 0 && endedSessions.length === 0 ? (
                 <Paper
                   sx={{
                     p: 2.2,
@@ -691,3 +709,6 @@ function InfoRow({ label, value }) {
     </Box>
   );
 }
+
+
+

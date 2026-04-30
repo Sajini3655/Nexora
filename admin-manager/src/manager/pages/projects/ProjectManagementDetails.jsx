@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -21,9 +21,15 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import ChatBubbleRoundedIcon from "@mui/icons-material/ChatBubbleRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { useParams } from "react-router-dom";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import api from "../../../services/api";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import ChatBox from "../../../dev/pages/chat/src/ChatBox";
+import { getProjectSessions } from "../../../dev/pages/chat/src/api";
 import {
   assignManagerTaskAssignee,
   createManagerTask,
@@ -109,8 +115,35 @@ function getStoryPointLabel(storyPoint) {
   return `${storyPoint?.title || "Untitled"} - ${Number(storyPoint?.pointValue || 0)} pt`;
 }
 
+function formatChatTime(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getSessionSortTime(session) {
+  const value = session?.endedAt || session?.createdAt || session?.startedAt || 0;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function buildSummaryPreview(session) {
+  const summary = String(session?.summary || session?.lastMessagePreview || "").trim();
+  if (!summary) return "No summary available yet.";
+  return summary.length > 160 ? `${summary.substring(0, 160)}...` : summary;
+}
+
 export default function ProjectManagementDetails() {
   const { projectId } = useParams();
+  const { user, loading: authLoading } = useAuth();
 
   const [project, setProject] = useState(null);
   const [developers, setDevelopers] = useState([]);
@@ -146,6 +179,12 @@ export default function ProjectManagementDetails() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [chatListLoading, setChatListLoading] = useState(false);
+  const [chatListError, setChatListError] = useState("");
+  const [sessions, setSessions] = useState([]);
 
   const loadProject = async (background = false) => {
     try {
@@ -195,6 +234,90 @@ export default function ProjectManagementDetails() {
   useLiveRefresh(liveTopics, () => loadProject(true), { debounceMs: 650 });
 
   const tasks = useMemo(() => (Array.isArray(project?.tasks) ? project.tasks : []), [project]);
+
+  const currentUserId = String(user?.id || user?.email || "");
+  const currentUserName = user?.name || user?.email || "Manager";
+
+  const loadProjectSessions = useCallback(async () => {
+    if (!projectId || authLoading) return;
+
+    try {
+      setChatListLoading(true);
+      setChatListError("");
+
+      const allSessions = await getProjectSessions(String(projectId));
+      setSessions(Array.isArray(allSessions) ? allSessions : []);
+    } catch (err) {
+      const aborted =
+        err?.name === "AbortError" ||
+        String(err?.message || "").toLowerCase().includes("aborted");
+
+      if (!aborted) {
+        setChatListError(err?.message || "Failed to load chat sessions.");
+      }
+    } finally {
+      setChatListLoading(false);
+    }
+  }, [projectId, authLoading]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+      await loadProjectSessions();
+    };
+
+    run();
+
+    const intervalId = window.setInterval(run, 12000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [loadProjectSessions]);
+
+  const activeSessions = useMemo(
+    () => sessions.filter((session) => !session.ended),
+    [sessions]
+  );
+
+  const endedSessions = useMemo(
+    () => sessions.filter((session) => Boolean(session.ended)),
+    [sessions]
+  );
+
+  const recentSummaries = useMemo(() => {
+    return sessions
+      .filter((session) => Boolean(session.ended) && Boolean(session.summary))
+      .sort((a, b) => getSessionSortTime(b) - getSessionSortTime(a))
+      .slice(0, 5);
+  }, [sessions]);
+
+  const releaseFocusedElement = () => {
+    const activeElement = document.activeElement;
+    if (activeElement && typeof activeElement.blur === "function") {
+      activeElement.blur();
+    }
+  };
+
+  const handleOpenSession = (sessionId) => {
+    releaseFocusedElement();
+    setSelectedSessionId(String(sessionId));
+    setChatDrawerOpen(true);
+  };
+
+  const handleOpenNewChat = () => {
+    releaseFocusedElement();
+    setSelectedSessionId(null);
+    setChatDrawerOpen(true);
+  };
+
+  const handleChatEnd = useCallback(() => {
+    setSelectedSessionId(null);
+    loadProjectSessions();
+  }, [loadProjectSessions]);
 
   const projectTotals = useMemo(() => {
     let taskCount = 0;
@@ -694,6 +817,237 @@ export default function ProjectManagementDetails() {
           </Box>
         </Paper>
 
+        <Paper
+          sx={{
+            p: 1.8,
+            borderRadius: 2.5,
+            border: "1px solid rgba(148,163,184,0.16)",
+            background: "rgba(15,23,42,0.68)",
+          }}
+        >
+          <Stack spacing={2}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              justifyContent="space-between"
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              spacing={1.2}
+            >
+              <Box>
+                <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+                  Team Chat
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
+                  {activeSessions.length > 0
+                    ? `${activeSessions.length} active thread${activeSessions.length !== 1 ? "s" : ""}`
+                    : "No active chat threads."}
+                </Typography>
+              </Box>
+
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Chip
+                  icon={<ChatBubbleRoundedIcon />}
+                  label={`Active: ${activeSessions.length}`}
+                  sx={{
+                    bgcolor:
+                      activeSessions.length > 0
+                        ? "rgba(59,130,246,0.16)"
+                        : "rgba(148,163,184,0.12)",
+                    color: activeSessions.length > 0 ? "#bfdbfe" : "#cbd5e1",
+                    fontWeight: 900,
+                  }}
+                />
+
+                <Button
+                  variant="contained"
+                  startIcon={<AddRoundedIcon />}
+                  onClick={handleOpenNewChat}
+                  disabled={!currentUserId || authLoading}
+                  sx={{ fontWeight: 900, textTransform: "none" }}
+                >
+                  New Chat
+                </Button>
+              </Stack>
+            </Stack>
+
+            {chatListLoading && sessions.length === 0 ? (
+              <Paper
+                sx={{
+                  p: 2,
+                  borderRadius: 3,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <Stack direction="row" spacing={1.2} alignItems="center">
+                  <CircularProgress size={18} sx={{ color: "#6b51ff" }} />
+                  <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                    Loading chat sessions...
+                  </Typography>
+                </Stack>
+              </Paper>
+            ) : chatListError ? (
+              <Alert severity="warning">{chatListError}</Alert>
+            ) : activeSessions.length === 0 && endedSessions.length === 0 ? (
+              <Paper
+                sx={{
+                  p: 2,
+                  borderRadius: 3,
+                  background:
+                    "linear-gradient(180deg, rgba(18,31,54,0.88), rgba(10,18,34,0.96))",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <Typography sx={{ fontWeight: 900, color: "#f8fafc", mb: 0.5 }}>
+                  No chat threads yet.
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                  Start a project discussion with assigned developers.
+                </Typography>
+              </Paper>
+            ) : (
+              <Stack spacing={2}>
+                {activeSessions.length > 0 ? (
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "#93c5fd",
+                        fontWeight: 900,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Active Threads
+                    </Typography>
+
+                    <Stack spacing={1.2} sx={{ mt: 1 }}>
+                      {activeSessions.map((session) => (
+                        <ManagerChatThreadCard
+                          key={session.id}
+                          session={session}
+                          onClick={() => handleOpenSession(session.id)}
+                          currentUserId={currentUserId}
+                        />
+                      ))}
+                    </Stack>
+                  </Box>
+                ) : null}
+              </Stack>
+            )}
+
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                background:
+                  "linear-gradient(180deg, rgba(18,31,54,0.88), rgba(10,18,34,0.96))",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <Stack spacing={1.4}>
+                <Box>
+                  <Typography sx={{ fontWeight: 900, fontSize: 17 }}>
+                    Recent Chat Summaries
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
+                    Last five ended chats for this project.
+                  </Typography>
+                </Box>
+
+                {recentSummaries.length > 0 ? (
+                  <Stack spacing={1.2}>
+                    {recentSummaries.map((session) => (
+                      <Paper
+                        key={session.id}
+                        onClick={() => handleOpenSession(session.id)}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 3,
+                          cursor: "pointer",
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          transition: "all 180ms ease",
+                          "&:hover": {
+                            background: "rgba(255,255,255,0.07)",
+                            borderColor: "rgba(96,165,250,0.28)",
+                          },
+                        }}
+                      >
+                        <Stack spacing={1}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="flex-start"
+                            spacing={1}
+                          >
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography sx={{ fontWeight: 900, color: "#f8fafc" }}>
+                                {session.startedByName || "Unknown"}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{ color: "rgba(231,233,238,0.58)" }}
+                              >
+                                {formatChatTime(session.endedAt || session.startedAt)}
+                              </Typography>
+                            </Box>
+
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<OpenInNewRoundedIcon />}
+                              sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+                            >
+                              View
+                            </Button>
+                          </Stack>
+
+                          <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
+                            {buildSummaryPreview(session)}
+                          </Typography>
+
+                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            <Chip
+                              size="small"
+                              label={`${session.messageCount || 0} messages`}
+                              sx={{
+                                bgcolor: "rgba(59,130,246,0.16)",
+                                color: "#bfdbfe",
+                                fontWeight: 800,
+                              }}
+                            />
+                            <Chip
+                              size="small"
+                              label="Ended"
+                              sx={{
+                                bgcolor: "rgba(107,114,128,0.16)",
+                                color: "#d1d5db",
+                                fontWeight: 800,
+                              }}
+                            />
+                          </Stack>
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 3,
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                      No ended chat summaries yet.
+                    </Typography>
+                  </Paper>
+                )}
+              </Stack>
+            </Paper>
+          </Stack>
+        </Paper>
+
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Task List</Typography>
 
@@ -745,6 +1099,68 @@ export default function ProjectManagementDetails() {
           <Typography variant="caption" sx={{ color: "#94a3b8" }}>Updating...</Typography>
         </Box>
       )}
+
+      <Dialog
+        open={chatDrawerOpen}
+        onClose={() => setChatDrawerOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            width: { xs: "94vw", sm: "94vw", md: "760px", lg: "820px" },
+            maxHeight: "82vh",
+            maxWidth: "none",
+            background:
+              "linear-gradient(180deg, rgba(8,15,28,0.98), rgba(6,11,21,0.99))",
+            border: "1px solid rgba(148,163,184,0.14)",
+            backdropFilter: "blur(18px)",
+            borderRadius: 4,
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+        BackdropProps={{
+          sx: {
+            background: "rgba(0, 0, 0, 0.6)",
+            backdropFilter: "blur(4px)",
+          },
+        }}
+      >
+        <DialogContent
+          sx={{
+            p: 0,
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+            minHeight: 0,
+            background: "#0b1628",
+            borderRadius: 4,
+          }}
+        >
+          {currentUserId ? (
+            <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              <ChatBox
+                projectId={String(projectId)}
+                projectName={getProjectName(project)}
+                currentUserId={currentUserId}
+                currentUserName={currentUserName}
+                selectedSessionId={selectedSessionId}
+                hideSidebar
+                hideNewChatButton
+                onSummary={handleChatEnd}
+                onClose={() => {
+                  setChatDrawerOpen(false);
+                  loadProjectSessions();
+                }}
+              />
+            </Box>
+          ) : (
+            <Alert severity="info" sx={{ m: 2 }}>
+              Sign in to use the project chat.
+            </Alert>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={taskModalOpen} onClose={closeTaskModal} fullWidth maxWidth="lg">
         <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -915,3 +1331,115 @@ function Metric({ label, value }) {
 
 
 
+
+function ManagerChatThreadCard({ session, onClick, currentUserId }) {
+  const isStarter = String(session.startedById) === String(currentUserId);
+
+  return (
+    <Paper
+      onClick={onClick}
+      sx={{
+        p: 1.5,
+        borderRadius: 3,
+        background:
+          "linear-gradient(135deg, rgba(30,58,138,0.24), rgba(15,23,42,0.28))",
+        border: "1px solid rgba(59,130,246,0.2)",
+        cursor: "pointer",
+        transition: "all 200ms ease",
+        "&:hover": {
+          background:
+            "linear-gradient(135deg, rgba(30,58,138,0.32), rgba(15,23,42,0.36))",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+        },
+      }}
+    >
+      <Stack spacing={1}>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Chip
+                size="small"
+                label="Active"
+                sx={{
+                  bgcolor: "rgba(34,197,94,0.24)",
+                  color: "#86efac",
+                  fontWeight: 900,
+                }}
+              />
+
+              {isStarter ? (
+                <Chip
+                  size="small"
+                  label="You started"
+                  sx={{
+                    bgcolor: "rgba(139,92,246,0.16)",
+                    color: "#d8b4fe",
+                    fontWeight: 700,
+                  }}
+                />
+              ) : null}
+            </Stack>
+          </Box>
+
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<OpenInNewRoundedIcon />}
+            sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+          >
+            Open
+          </Button>
+        </Stack>
+
+        <Stack spacing={0.6} sx={{ py: 0.5 }}>
+          <ManagerChatRow label="Started by" value={session.startedByName || "Unknown"} />
+          <ManagerChatRow label="Started" value={formatChatTime(session.startedAt) || "Recently"} />
+
+          {session.lastMessagePreview ? (
+            <ManagerChatRow
+              label="Last message"
+              value={
+                session.lastMessagePreview.length > 60
+                  ? `${session.lastMessagePreview.substring(0, 60)}...`
+                  : session.lastMessagePreview
+              }
+            />
+          ) : null}
+
+          <ManagerChatRow label="Messages" value={String(session.messageCount || 0)} />
+        </Stack>
+      </Stack>
+    </Paper>
+  );
+}
+
+function ManagerChatRow({ label, value }) {
+  return (
+    <Stack direction="row" spacing={0.6} justifyContent="space-between" alignItems="flex-start">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "rgba(231,233,238,0.52)",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </Typography>
+
+      <Typography
+        variant="body2"
+        sx={{
+          color: "#e2e8f0",
+          fontWeight: 700,
+          textAlign: "right",
+          wordBreak: "break-word",
+          maxWidth: "65%",
+        }}
+      >
+        {value}
+      </Typography>
+    </Stack>
+  );
+}

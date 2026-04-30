@@ -151,6 +151,22 @@ export async function fetchAssignedTaskByIdFromBackend(taskId) {
   return res.json();
 }
 
+export async function fetchProjectTasksFromBackend(projectId) {
+  const res = await apiFetch(`/developer/tasks/project/${encodeURIComponent(projectId)}`, {
+    method: "GET",
+  });
+
+  const backendTasks = await res.json();
+  const existing = loadTasks();
+  const byId = new Map(existing.map((task) => [String(task.id), task]));
+
+  const mappedFromBackend = Array.isArray(backendTasks)
+    ? backendTasks.map((task) => mapBackendTaskToUi(task, byId.get(String(task.id))))
+    : [];
+
+  return mappedFromBackend;
+}
+
 export async function fetchTaskStoryPoints(taskId) {
   try {
     const res = await apiFetch(`/tasks/${encodeURIComponent(taskId)}/story-points`, {

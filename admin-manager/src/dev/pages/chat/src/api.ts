@@ -103,7 +103,9 @@ export async function getProjectSessions(projectId: string) {
   try {
     res = await fetch(`${BACKEND_URL}/project/${projectId}/sessions`, {
       method: "GET",
-      headers: authHeaders(),
+      headers: authHeaders({
+        "Cache-Control": "no-cache",
+      }),
       signal: controller.signal,
     });
   } finally {
@@ -213,3 +215,4 @@ export async function sendMessage(sessionId: string, content: string) {
 
   return res.json();
 }
+

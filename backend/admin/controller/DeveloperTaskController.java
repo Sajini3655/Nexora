@@ -27,4 +27,10 @@ public class DeveloperTaskController {
     public ResponseEntity<TaskDto> myTask(Authentication authentication, @PathVariable Long id) {
         return ResponseEntity.ok(developerTaskService.getAssignedToMe(authentication.getName(), id));
     }
+
+    /** List all tasks in a project if developer is assigned to at least one task in that project. */
+    @GetMapping("/project/{projectId}")
+    public ResponseEntity<List<TaskDto>> projectTasks(Authentication authentication, @PathVariable Long projectId) {
+        return ResponseEntity.ok(developerTaskService.listProjectTasksVisibleToMe(authentication.getName(), projectId));
+    }
 }

@@ -52,6 +52,23 @@ public class DeveloperTaskService {
         return toTaskDto(task);
     }
 
+    @Transactional(readOnly = true)
+    public List<TaskDto> listProjectTasksVisibleToMe(String developerEmail, Long projectId) {
+        User dev = userRepository.findByEmail(developerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Developer not found"));
+
+        boolean canAccessProject = taskRepository.existsByProject_IdAndAssignedTo_Id(projectId, dev.getId());
+
+        if (!canAccessProject) {
+            throw new ResourceNotFoundException("Project not found");
+        }
+
+        return taskRepository.findByProject_Id(projectId).stream()
+                .sorted(Comparator.comparing(TaskItem::getCreatedAt).reversed())
+                .map(this::toTaskDto)
+                .collect(Collectors.toList());
+    }
+
     private TaskDto toTaskDto(TaskItem t) {
         long totalStoryPoints = storyPointRepository.countByTaskId(t.getId());
         long completedStoryPoints = storyPointRepository.countByTaskIdAndStatus(t.getId(), StoryPointStatus.DONE);
