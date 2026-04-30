@@ -35,6 +35,8 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { getAdminDashboard, getSystemHealth } from "../../../services/api";
+import DashboardHero from "../../../components/ui/DashboardHero.jsx";
+import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
 export default function AdminDashboard() {
@@ -244,14 +246,11 @@ export default function AdminDashboard() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
-          Admin Dashboard
-        </Typography>
-        <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-          Overview of users, roles, and live system health.
-        </Typography>
-      </Box>
+      <DashboardHero
+        icon={<AdminPanelSettingsRoundedIcon />}
+        title="Admin Dashboard"
+        subtitle="Overview of users, roles, invitations, and live system health."
+      />
 
       <Box
         sx={{

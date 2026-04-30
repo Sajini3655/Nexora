@@ -19,6 +19,8 @@ import {
 } from "../../services/clientService";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+import DashboardHero from "../../../components/ui/DashboardHero.jsx";
+import SupportAgentRoundedIcon from "@mui/icons-material/SupportAgentRounded";
 
 export default function ClientDashboardHome() {
   const initialTickets = useMemo(() => getCachedClientTickets(), []);
@@ -98,14 +100,14 @@ export default function ClientDashboardHome() {
           "& .MuiTypography-body2": { fontSize: 14.5 },
         }}
       >
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
-            Client Dashboard
-          </Typography>
-          <Typography variant="body1" sx={{ color: "#94a3b8", mt: 0.5, fontSize: 15 }}>
-            Simple overview of your tickets and workstreams.
-          </Typography>
-        </Box>
+        <DashboardHero
+          icon={<SupportAgentRoundedIcon />}
+          title="Client Dashboard"
+          subtitle="Simple overview of your support tickets, project updates, and workstreams."
+          actionLabel="View Tickets"
+          component={Link}
+          actionTo="/client/tickets"
+        />
 
         {error ? <Alert severity="warning">{error}</Alert> : null}
 

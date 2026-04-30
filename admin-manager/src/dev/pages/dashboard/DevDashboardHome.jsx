@@ -15,6 +15,8 @@ import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+import DashboardHero from "../../../components/ui/DashboardHero.jsx";
+import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 
 function isCompletedTask(task) {
   const status = String(task?.status || "").toLowerCase();
@@ -198,37 +200,19 @@ export default function DevDashboardHome() {
         maxWidth: 1320,
         mx: "auto",
         px: { xs: 2, md: 3 },
-        py: { xs: 2, md: 3 },
+        pt: { xs: 1, md: 0.75 },
+        pb: { xs: 2, md: 3 },
         "& .MuiTypography-caption": { fontSize: 13.5 },
         "& .MuiTypography-body2": { fontSize: 14.5 },
       }}
     >
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h3"
-          sx={{
-            fontWeight: 950,
-            mb: 0.75,
-            background: "linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%)",
-            backgroundClip: "text",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            fontSize: { xs: 28, md: 36 },
-          }}
-        >
-          Developer Dashboard
-        </Typography>
-        <Typography
-          variant="body1"
-          sx={{
-            color: "#94a3b8",
-            fontSize: 16,
-            maxWidth: 600,
-          }}
-        >
-          Track assigned tasks, project progress, and converted ticket work.
-        </Typography>
+      <Box sx={{ mt: { xs: -1.5, md: -1.5 }, mb: { xs: 3, md: 6 } }}>
+        <DashboardHero
+          icon={<CodeRoundedIcon />}
+          title="Developer Dashboard"
+          subtitle="Track assigned work, active projects, ticket updates, and delivery progress."
+        />
       </Box>
 
       {error ? (
@@ -798,4 +782,5 @@ function EmptyState({ icon, message }) {
     </Box>
   );
 }
+
 

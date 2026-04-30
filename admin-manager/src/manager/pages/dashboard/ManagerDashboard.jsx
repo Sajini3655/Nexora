@@ -29,6 +29,7 @@ import { fetchManagerTasks, fetchProjects } from "../../../services/managerServi
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloperProgress";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+import DashboardHero from "../../../components/ui/DashboardHero.jsx";
 
 const MANAGER_DASHBOARD_CACHE_KEY = "manager.dashboard.cache.v1";
 
@@ -549,6 +550,21 @@ export default function ManagerDashboard() {
     [projectRows]
   );
 
+  const planningProjectCount = useMemo(
+    () => projectRows.filter((project) => project.status === "Planning").length,
+    [projectRows]
+  );
+
+  const completedProjectCount = useMemo(
+    () => projectRows.filter((project) => project.status === "Completed").length,
+    [projectRows]
+  );
+
+  const atRiskProjectCount = useMemo(
+    () => projectRows.filter((project) => project.status === "Active" && Number(project.progress || 0) < 25).length,
+    [projectRows]
+  );
+
   const completionRate = useMemo(() => {
     const totalPointValue = tasks.reduce(
       (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0),
@@ -669,47 +685,12 @@ export default function ManagerDashboard() {
         />
       ) : null}
 
-      <Stack
-        direction={{ xs: "column", md: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", md: "center" }}
-        spacing={1.4}
-        sx={{ mb: 0.8 }}
-      >
-        <Box>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.45 }}>
-            <IconPill icon={<DashboardRoundedIcon />} color="#c4b5fd" bg="rgba(124,92,255,0.16)" />
-            <Typography variant="h4" sx={{ fontWeight: 950, letterSpacing: -0.7 }}>
-              Manager Dashboard
-            </Typography>
-          </Stack>
-          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-            Track project delivery, inbound tickets, team workload, and developer progress.
-          </Typography>
-        </Box>
-
-        <Button
-          variant="outlined"
-          onClick={() => navigate("/manager/projects")}
-          sx={{
-            textTransform: "none",
-            borderColor: "rgba(124,92,255,0.45)",
-            color: "#ddd6fe",
-            backgroundColor: "rgba(124,92,255,0.08)",
-            "&:hover": { borderColor: "rgba(124,92,255,0.72)", backgroundColor: "rgba(124,92,255,0.14)" },
-          }}
-        >
-          View Projects
-        </Button>
-      </Stack>
-
-      <Box
-        sx={{
-          height: 2,
-          background: "linear-gradient(90deg, rgba(124,92,255,0.46) 0%, rgba(56,189,248,0.28) 42%, transparent 100%)",
-          borderRadius: 999,
-          mb: 2.35,
-        }}
+      <DashboardHero
+        icon={<DashboardRoundedIcon />}
+        title="Manager Dashboard"
+        subtitle="Track project delivery, inbound tickets, team workload, and developer progress."
+        actionLabel="View Projects"
+        onAction={() => navigate("/manager/projects")}
       />
 
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
@@ -778,13 +759,13 @@ export default function ManagerDashboard() {
             <DashboardMetricCard label="Active Projects" value={activeProjectCount} hint="Currently moving" icon={<BoltRoundedIcon />} color="#60a5fa" bg="rgba(96,165,250,0.14)" />
           </Grid>
           <Grid item xs={12} sm={6} lg={3}>
-            <DashboardMetricCard label="Total Tasks" value={tasks.length} hint="Across manager projects" icon={<TaskAltRoundedIcon />} color="#a78bfa" bg="rgba(167,139,250,0.14)" />
+            <DashboardMetricCard label="Planning Projects" value={planningProjectCount} hint="Waiting for tasks" icon={<ScheduleRoundedIcon />} color="#fbbf24" bg="rgba(251,191,36,0.14)" />
           </Grid>
           <Grid item xs={12} sm={6} lg={3}>
-            <DashboardMetricCard label="Average Progress" value={`${averageProjectProgress}%`} hint="Project completion average" icon={<TrendingUpRoundedIcon />} color="#22d3ee" bg="rgba(34,211,238,0.14)" />
+            <DashboardMetricCard label="Completed Projects" value={completedProjectCount} hint="Fully delivered" icon={<CheckCircleRoundedIcon />} color="#86efac" bg="rgba(134,239,172,0.14)" />
           </Grid>
           <Grid item xs={12} sm={6} lg={3}>
-            <DashboardMetricCard label="Tracked Projects" value={projectRows.length} hint="Visible in workspace" icon={<FolderRoundedIcon />} color="#fb923c" bg="rgba(251,146,60,0.14)" />
+            <DashboardMetricCard label="At Risk Projects" value={atRiskProjectCount} hint="Low progress" icon={<PriorityHighRoundedIcon />} color="#fda4af" bg="rgba(253,164,175,0.14)" />
           </Grid>
         </Grid>
       </Paper>
