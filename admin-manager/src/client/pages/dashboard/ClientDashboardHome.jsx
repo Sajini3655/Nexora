@@ -18,6 +18,7 @@ import {
   getCachedClientTickets,
 } from "../../services/clientService";
 import ClientProjectTimeline from "../../components/dashboard/ClientProjectTimeline.jsx";
+import ClientQuickRequest from "../../components/dashboard/ClientQuickRequest.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
@@ -156,6 +157,13 @@ export default function ClientDashboardHome() {
           </Box>
 
           <ClientProjectTimeline project={activeProject} tickets={tickets} />
+          <ClientQuickRequest
+  onTicketCreated={(createdTicket) => {
+    const updatedTickets = [createdTicket, ...tickets];
+    setTickets(updatedTickets);
+    setProjects(buildProjectsFromTickets(updatedTickets));
+  }}
+/>
 
           <Box
             sx={{
