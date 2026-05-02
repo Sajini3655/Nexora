@@ -18,13 +18,19 @@ function ensureClient() {
   if (client) return client;
 
   client = new Client({
+    // SockJS websocket transport was causing noisy early-close errors in the browser.
+    // Prefer the SockJS HTTP transports so live updates still work without surfacing
+    // a failed websocket handshake when the backend is still starting up.
     webSocketFactory: () => new SockJS(getWsEndpoint(), undefined, {
-      transports: ["websocket", "xhr-streaming", "xhr-polling"],
+      transports: ["xhr-streaming", "xhr-polling"],
     }),
     reconnectDelay: 5000,
     onConnect: () => {
       isConnected = true;
       resubscribeAll();
+    },
+    onWebSocketError: () => {
+      isConnected = false;
     },
     onWebSocketClose: () => {
       isConnected = false;
