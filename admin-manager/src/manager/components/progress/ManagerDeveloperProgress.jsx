@@ -1,10 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Alert, Box, Chip, Paper, Stack, Typography } from "@mui/material";
-import useLiveRefresh from "../../../hooks/useLiveRefresh";
-import {
-  fetchManagerDevelopers,
-  fetchManagerTasks,
-} from "../../../services/managerService";
+import { useManagerDevelopers, useManagerTasks } from "../../data/useManager";
 import DeveloperProgressTable from "./DeveloperProgressTable";
 
 function isDelayedTask(task) {
@@ -87,42 +83,22 @@ function buildSummariesFromTasks(developers, tasks) {
 }
 
 export default function ManagerDeveloperProgress() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [delayedTaskCount, setDelayedTaskCount] = useState(0);
+  const developersQuery = useManagerDevelopers();
+  const tasksQuery = useManagerTasks();
 
-  const load = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
+  const loading = developersQuery.isLoading || tasksQuery.isLoading;
+  const error = developersQuery.error?.message || tasksQuery.error?.message || "";
 
-      const [developers, tasks] = await Promise.all([
-        fetchManagerDevelopers(),
-        fetchManagerTasks(),
-      ]);
+  const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
+  const tasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
 
-      const delayedCount = (Array.isArray(tasks) ? tasks : []).filter(isDelayedTask).length;
-      setDelayedTaskCount(delayedCount);
+  const rows = useMemo(() => {
+    return buildSummariesFromTasks(developers, tasks);
+  }, [developers, tasks]);
 
-      const developerList = Array.isArray(developers) ? developers : [];
-      const summaries = buildSummariesFromTasks(developerList, tasks);
-
-      setRows(summaries);
-    } catch (err) {
-      setError(err?.message || "Failed to load developer work progress.");
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const liveTopics = useMemo(() => ["/topic/tasks", "/topic/manager.dashboard"], []);
-  useLiveRefresh(liveTopics, load, { debounceMs: 500 });
+  const delayedTaskCount = useMemo(() => {
+    return tasks.filter(isDelayedTask).length;
+  }, [tasks]);
 
   const totals = useMemo(() => {
     const assignedTasks = rows.reduce((sum, row) => sum + Number(row.assignedTasks || 0), 0);
