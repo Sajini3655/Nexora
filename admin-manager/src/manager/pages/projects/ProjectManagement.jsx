@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -12,9 +12,9 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { fetchManagerTasks, fetchProjects, getErrorMessage } from "../../../services/managerService";
+import { getErrorMessage } from "../../../services/managerService";
 import api from "../../../services/api";
-import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import { useManagerProjects, useManagerTasks } from "../../data/useManager";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
 function isCompletedTask(task) {
@@ -36,34 +36,20 @@ function getProjectDescription(project) {
 
 export default function ProjectManagement() {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const projectsQuery = useManagerProjects();
+  const tasksQuery = useManagerTasks();
+
+  const projects = Array.isArray(projectsQuery.data) ? projectsQuery.data : [];
+  const tasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
+  const loading = projectsQuery.isLoading || tasksQuery.isLoading;
+  const error =
+    projectsQuery.error?.message ||
+    tasksQuery.error?.message ||
+    "";
   const [success, setSuccess] = useState("");
   
   const [newProjectForm, setNewProjectForm] = useState({ name: "", description: "" });
   const [creatingProject, setCreatingProject] = useState(false);
-
-  const loadProjects = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const [projectsData, tasksData] = await Promise.all([fetchProjects(), fetchManagerTasks()]);
-      setProjects(Array.isArray(projectsData) ? projectsData : []);
-      setTasks(Array.isArray(tasksData) ? tasksData : []);
-    } catch (err) {
-      setError(err?.response?.data?.message || "Failed to load project management data.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
-
-  useLiveRefresh(["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"], loadProjects, { debounceMs: 550 });
 
   const projectRows = useMemo(() => {
     const tasksByProject = new Map();
@@ -123,8 +109,7 @@ export default function ProjectManagement() {
       setSuccess("New project created successfully!");
       setNewProjectForm({ name: "", description: "" });
       
-      // Reload projects to show the new one
-      await loadProjects();
+      projectsQuery.refetch();
       
       // Navigate to the new project after a short delay
       setTimeout(() => {
