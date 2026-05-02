@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   Alert,
   Box,
@@ -24,14 +24,11 @@ import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import { useNavigate } from "react-router-dom";
-import api from "../../../services/api";
-import { fetchManagerTasks, fetchProjects } from "../../../services/managerService";
-import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import { useManagerProjects, useManagerTasks } from "../../data/useManager";
+import { useRecentEmailTickets } from "../../data/useManagerTickets";
 import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloperProgress";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
-
-const MANAGER_DASHBOARD_CACHE_KEY = "manager.dashboard.cache.v1";
 
 const sectionCardSx = {
   p: { xs: 1.6, md: 1.9 },
@@ -42,38 +39,6 @@ const sectionCardSx = {
   boxShadow: "0 18px 46px rgba(0,0,0,0.22)",
   backdropFilter: "blur(18px)",
 };
-
-function readManagerDashboardCache() {
-  try {
-    if (typeof window === "undefined") return null;
-    const raw = window.sessionStorage.getItem(MANAGER_DASHBOARD_CACHE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    const projects = Array.isArray(parsed?.projects) ? parsed.projects : [];
-    const tasks = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
-    const tickets = Array.isArray(parsed?.tickets) ? parsed.tickets : [];
-
-    return { projects, tasks, tickets };
-  } catch {
-    return null;
-  }
-}
-
-function writeManagerDashboardCache(projects, tasks, tickets) {
-  try {
-    if (typeof window === "undefined") return;
-    const payload = {
-      projects: Array.isArray(projects) ? projects : [],
-      tasks: Array.isArray(tasks) ? tasks : [],
-      tickets: Array.isArray(tickets) ? tickets : [],
-      timestamp: Date.now(),
-    };
-    window.sessionStorage.setItem(MANAGER_DASHBOARD_CACHE_KEY, JSON.stringify(payload));
-  } catch {
-    // Ignore cache write errors.
-  }
-}
 
 function normalizeTicketList(data) {
   if (Array.isArray(data)) return data;
@@ -397,14 +362,20 @@ function TaskFocusRow({ task, type, getTaskTitle, getTaskDate }) {
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
-  const cachedDashboard = useMemo(() => readManagerDashboardCache(), []);
+  const projectsQuery = useManagerProjects();
+  const tasksQuery = useManagerTasks();
+  const emailTicketsQuery = useRecentEmailTickets();
 
-  const [projects, setProjects] = useState(cachedDashboard?.projects || []);
-  const [tasks, setTasks] = useState(cachedDashboard?.tasks || []);
-  const [tickets, setTickets] = useState(cachedDashboard?.tickets || []);
-  const [loading, setLoading] = useState(!cachedDashboard);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
+  const projects = Array.isArray(projectsQuery.data) ? projectsQuery.data : [];
+  const tasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
+  const tickets = normalizeTicketList(emailTicketsQuery.data);
+  const loading = projectsQuery.isLoading || tasksQuery.isLoading || emailTicketsQuery.isLoading;
+  const refreshing = projectsQuery.isFetching || tasksQuery.isFetching || emailTicketsQuery.isFetching;
+  const error =
+    projectsQuery.error?.message ||
+    tasksQuery.error?.message ||
+    emailTicketsQuery.error?.message ||
+    "";
 
   const normalizeTaskStatus = (task) =>
     String(task?.status || task?.taskStatus || task?.state || "")
@@ -434,56 +405,6 @@ export default function ManagerDashboard() {
 
   const getProjectDescription = (project) =>
     project?.description ?? project?.projectDescription ?? "No description available.";
-
-  const loadDashboard = useCallback(async (options = {}) => {
-    const isBackground = Boolean(options.background);
-
-    try {
-      if (isBackground) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setError("");
-      const [projectData, taskData] = await Promise.all([
-        fetchProjects(),
-        fetchManagerTasks(),
-      ]);
-      const ticketData = await api.get("/tickets/email/recent").catch(() => null);
-
-      const normalizedProjects = Array.isArray(projectData) ? projectData : [];
-      const normalizedTasks = Array.isArray(taskData) ? taskData : [];
-      const normalizedTickets = ticketData ? normalizeTicketList(ticketData.data) : [];
-
-      setProjects(normalizedProjects);
-      setTasks(normalizedTasks);
-      setTickets(normalizedTickets);
-      writeManagerDashboardCache(normalizedProjects, normalizedTasks, normalizedTickets);
-    } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          "Failed to load manager dashboard data."
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadDashboard({ background: Boolean(cachedDashboard) });
-  }, [cachedDashboard, loadDashboard]);
-
-  const liveTopics = useMemo(
-    () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects", "/topic/tickets"],
-    []
-  );
-
-  const refreshDashboard = useCallback(() => {
-    loadDashboard({ background: true });
-  }, [loadDashboard]);
-
-  useLiveRefresh(liveTopics, refreshDashboard, { debounceMs: 900 });
 
   const tasksByProject = useMemo(() => {
     const grouped = new Map();
