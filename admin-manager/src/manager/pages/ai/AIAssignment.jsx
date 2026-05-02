@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Box, Button, Chip, Divider, MenuItem, Paper, Stack, Typography } from "@mui/material";
 import PageHeader from "../../../components/ui/PageHeader";
 import Card from "../../../components/ui/Card";
 import Input from "../../../components/ui/Input";
-import { assignManagerTaskAssignee, fetchManagerDevelopers, fetchManagerTasks, getErrorMessage, suggestManagerTaskAssignment } from "../../../services/managerService";
-import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import { assignManagerTaskAssignee, getErrorMessage, suggestManagerTaskAssignment } from "../../../services/managerService";
+import { useManagerDevelopers, useManagerTasks } from "../../data/useManager";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
 function getProjectName(task) {
@@ -32,31 +32,19 @@ function getTaskLabel(task) {
 }
 
 export default function AIAssignment() {
-  const [developers, setDevelopers] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  const developersQuery = useManagerDevelopers();
+  const tasksQuery = useManagerTasks();
+  
+  const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
+  const tasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
+  const queryError = developersQuery.error?.message || tasksQuery.error?.message || "";
+
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [selectedDeveloperId, setSelectedDeveloperId] = useState("");
   const [suggestion, setSuggestion] = useState(null);
   const [loadingAssignManual, setLoadingAssignManual] = useState(false);
   const [loadingAssignAI, setLoadingAssignAI] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  const load = useCallback(async () => {
-    try {
-      const [developersData, tasksData] = await Promise.all([fetchManagerDevelopers(), fetchManagerTasks()]);
-      setDevelopers(Array.isArray(developersData) ? developersData : []);
-      setTasks(Array.isArray(tasksData) ? tasksData : []);
-    } catch (e) {
-      setMsg(getErrorMessage(e, "Failed to load developers or tasks."));
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const liveTopics = useMemo(() => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects", "/topic/users"], []);
-  useLiveRefresh(liveTopics, load, { debounceMs: 500 });
+  const [actionMsg, setActionMsg] = useState("");
 
   const unassignedTasks = useMemo(() => tasks.filter((task) => !isAssignedTask(task)), [tasks]);
   const assignedTasks = useMemo(() => tasks.filter((task) => isAssignedTask(task)), [tasks]);
@@ -80,19 +68,19 @@ export default function AIAssignment() {
   const handleAssignManual = async () => {
     if (!canAssignManual) return;
 
-    setMsg("");
+    setActionMsg("");
     setSuggestion(null);
     setLoadingAssignManual(true);
 
     try {
       await assignManagerTaskAssignee(Number(selectedTaskId), Number(selectedDeveloperId));
       const dev = developers.find((d) => String(d?.id) === String(selectedDeveloperId));
-      setMsg(dev ? `Assigned to ${dev.name}.` : "Task assignment updated.");
+      setActionMsg(dev ? `Assigned to ${dev.name}.` : "Task assignment updated.");
       setSelectedTaskId("");
       setSelectedDeveloperId("");
-      await load();
+      await Promise.all([developersQuery.refetch(), tasksQuery.refetch()]);
     } catch (e) {
-      setMsg(getErrorMessage(e, "Manual assignment failed."));
+      setActionMsg(getErrorMessage(e, "Manual assignment failed."));
     } finally {
       setLoadingAssignManual(false);
     }
@@ -101,7 +89,7 @@ export default function AIAssignment() {
   const handleAssignWithAI = async () => {
     if (!canAssignAI || !selectedTask) return;
 
-    setMsg("");
+    setActionMsg("");
     setSuggestion(null);
     setLoadingAssignAI(true);
 
@@ -120,9 +108,9 @@ export default function AIAssignment() {
       }
 
       setSelectedDeveloperId(String(recommendedId));
-      setMsg(`AI suggested: ${data.recommendedDeveloper.name}. Click \"Assign Manually\" to confirm.`);
+      setActionMsg(`AI suggested: ${data.recommendedDeveloper.name}. Click \"Assign Manually\" to confirm.`);
     } catch (e) {
-      setMsg(getErrorMessage(e, "AI assignment failed."));
+      setActionMsg(getErrorMessage(e, "AI assignment failed."));
     } finally {
       setLoadingAssignAI(false);
     }
@@ -234,9 +222,15 @@ export default function AIAssignment() {
           </Button>
         </Box>
 
-        {msg ? (
+        {queryError ? (
+          <Box sx={{ mt: 1.6, px: 1.4, py: 0.9, borderRadius: 2, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.1)" }}>
+            <Typography variant="body2" sx={{ color: "#ef5350" }}>{queryError}</Typography>
+          </Box>
+        ) : null}
+
+        {actionMsg ? (
           <Box sx={{ mt: 1.6, px: 1.4, py: 0.9, borderRadius: 2, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)" }}>
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>{msg}</Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>{actionMsg}</Typography>
           </Box>
         ) : null}
 

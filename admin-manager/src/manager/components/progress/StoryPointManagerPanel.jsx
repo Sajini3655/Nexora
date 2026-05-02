@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -14,6 +14,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import api from "../../../services/api";
+import { useTaskStoryPoints } from "../../data/useTaskStoryPoints";
 
 const emptyForm = {
   title: "",
@@ -27,13 +28,15 @@ function getTaskLabel(task) {
 
 export default function StoryPointManagerPanel({ tasks = [] }) {
   const [selectedTaskId, setSelectedTaskId] = useState("");
-  const [storyPoints, setStoryPoints] = useState([]);
   const [form, setForm] = useState(emptyForm);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [editingStoryPointId, setEditingStoryPointId] = useState(null);
+
+  const storyPointsQuery = useTaskStoryPoints(selectedTaskId);
+  const storyPoints = Array.isArray(storyPointsQuery.data) ? storyPointsQuery.data : [];
+  const loading = storyPointsQuery.isLoading || storyPointsQuery.isFetching;
 
   const selectedTask = useMemo(
     () => tasks.find((task) => String(task?.id) === String(selectedTaskId)) || null,
@@ -45,30 +48,9 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
     [form.pointValue, form.title, selectedTaskId]
   );
 
-  const loadStoryPoints = async (taskId) => {
-    if (!taskId) {
-      setStoryPoints([]);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await api.get(`/tasks/${taskId}/story-points`);
-      setStoryPoints(Array.isArray(response.data) ? response.data : []);
-    } catch (err) {
-      setError(err?.response?.data?.message || err?.message || "Failed to load story points.");
-      setStoryPoints([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
+  useMemo(() => {
     if (!tasks.length) {
       setSelectedTaskId("");
-      setStoryPoints([]);
       return;
     }
 
@@ -76,12 +58,6 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
       setSelectedTaskId(String(tasks[0]?.id));
     }
   }, [tasks, selectedTaskId]);
-
-  useEffect(() => {
-    if (selectedTaskId) {
-      loadStoryPoints(selectedTaskId);
-    }
-  }, [selectedTaskId]);
 
   const handleCreate = async () => {
     if (!canCreate) return;
@@ -99,7 +75,7 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
 
       setForm(emptyForm);
       setSuccess("Story point created.");
-      await loadStoryPoints(selectedTaskId);
+      await storyPointsQuery.refetch();
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || "Failed to create story point.");
     } finally {
@@ -114,7 +90,7 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
     try {
       await api.delete(`/story-points/${storyPointId}`);
       setSuccess("Story point deleted.");
-      await loadStoryPoints(selectedTaskId);
+      await storyPointsQuery.refetch();
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || "Failed to delete story point.");
     }
@@ -153,7 +129,7 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
       setEditingStoryPointId(null);
       setForm(emptyForm);
       setSuccess("Story point updated.");
-      await loadStoryPoints(selectedTaskId);
+      await storyPointsQuery.refetch();
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || "Failed to update story point.");
     } finally {

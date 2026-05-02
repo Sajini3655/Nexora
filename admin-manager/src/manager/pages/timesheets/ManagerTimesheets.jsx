@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Alert,
   Box,
@@ -20,10 +20,9 @@ import Card from "../../../components/ui/Card.jsx";
 import { formatDate } from "../../../utils/formatDate.js";
 import {
   approveTimesheet,
-  fetchTeamTimesheetSummary,
-  fetchTeamTimesheets,
   rejectTimesheet,
 } from "../../../services/timesheetService.js";
+import { useTeamTimesheets, useTeamTimesheetsSummary } from "../../data/useTimesheets";
 
 const FILTERS = [
   { label: "All", value: "ALL" },
@@ -33,38 +32,20 @@ const FILTERS = [
 ];
 
 export default function ManagerTimesheets() {
-  const [items, setItems] = useState([]);
-  const [summary, setSummary] = useState(null);
   const [filter, setFilter] = useState("ALL");
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [actionKey, setActionKey] = useState("");
   const [rejectTarget, setRejectTarget] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const [teamTimesheets, teamSummary] = await Promise.all([
-        fetchTeamTimesheets(filter === "ALL" ? {} : { status: filter }),
-        fetchTeamTimesheetSummary(),
-      ]);
-
-      setItems(Array.isArray(teamTimesheets) ? teamTimesheets : []);
-      setSummary(teamSummary ?? null);
-    } catch (err) {
-      setError(err?.message || "Failed to load team timesheets.");
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const itemsQuery = useTeamTimesheets(filter);
+  const summaryQuery = useTeamTimesheetsSummary();
+  
+  const items = Array.isArray(itemsQuery.data) ? itemsQuery.data : [];
+  const summary = summaryQuery.data || null;
+  const loading = itemsQuery.isLoading || itemsQuery.isFetching || summaryQuery.isLoading || summaryQuery.isFetching;
+  const fetchError = itemsQuery.error?.message || summaryQuery.error?.message || "";
 
   const summaryCards = useMemo(() => ([
     { label: "Pending Review", value: summary?.submittedCount ?? 0 },
@@ -80,7 +61,7 @@ export default function ManagerTimesheets() {
       setMessage("");
       await approveTimesheet(item.id);
       setMessage("Timesheet approved.");
-      await loadData();
+      await Promise.all([itemsQuery.refetch(), summaryQuery.refetch()]);
     } catch (err) {
       setError(err?.message || "Unable to approve timesheet.");
     } finally {
@@ -108,7 +89,7 @@ export default function ManagerTimesheets() {
       await rejectTimesheet(rejectTarget.id, rejectReason);
       setMessage("Timesheet rejected.");
       closeReject();
-      await loadData();
+      await Promise.all([itemsQuery.refetch(), summaryQuery.refetch()]);
     } catch (err) {
       setError(err?.message || "Unable to reject timesheet.");
     } finally {
@@ -134,13 +115,13 @@ export default function ManagerTimesheets() {
         </Box>
 
         <Stack direction="row" spacing={1.5} sx={{ alignSelf: { xs: "stretch", md: "auto" } }} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
-          <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={loadData}>
+          <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={() => Promise.all([itemsQuery.refetch(), summaryQuery.refetch()])}>
             Refresh
           </Button>
         </Stack>
       </Stack>
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
+      {error || fetchError ? <Alert severity="error">{error || fetchError}</Alert> : null}
       {message ? <Alert severity="success">{message}</Alert> : null}
 
       <Grid container spacing={2}>
