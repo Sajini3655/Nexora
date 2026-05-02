@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -22,8 +22,10 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import Tooltip from '@mui/material/Tooltip';
 import api from "../../services/api";
 import StatusBadge from "../../components/ui/StatusBadge.jsx";
-import { fetchManagerDevelopers, fetchProjects, suggestManagerTaskAssignment } from "../../services/managerService";
+import { suggestManagerTaskAssignment } from "../../services/managerService";
 import { getAdminUsers } from "../../services/api";
+import { useRecentEmailTickets } from "../data/useManagerTickets";
+import { useManagerProjects, useManagerDevelopers } from "../data/useManager";
 
 function normalizeTicketList(data) {
   if (Array.isArray(data)) return data;
@@ -64,11 +66,20 @@ function isOpenTicket(ticket) {
 }
 
 export default function RecentEmailTickets() {
-  const [tickets, setTickets] = useState([]);
-  const [developers, setDevelopers] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const ticketsQuery = useRecentEmailTickets();
+  const projectsQuery = useManagerProjects();
+  const developersQuery = useManagerDevelopers();
+
+  const tickets = normalizeTicketList(ticketsQuery.data).filter(isOpenTicket);
+  const projects = normalizeProjectList(projectsQuery.data);
+  const developers = normalizeDeveloperList(developersQuery.data);
+  const loading = ticketsQuery.isLoading || projectsQuery.isLoading || developersQuery.isLoading;
+  const error =
+    ticketsQuery.error?.message ||
+    projectsQuery.error?.message ||
+    developersQuery.error?.message ||
+    "";
+
   const [convertOpen, setConvertOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -77,55 +88,6 @@ export default function RecentEmailTickets() {
   const [suggestion, setSuggestion] = useState(null);
   const [suggestingDeveloper, setSuggestingDeveloper] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  async function loadAssignableDevelopers() {
-    try {
-      const managerDevelopers = await fetchManagerDevelopers();
-      return normalizeDeveloperList(managerDevelopers);
-    } catch (err) {
-      const status = err?.response?.status;
-      if (status !== 403) {
-        throw err;
-      }
-
-      const adminDevelopers = await getAdminUsers({ role: "DEVELOPER", page: 0, size: 100 });
-      return normalizeDeveloperList(adminDevelopers);
-    }
-  }
-
-  useEffect(() => {
-    async function loadEmailTickets() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const [ticketsResponse, developersResponse, projectsResponse] = await Promise.all([
-          api.get("/tickets/email/recent"),
-          loadAssignableDevelopers(),
-          fetchProjects(),
-        ]);
-
-        const list = normalizeTicketList(ticketsResponse.data).filter(isOpenTicket);
-        setTickets(list);
-        setDevelopers(normalizeDeveloperList(developersResponse));
-        setProjects(normalizeProjectList(projectsResponse));
-      } catch (err) {
-        console.error("Recent email tickets error:", err);
-        const status = err?.response?.status;
-        const message =
-          err?.response?.data?.message ||
-          err?.response?.data ||
-          err?.message ||
-          "Unknown error";
-
-        setError(`Could not load email tickets${status ? ` (${status})` : ""}: ${message}`);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadEmailTickets();
-  }, []);
 
   const openCount = useMemo(() => tickets.filter(isOpenTicket).length, [tickets]);
 
