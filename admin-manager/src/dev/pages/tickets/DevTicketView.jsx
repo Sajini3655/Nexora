@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
 import Card from "../../../components/ui/Card.jsx";
 import { loadUserTickets } from "../../data/ticketStore";
-import { fetchDeveloperTicketByIdFromBackend, loadDeveloperTicketByIdFromBackendSafe } from "../../data/ticketApi";
+import { loadDeveloperTicketByIdFromBackendSafe } from "../../data/ticketApi";
+import { useDeveloperTicket } from "../../data/useDeveloperTickets";
 
 function calcSubtaskPct(list) {
   const total = list.reduce((s, x) => s + Number(x.points || 0), 0);
@@ -22,41 +23,10 @@ function ProgressBar({ pct }) {
 
 export default function DevTicketView() {
   const { id } = useParams();
-  const [ticket, setTicket] = useState(() => loadUserTickets().find((item) => String(item.id) === String(id)) || null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
-
-    const loadTicket = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const backendTicket = await fetchDeveloperTicketByIdFromBackend(id);
-        if (!active) return;
-        setTicket(backendTicket);
-      } catch {
-        try {
-          const fallback = await loadDeveloperTicketByIdFromBackendSafe(id);
-          const local = fallback || loadUserTickets().find((item) => String(item.id) === String(id)) || null;
-          if (!active) return;
-          setTicket(local);
-        } catch (err) {
-          if (!active) return;
-          setError(err?.message || "Failed to load ticket.");
-          setTicket(null);
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    loadTicket();
-    return () => {
-      active = false;
-    };
-  }, [id]);
+  // React Query hook
+  const { data: ticket, isLoading: loading, error: queryError } = useDeveloperTicket(id, !!id);
+  const error = queryError?.message || "";
 
   const p = useMemo(() => calcSubtaskPct(ticket?.suggestedSubtasks || []), [ticket]);
 

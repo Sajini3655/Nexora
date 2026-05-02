@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -18,82 +18,49 @@ import { Link, useParams } from "react-router-dom";
 import ChatBox from "./src/ChatBox";
 import { createProjectTicket } from "./src/api";
 import { useAuth } from "../../../context/AuthContext";
-import { fetchAssignedTasksFromBackend } from "../../data/taskApi";
+import { useAssignedTasks } from "../../data/useDevTasks";
 
 const DevChat = () => {
   const { projectId } = useParams();
   const { user, loading: authLoading } = useAuth();
 
   const [summary, setSummary] = useState(null);
-  const [resolvedProjectId, setResolvedProjectId] = useState("");
-  const [projectName, setProjectName] = useState("Project chat");
-  const [taskCount, setTaskCount] = useState(0);
-  const [loadingProject, setLoadingProject] = useState(true);
-  const [error, setError] = useState("");
-
   const [creatingTicket, setCreatingTicket] = useState(false);
   const [ticketChoiceDone, setTicketChoiceDone] = useState(false);
   const [ticketStatus, setTicketStatus] = useState("");
 
+  // React Query hook - auto-refetch every 30s
+  const { data: tasks = [], isLoading: loadingProject, error: queryError } = useAssignedTasks();
+  const error = queryError?.message || "";
+
   const routeProjectId = useMemo(() => String(projectId || "").trim(), [projectId]);
 
-  useEffect(() => {
-    let active = true;
+  const { resolvedProjectId, projectName, taskCount } = useMemo(() => {
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
 
-    const resolveProjectId = async () => {
-      try {
-        setLoadingProject(true);
-        setError("");
+    let selectedProjectId = "";
+    let selectedProjectName = "Project chat";
 
-        const tasks = await fetchAssignedTasksFromBackend();
-        const safeTasks = Array.isArray(tasks) ? tasks : [];
-
-        let selectedProjectId = "";
-        let selectedProjectName = "Project chat";
-
-        if (routeProjectId && /^\d+$/.test(routeProjectId)) {
-          selectedProjectId = routeProjectId;
-          const matched = safeTasks.find((task) => String(task?.projectId) === String(routeProjectId));
-          selectedProjectName = matched?.projectName || `Project ${routeProjectId}`;
-        } else {
-          const firstProjectTask = safeTasks.find((task) => task?.projectId != null);
-          if (firstProjectTask?.projectId != null) {
-            selectedProjectId = String(firstProjectTask.projectId);
-            selectedProjectName = firstProjectTask.projectName || `Project ${firstProjectTask.projectId}`;
-          }
-        }
-
-        if (!active) return;
-
-        if (selectedProjectId) {
-          setResolvedProjectId(selectedProjectId);
-          setProjectName(selectedProjectName);
-          setTaskCount(
-            safeTasks.filter((task) => String(task?.projectId) === String(selectedProjectId)).length
-          );
-        } else {
-          setResolvedProjectId("");
-          setProjectName("Project chat");
-          setTaskCount(0);
-          setError("No backend project is available for chat yet. Sync tasks from the dashboard first.");
-        }
-      } catch (err) {
-        if (!active) return;
-        setResolvedProjectId("");
-        setProjectName("Project chat");
-        setTaskCount(0);
-        setError(err?.message || "Failed to resolve a backend project for chat.");
-      } finally {
-        if (active) setLoadingProject(false);
+    if (routeProjectId && /^\d+$/.test(routeProjectId)) {
+      selectedProjectId = routeProjectId;
+      const matched = safeTasks.find((task) => String(task?.projectId) === String(routeProjectId));
+      selectedProjectName = matched?.projectName || `Project ${routeProjectId}`;
+    } else {
+      const firstProjectTask = safeTasks.find((task) => task?.projectId != null);
+      if (firstProjectTask?.projectId != null) {
+        selectedProjectId = String(firstProjectTask.projectId);
+        selectedProjectName = firstProjectTask.projectName || `Project ${firstProjectTask.projectId}`;
       }
-    };
+    }
 
-    resolveProjectId();
+    const count = safeTasks.filter((task) => String(task?.projectId) === String(selectedProjectId)).length;
 
-    return () => {
-      active = false;
+    return {
+      resolvedProjectId: selectedProjectId || "",
+      projectName: selectedProjectName,
+      taskCount: count,
     };
-  }, [routeProjectId]);
+  }, [tasks, routeProjectId]);
 
   const currentUserId = user?.id != null ? String(user.id) : "";
   const currentUserName = user?.name || user?.email || "Developer";
@@ -101,6 +68,11 @@ const DevChat = () => {
   const readyToChat = Boolean(
     resolvedProjectId && currentUserId && !authLoading && !loadingProject
   );
+
+  // Show error if no project available
+  const displayError = !loadingProject && !resolvedProjectId && !error
+    ? "No backend project is available for chat yet. Sync tasks from the dashboard first."
+    : error;
 
   const resetTicketPromptForNewSummary = (data) => {
     setSummary(data);
@@ -208,9 +180,9 @@ const DevChat = () => {
           </Paper>
         ) : null}
 
-        {error ? (
+        {displayError ? (
           <Alert severity="warning">
-            {error}
+            {displayError}
             <Box sx={{ mt: 1 }}>
               <Button component={Link} to="/dev" variant="outlined" size="small">
                 Back to dashboard

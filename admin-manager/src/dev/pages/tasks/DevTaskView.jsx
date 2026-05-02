@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
 import Card from "../../../components/ui/Card.jsx";
@@ -7,13 +7,13 @@ import StoryPointChecklist from "../../components/tasks/StoryPointChecklist";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import { loadTasks } from "../../data/taskStore";
 import {
-  fetchAssignedTaskByIdFromBackend,
   fetchTaskProgress,
   fetchTaskStoryPoints,
   markStoryPointDone,
   markStoryPointTodo,
   syncAssignedTasksToLocalStoreSafe,
 } from "../../data/taskApi";
+import { useAssignedTask, useTaskProgress, useTaskStoryPoints } from "../../data/useDevTasks";
 
 function getTaskStatus(task) {
   return String(task?.status || "Assigned");
@@ -28,109 +28,16 @@ function statusChipColor(status) {
 
 export default function DevTaskView() {
   const { id } = useParams();
-  const [task, setTask] = useState(() => loadTasks().find((item) => String(item.id) === String(id)) || null);
-  const [storyPoints, setStoryPoints] = useState([]);
-  const [progressData, setProgressData] = useState(null);
   const [togglingStoryPointId, setTogglingStoryPointId] = useState(null);
   const [storyPointError, setStoryPointError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  const loadStoryPointData = async (taskId, fallbackTask) => {
-    const [progress, checklist] = await Promise.all([
-      fetchTaskProgress(taskId),
-      fetchTaskStoryPoints(taskId),
-    ]);
+  // React Query hooks
+  const { data: task, isLoading: taskLoading, error: taskError } = useAssignedTask(id, !!id);
+  const { data: progressData, isLoading: progressLoading, error: progressError } = useTaskProgress(id, !!id);
+  const { data: storyPoints = [], isLoading: storyPointsLoading, error: storyPointsError } = useTaskStoryPoints(id, !!id);
 
-    const totalStoryPoints = Number(progress?.totalStoryPoints ?? fallbackTask?.totalStoryPoints ?? 0);
-    const completedStoryPoints = Number(progress?.completedStoryPoints ?? fallbackTask?.completedStoryPoints ?? 0);
-    const totalPointValue = Number(progress?.totalPointValue ?? fallbackTask?.totalPointValue ?? totalStoryPoints);
-    const completedPointValue = Number(progress?.completedPointValue ?? fallbackTask?.completedPointValue ?? completedStoryPoints);
-    const progressPercentage = totalPointValue > 0
-      ? Math.round((completedPointValue * 100) / totalPointValue)
-      : (totalStoryPoints > 0 ? Math.round((completedStoryPoints * 100) / totalStoryPoints) : Number(fallbackTask?.progressPercentage || 0));
-
-    const safeProgress = progress && typeof progress === "object"
-      ? {
-          ...progress,
-          taskId,
-          totalStoryPoints,
-          completedStoryPoints,
-          totalPointValue,
-          completedPointValue,
-          progressPercentage,
-          status: progress?.status ?? fallbackTask?.status,
-        }
-      : {
-          taskId,
-          totalStoryPoints,
-          completedStoryPoints,
-          totalPointValue,
-          completedPointValue,
-          progressPercentage,
-          status: fallbackTask?.status,
-        };
-
-    setProgressData(safeProgress);
-    setStoryPoints(Array.isArray(checklist) ? checklist : []);
-  };
-
-  useEffect(() => {
-    let active = true;
-
-    const loadTask = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const backendTask = await fetchAssignedTaskByIdFromBackend(id);
-        if (!active) return;
-        setTask(backendTask);
-        try {
-          await loadStoryPointData(backendTask.id, backendTask);
-          if (!active) return;
-          setStoryPointError("");
-        } catch (storyPointErr) {
-          if (!active) return;
-          setStoryPointError(storyPointErr?.message || "Failed to load story points.");
-          setProgressData({
-            taskId: backendTask.id,
-            totalStoryPoints: Number(backendTask?.totalStoryPoints || 0),
-            completedStoryPoints: Number(backendTask?.completedStoryPoints || 0),
-            progressPercentage: Number(backendTask?.progressPercentage || 0),
-            status: backendTask?.status,
-          });
-          setStoryPoints([]);
-        }
-      } catch {
-        try {
-          await syncAssignedTasksToLocalStoreSafe();
-          const found = loadTasks().find((item) => String(item.id) === String(id)) || null;
-          if (!active) return;
-          setTask(found);
-          setProgressData({
-            taskId: found?.id,
-            totalStoryPoints: Number(found?.totalStoryPoints || 0),
-            completedStoryPoints: Number(found?.completedStoryPoints || 0),
-            progressPercentage: Number(found?.progressPercentage || 0),
-            status: found?.status,
-          });
-          setStoryPoints([]);
-        } catch (err) {
-          if (!active) return;
-          setError(err?.message || "Failed to load task details.");
-          setTask(null);
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    loadTask();
-    return () => {
-      active = false;
-    };
-  }, [id]);
+  const loading = taskLoading || progressLoading || storyPointsLoading;
+  const error = taskError?.message || progressError?.message || storyPointsError?.message || "";
 
   const progress = useMemo(() => Number(progressData?.progressPercentage || 0), [progressData]);
 
