@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Alert,
   Box,
@@ -90,108 +91,19 @@ export default function DevProjectView() {
   const [error, setError] = useState("");
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
-  const [chatListLoading, setChatListLoading] = useState(false);
-  const [chatListError, setChatListError] = useState("");
-  const [sessions, setSessions] = useState([]);
-  const chatSessionsFetchInFlightRef = useRef(false); // prevent overlapping session list fetches
-
-  useEffect(() => {
-    let active = true;
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const projectTasks = await fetchProjectTasksFromBackend(id);
-        if (!active) return;
-        setTasks(Array.isArray(projectTasks) ? projectTasks : []);
-      } catch (err) {
-        if (!active) return;
-        setError(err?.message || "Failed to load project.");
-        setTasks([]);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    loadData();
-    return () => {
-      active = false;
-    };
-  }, [id]);
-
-  const project = useMemo(() => {
-    const found = buildProjects(tasks).find((item) => String(item.id) === String(id));
-
-    if (found) return found;
-
-    if (tasks.length > 0) {
-      return {
-        id: String(id),
-        name: tasks[0]?.projectName || `Project ${id}`,
-        description: tasks[0]?.projectDescription || "Read-only project collaboration view.",
-        progress: 0,
-        taskCount: tasks.length,
-        status: "Planning",
-        tasks,
-      };
-    }
-
-    return null;
-  }, [tasks, id]);
   const currentUserId = String(user?.id || user?.email || "");
   const currentUserName = user?.name || user?.email || "Developer";
 
-  const loadProjectSessions = useCallback(async () => {
-    if (!project || authLoading) return;
+  // Fetch chat sessions using React Query with 30s refetch interval
+  const { data: sessions = [], isLoading: chatListLoading, error: chatListQueryError } = useQuery({
+    queryKey: ["projectSessions", project?.id],
+    queryFn: () => getProjectSessions(String(project.id)),
+    enabled: !!(project && !authLoading),
+    refetchInterval: 30000,
+    staleTime: 0,
+  });
 
-    // If a fetch is already in-flight, bail out to avoid duplicate requests
-    if (chatSessionsFetchInFlightRef.current) return;
-
-    chatSessionsFetchInFlightRef.current = true;
-    try {
-      setChatListLoading(true);
-      setChatListError("");
-
-      const allSessions = await getProjectSessions(String(project.id));
-      setSessions(Array.isArray(allSessions) ? allSessions : []);
-    } catch (err) {
-      const aborted =
-        err?.name === "AbortError" ||
-        String(err?.message || "").toLowerCase().includes("aborted");
-
-      if (!aborted) {
-        setChatListError(err?.message || "Failed to load chat sessions");
-      }
-    } finally {
-      chatSessionsFetchInFlightRef.current = false;
-      setChatListLoading(false);
-    }
-  }, [project, authLoading]);
-
-  const releaseFocusedElement = () => {
-    const activeElement = document.activeElement;
-    if (activeElement && typeof activeElement.blur === "function") {
-      activeElement.blur();
-    }
-  };
-
-  // Load all chat sessions
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      if (cancelled) return;
-      await loadProjectSessions();
-    };
-
-    run();
-
-    const intervalId = window.setInterval(run, 30000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [loadProjectSessions]);
+  const chatListError = chatListQueryError?.message || "";
 
   const activeSessions = useMemo(() => sessions.filter((s) => !s.ended), [sessions]);
   const endedSessions = useMemo(() => sessions.filter((s) => Boolean(s.ended)), [sessions]);
@@ -205,8 +117,15 @@ export default function DevProjectView() {
 
   const handleChatEnd = useCallback(() => {
     setSelectedSessionId(null);
-    loadProjectSessions();
-  }, [loadProjectSessions]);
+    refetchSessions();
+  }, [refetchSessions]);
+
+  const releaseFocusedElement = () => {
+    const activeElement = document.activeElement;
+    if (activeElement && typeof activeElement.blur === "function") {
+      activeElement.blur();
+    }
+  };
 
   if (loading) {
     return (
