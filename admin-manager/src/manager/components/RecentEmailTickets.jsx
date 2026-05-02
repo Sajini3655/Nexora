@@ -73,13 +73,20 @@ export default function RecentEmailTickets() {
   const tickets = normalizeTicketList(ticketsQuery.data).filter(isOpenTicket);
   const projects = normalizeProjectList(projectsQuery.data);
   const developers = normalizeDeveloperList(developersQuery.data);
-  const loading = ticketsQuery.isLoading || projectsQuery.isLoading || developersQuery.isLoading;
-  const error =
+  const loading =
+    ticketsQuery.isLoading ||
+    ticketsQuery.isFetching ||
+    projectsQuery.isLoading ||
+    projectsQuery.isFetching ||
+    developersQuery.isLoading ||
+    developersQuery.isFetching;
+  const fetchError =
     ticketsQuery.error?.message ||
     projectsQuery.error?.message ||
     developersQuery.error?.message ||
     "";
 
+  const [actionError, setActionError] = useState("");
   const [convertOpen, setConvertOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -97,6 +104,7 @@ export default function RecentEmailTickets() {
     setSelectedDeveloperId(String(ticket?.assignedToId || ""));
     setStoryPoints(buildDefaultStoryPoints(ticket));
     setSuggestion(null);
+    setActionError("");
     setConvertOpen(true);
   };
 
@@ -108,13 +116,14 @@ export default function RecentEmailTickets() {
     setSelectedDeveloperId("");
     setStoryPoints(buildDefaultStoryPoints({}));
     setSuggestion(null);
+    setActionError("");
   };
 
   const handleSuggestDeveloper = async () => {
     if (!selectedTicket) return;
 
     setSuggestingDeveloper(true);
-    setError("");
+    setActionError("");
 
     try {
       const estimatedPoints = storyPoints.reduce((sum, row) => sum + Number(row?.pointValue || 0), 0);
@@ -136,7 +145,7 @@ export default function RecentEmailTickets() {
         err?.response?.data ||
         err?.message ||
         "Unknown error";
-      setError(`Could not get AI suggestion${status ? ` (${status})` : ""}: ${message}`);
+      setActionError(`Could not get AI suggestion${status ? ` (${status})` : ""}: ${message}`);
     } finally {
       setSuggestingDeveloper(false);
     }
@@ -168,28 +177,28 @@ export default function RecentEmailTickets() {
       .filter((row) => row.title || row.description || Number.isFinite(row.pointValue));
 
     if (!selectedProjectId) {
-      setError("Please select a project before converting this ticket.");
+      setActionError("Please select a project before converting this ticket.");
       return;
     }
 
     if (!selectedDeveloperId) {
-      setError("Please select a developer before converting this ticket.");
+      setActionError("Please select a developer before converting this ticket.");
       return;
     }
 
     if (normalizedStoryPoints.length === 0) {
-      setError("Add at least one story point before converting this ticket.");
+      setActionError("Add at least one story point before converting this ticket.");
       return;
     }
 
     if (normalizedStoryPoints.some((row) => !row.title || !Number.isFinite(row.pointValue) || row.pointValue < 1)) {
-      setError("Each story point needs a title and a point value greater than 0.");
+      setActionError("Each story point needs a title and a point value greater than 0.");
       return;
     }
 
     try {
       setSubmitting(true);
-      setError("");
+      setActionError("");
 
       try {
         await api.patch(`/tickets/${selectedTicket.id}/assign`, {
@@ -209,7 +218,11 @@ export default function RecentEmailTickets() {
         }
       }
 
-      setTickets((prev) => prev.filter((ticket) => String(ticket.id) !== String(selectedTicket.id)));
+      await Promise.all([
+        ticketsQuery.refetch(),
+        projectsQuery.refetch(),
+        developersQuery.refetch(),
+      ]);
       closeConvertModal();
     } catch (err) {
       const status = err?.response?.status;
@@ -218,7 +231,7 @@ export default function RecentEmailTickets() {
         err?.response?.data ||
         err?.message ||
         "Unknown error";
-      setError(`Could not convert ticket${status ? ` (${status})` : ""}: ${message}`);
+      setActionError(`Could not convert ticket${status ? ` (${status})` : ""}: ${message}`);
     } finally {
       setSubmitting(false);
     }
@@ -269,9 +282,9 @@ export default function RecentEmailTickets() {
         </Typography>
       )}
 
-      {!loading && error && (
+      {!loading && (actionError || fetchError) && (
         <Typography variant="body2" sx={{ color: "#ef5350" }}>
-          {error}
+          {actionError || fetchError}
         </Typography>
       )}
 
