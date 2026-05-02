@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   Alert,
   Box,
@@ -9,38 +9,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { fetchClientProjects } from "../../services/clientService";
+import { useClientProjects } from "../../services/useClient";
 
 export default function ClientProjectList() {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const rows = await fetchClientProjects();
-        if (!active) return;
-        setProjects(Array.isArray(rows) ? rows : []);
-      } catch (err) {
-        if (!active) return;
-        setError(err?.message || "Failed to load workstreams.");
-        setProjects([]);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    load();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { data: projects = [], isLoading: loading, error: queryError } = useClientProjects();
+  const error = queryError?.message || "";
 
   return (
     <>

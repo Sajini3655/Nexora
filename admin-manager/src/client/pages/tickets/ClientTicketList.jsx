@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -13,9 +13,8 @@ import {
 import CategoryPicker from "../../components/tickets/CategoryPicker";
 import {
   clientTicketCategories,
-  createClientTicket,
-  fetchClientTickets,
 } from "../../services/clientService";
+import { useClientTickets, useCreateClientTicket } from "../../services/useClient";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
@@ -28,53 +27,38 @@ const emptyForm = {
 };
 
 export default function ClientTicketList() {
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState(emptyForm);
+
+  // React Query hook - auto-refetch every 30s
+  const { data: tickets = [], isLoading: loading, error: queryError, refetch: refetchTickets } = useClientTickets();
+  const createMutation = useCreateClientTicket();
+
+  const error = queryError?.message || createMutation.error?.message || "";
 
   const canCreate = useMemo(() => {
     return Boolean(form.category && form.title.trim() && form.description.trim());
   }, [form]);
 
-  const loadTickets = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const rows = await fetchClientTickets();
-      setTickets(Array.isArray(rows) ? rows : []);
-    } catch (err) {
-      setError(err?.message || "Failed to load client tickets.");
-      setTickets([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadTickets();
-  }, [loadTickets]);
-
+  // Live refresh via WebSocket - refetch when tickets update
   const liveTopics = useMemo(() => ["/topic/tickets"], []);
-  useLiveRefresh(liveTopics, loadTickets, { debounceMs: 400 });
+  useLiveRefresh(liveTopics, refetchTickets, { debounceMs: 400 });
 
   const onCreate = async () => {
-    if (!canCreate) return;
+    if (!canCreate || creating) return;
 
     try {
       setCreating(true);
-      setError("");
       setSuccess("");
 
-      const created = await createClientTicket(form);
-
-      setTickets((prev) => [created, ...prev]);
+      await createMutation.mutateAsync(form);
+      
       setForm(emptyForm);
       setSuccess("Ticket created successfully.");
     } catch (err) {
-      setError(err?.message || "Failed to create ticket.");
+      // Error is handled by mutation and displayed via error state
+      console.error("Failed to create ticket:", err);
     } finally {
       setCreating(false);
     }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   Alert,
   Box,
@@ -14,9 +14,8 @@ import { Link } from "react-router-dom";
 
 import {
   buildProjectsFromTickets,
-  fetchClientTickets,
-  getCachedClientTickets,
 } from "../../services/clientService";
+import { useClientTickets } from "../../services/useClient";
 import ClientProjectTimeline from "../../components/dashboard/ClientProjectTimeline.jsx";
 import ClientQuickRequest from "../../components/dashboard/ClientQuickRequest.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
@@ -24,60 +23,20 @@ import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
 
 export default function ClientDashboardHome() {
-  const initialTickets = useMemo(() => getCachedClientTickets(), []);
-  const [tickets, setTickets] = useState(initialTickets);
-  const [projects, setProjects] = useState(() =>
-    buildProjectsFromTickets(initialTickets)
-  );
-  const [loading, setLoading] = useState(initialTickets.length === 0);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
+  // React Query hook - auto-refetch every 30s
+  const { data: tickets = [], isLoading: loading, isFetching: refreshing, error: queryError, refetch } = useClientTickets();
+  
+  const error = queryError?.message || "";
 
-  const load = useCallback(
-    async (options = {}) => {
-      const isBackground = Boolean(options.background);
+  const projects = useMemo(() => buildProjectsFromTickets(tickets), [tickets]);
 
-      try {
-        if (isBackground) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
-        }
-
-        setError("");
-
-        const ticketData = await fetchClientTickets({
-          forceRefresh: isBackground,
-        });
-
-        const normalizedTickets = Array.isArray(ticketData) ? ticketData : [];
-
-        setTickets(normalizedTickets);
-        setProjects(buildProjectsFromTickets(normalizedTickets));
-      } catch (err) {
-        setError(err?.message || "Failed to load client dashboard.");
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    load({ background: initialTickets.length > 0 });
-  }, [load, initialTickets.length]);
-
+  // Live refresh via WebSocket
   const liveTopics = useMemo(
     () => ["/topic/client.dashboard", "/topic/tickets", "/topic/tasks"],
     []
   );
 
-  const refreshDashboard = useCallback(() => {
-    load({ background: true });
-  }, [load]);
-
-  useLiveRefresh(liveTopics, refreshDashboard, { debounceMs: 900 });
+  useLiveRefresh(liveTopics, refetch, { debounceMs: 900 });
 
   const stats = useMemo(() => {
     return [
