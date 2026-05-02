@@ -29,6 +29,7 @@ import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import ChatBox from "../chat/src/ChatBox";
 import { getProjectSessions } from "../chat/src/api";
+import { useProjectSessions } from "../chat/src/useChat";
 import { loadTasks } from "../../data/taskStore";
 import { fetchProjectTasksFromBackend } from "../../data/taskApi";
 
@@ -95,13 +96,53 @@ export default function DevProjectView() {
   const currentUserName = user?.name || user?.email || "Developer";
 
   // Fetch chat sessions using React Query with 30s refetch interval
-  const { data: sessions = [], isLoading: chatListLoading, error: chatListQueryError } = useQuery({
-    queryKey: ["projectSessions", project?.id],
-    queryFn: () => getProjectSessions(String(project.id)),
-    enabled: !!(project && !authLoading),
-    refetchInterval: 30000,
-    staleTime: 0,
-  });
+  // Load project tasks
+  useEffect(() => {
+    let active = true;
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const projectTasks = await fetchProjectTasksFromBackend(id);
+        if (!active) return;
+        setTasks(Array.isArray(projectTasks) ? projectTasks : []);
+      } catch (err) {
+        if (!active) return;
+        setError(err?.message || "Failed to load project.");
+        setTasks([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  // Calculate project from tasks
+  const project = useMemo(() => {
+    const found = buildProjects(tasks).find((item) => String(item.id) === String(id));
+
+    if (found) return found;
+
+    if (tasks.length > 0) {
+      return {
+        id: String(id),
+        name: tasks[0]?.projectName || `Project ${id}`,
+        description: tasks[0]?.projectDescription || "Read-only project collaboration view.",
+        progress: 0,
+        taskCount: tasks.length,
+        status: "Planning",
+        tasks,
+      };
+    }
+
+    return null;
+  }, [tasks, id]);
+
+  // Use custom hook for chat sessions
+  const { data: sessions = [], isLoading: chatListLoading, error: chatListQueryError, refetch: refetchSessions } = useProjectSessions(project?.id, !authLoading);
 
   const chatListError = chatListQueryError?.message || "";
 

@@ -8,16 +8,16 @@ import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import StopCircleRoundedIcon from "@mui/icons-material/StopCircleRounded";
 import CircleRoundedIcon from "@mui/icons-material/CircleRounded";
 import {
-  getProjectSession,
-  getSession,
+  useChatSession,
+  useMessages,
+  useSendMessage,
+  useEndChatAI,
+  useSaveSummary,
+  useCreateProjectTicket,
+} from "./useChat";
+import {
   startSession,
-  getMessages,
-  getProjectMessages,
   createProjectSession,
-  endChatAI,
-  saveSummary,
-  createProjectTicket,
-  sendMessage,
 } from "./api";
 
 interface Message {
@@ -203,6 +203,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   const stompClientRef = useRef<Client | null>(null);
   const wsActivateTimerRef = useRef<number | null>(null);
 
+  // React Query hooks
+  const { data: sessionData } = useChatSession(selectedSessionId, !!selectedSessionId);
+  const { data: messagesData } = useMessages(selectedSessionId, !!selectedSessionId);
+  const sendMessageMutation = useSendMessage();
+  const endChatAIMutation = useEndChatAI();
+  const saveSummaryMutation = useSaveSummary();
+  const createTicketMutation = useCreateProjectTicket();
+
   const subscriptionTopic = useMemo(
     () => (projectId && sessionId ? `/topic/projects/${projectId}/sessions/${sessionId}/chat` : null),
     [projectId, sessionId]
@@ -278,53 +286,44 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         setShowTicketPrompt(false);
         setSocketConnected(false);
 
-        // If selectedSessionId is provided, load that specific session
+        // If selectedSessionId is provided, load that specific session (via React Query)
         if (selectedSessionId) {
-          const session = await getSession(selectedSessionId);
-          
-          if (cancelled) return;
-
-          if (!session || !session.id) {
+          // sessionData and messagesData from React Query hooks
+          if (!sessionData || !sessionData.id) {
             throw new Error("Chat session not found.");
           }
 
-          setSessionId(String(session.id));
-          setSessionStartedById(session.startedById != null ? String(session.startedById) : null);
-
-          // Load messages for this specific session
-          let sessionMessages: any[] = [];
-          try {
-            sessionMessages = await getMessages(String(session.id));
-          } catch (e) {
-            console.debug("ChatBox:getMessages failed:", e?.message || e);
-          }
-
           if (cancelled) return;
 
-          const mappedMessages: Message[] = Array.isArray(sessionMessages)
-            ? sessionMessages.map((m: any) => {
-                const senderName = m.senderName ?? "Unknown";
-                const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
-                const isMe = String(m.senderId) === String(currentUserId);
+          setSessionId(String(sessionData.id));
+          setSessionStartedById(sessionData.startedById != null ? String(sessionData.startedById) : null);
 
-                return {
-                  user: isAi ? "assistant" : isMe ? "me" : "other",
-                  message: m.content ?? "",
-                  senderId: String(m.senderId),
-                  senderName: senderName,
-                  createdAt: m.createdAt,
-                };
-              })
-            : [];
+          // messagesData already loaded via useMessages hook
+          const sessionMessages = Array.isArray(messagesData) ? messagesData : [];
+
+          const mappedMessages: Message[] = sessionMessages
+            .map((m: any) => {
+              const senderName = m.senderName ?? "Unknown";
+              const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
+              const isMe = String(m.senderId) === String(currentUserId);
+
+              return {
+                user: isAi ? "assistant" : isMe ? "me" : "other",
+                message: m.content ?? "",
+                senderId: String(m.senderId),
+                senderName: senderName,
+                createdAt: m.createdAt,
+              };
+            });
 
           setChat(mappedMessages);
 
-          if (session.ended) {
+          if (sessionData.ended) {
             setChatEnded(true);
 
-            if (session.summary) {
+            if (sessionData.summary) {
               const endedSummary: ChatEndResult = {
-                summary: session.summary,
+                summary: sessionData.summary,
                 blockers: detectBlockers(mappedMessages),
                 tickets_created: [],
                 ticket_message: "",
@@ -355,7 +354,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [projectId, selectedSessionId, currentUserId, onSummary]);
+  }, [projectId, selectedSessionId, currentUserId, onSummary, sessionData, messagesData]);
 
   useEffect(() => {
     if (!subscriptionTopic || !sessionId || chatEnded) return;
@@ -477,10 +476,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       }
 
       // Send via HTTP API
-      const savedMessage = await sendMessage(currentSessionId, messageText);
 
-      // Optimistic update: add message immediately to chat
-      // The WebSocket will broadcast it back from the server for other users
+       // Send via React Query mutation
+       const savedMessage = await sendMessageMutation.mutateAsync({
+         sessionId: currentSessionId,
+         content: messageText,
+       });
+ 
+       // Optimistic update: add message immediately to chat
+       // The WebSocket will broadcast it back from the server for other users
       setChat((prev) => {
         const exists = prev.some((m) =>
           m.user === "me" &&
@@ -527,11 +531,24 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       try {
         const aiData = await endChatAI(buildAiMessages(chat), projectId, false);
         result = normalizeAiResult(aiData, chat);
-      } catch {
-        result = normalizeAiResult(null, chat);
-      }
-
-      await saveSummary(sessionId, result.summary);
+       } catch {
+         result = normalizeAiResult(null, chat);
+       }
+     try {
+       const aiData = await endChatAIMutation.mutateAsync({
+         messages: buildAiMessages(chat),
+         projectId,
+         createTickets: false,
+       });
+       result = normalizeAiResult(aiData, chat);
+     } catch {
+       result = normalizeAiResult(null, chat);
+     }
+ 
+     await saveSummaryMutation.mutateAsync({
+         sessionId,
+         summary: result.summary,
+       });
 
       const blockers = Array.isArray(result.blockers) ? result.blockers : [];
       const finalResult: ChatEndResult = {
@@ -584,9 +601,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       }
 
       const blockerOrReason = ticketReasonFromSummary(summaryData.summary, summaryData.blockers);
-      const created = await createProjectTicket(projectId, blockerOrReason);
-
-      const createdTicket = {
+       // Use React Query mutation
+       const created = await createTicketMutation.mutateAsync({
+         projectId,
+         blocker: blockerOrReason,
+       });
+ 
+       const createdTicket = {
         ticket_id: String(created?.id ?? "UNKNOWN"),
         blocker: blockerOrReason,
       };
