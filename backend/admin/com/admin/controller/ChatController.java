@@ -50,10 +50,10 @@ public class ChatController {
     // New session-centric endpoints
     @GetMapping("/project/{projectId}/sessions")
     public List<Map<String, Object>> listProjectSessions(@PathVariable Long projectId, Authentication authentication) {
-        List<ChatSession> sessions = chatService.getAllProjectSessions(projectId, authentication);
+        List<ChatService.ChatSessionSummaryView> sessions = chatService.getAllProjectSessionsWithSummary(projectId, authentication);
 
         return sessions.stream()
-                .map(this::buildSessionResponse)
+            .map(this::buildSessionResponse)
                 .toList();
     }
 
@@ -235,6 +235,24 @@ public class ChatController {
         response.put("messageCount", messageCount);
         response.put("lastMessagePreview", lastMessagePreview);
         
+        return response;
+    }
+
+    private Map<String, Object> buildSessionResponse(ChatService.ChatSessionSummaryView summaryView) {
+        ChatSession session = summaryView.session();
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("id", session.getId());
+        response.put("projectId", session.getProject().getId());
+        response.put("startedById", session.getStartedBy() == null ? null : session.getStartedBy().getId());
+        response.put("startedByName", session.getStartedBy() == null ? "Unknown" : session.getStartedBy().getName());
+        response.put("startedAt", session.getStartedAt());
+        response.put("endedAt", session.getEndedAt());
+        response.put("ended", session.getEnded() != null ? session.getEnded() : false);
+        response.put("summary", session.getSummary());
+        response.put("messageCount", summaryView.messageCount());
+        response.put("lastMessagePreview", summaryView.lastMessagePreview());
+
         return response;
     }
 }

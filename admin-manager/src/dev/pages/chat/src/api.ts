@@ -96,6 +96,8 @@ export async function createProjectSession(projectId: string) {
 }
 
 export async function getProjectSessions(projectId: string) {
+  const startTime = performance.now();
+  
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 20000);
 
@@ -114,10 +116,17 @@ export async function getProjectSessions(projectId: string) {
 
   if (!res.ok) {
     const text = await res.text();
+    const duration = (performance.now() - startTime).toFixed(2);
+    console.warn(`[chat:getProjectSessions] Failed after ${duration}ms`);
     throw new Error(text || "Failed to fetch project sessions");
   }
 
-  return res.json();
+  const data = await res.json();
+  const sessionCount = Array.isArray(data) ? data.length : 0;
+  const duration = (performance.now() - startTime).toFixed(2);
+  console.log(`[chat:getProjectSessions] ${sessionCount} sessions loaded in ${duration}ms`);
+  
+  return data;
 }
 
 export async function endChatAI(
@@ -125,6 +134,8 @@ export async function endChatAI(
   projectId: string,
   createTickets = false
 ) {
+  const startTime = performance.now();
+  
   const res = await fetch(`${AI_URL}/chat/end`, {
     method: "POST",
     headers: authHeaders({
@@ -140,10 +151,16 @@ export async function endChatAI(
 
   if (!res.ok) {
     const text = await res.text();
+    const duration = (performance.now() - startTime).toFixed(2);
+    console.warn(`[chat:endChatAI] Failed after ${duration}ms`);
     throw new Error(text || "AI failed");
   }
 
-  return res.json();
+  const data = await res.json();
+  const duration = (performance.now() - startTime).toFixed(2);
+  console.log(`[chat:endChatAI] Response received in ${duration}ms`);
+  
+  return data;
 }
 
 export async function saveSummary(sessionId: string, summary: string) {

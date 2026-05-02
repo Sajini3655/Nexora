@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   Alert,
@@ -93,6 +93,7 @@ export default function DevProjectView() {
   const [chatListLoading, setChatListLoading] = useState(false);
   const [chatListError, setChatListError] = useState("");
   const [sessions, setSessions] = useState([]);
+  const chatSessionsFetchInFlightRef = useRef(false); // prevent overlapping session list fetches
 
   useEffect(() => {
     let active = true;
@@ -140,10 +141,12 @@ export default function DevProjectView() {
   const currentUserName = user?.name || user?.email || "Developer";
 
   const loadProjectSessions = useCallback(async () => {
-    if (!project || authLoading) {
-      return;
-    }
+    if (!project || authLoading) return;
 
+    // If a fetch is already in-flight, bail out to avoid duplicate requests
+    if (chatSessionsFetchInFlightRef.current) return;
+
+    chatSessionsFetchInFlightRef.current = true;
     try {
       setChatListLoading(true);
       setChatListError("");
@@ -159,6 +162,7 @@ export default function DevProjectView() {
         setChatListError(err?.message || "Failed to load chat sessions");
       }
     } finally {
+      chatSessionsFetchInFlightRef.current = false;
       setChatListLoading(false);
     }
   }, [project, authLoading]);
@@ -181,7 +185,7 @@ export default function DevProjectView() {
 
     run();
 
-    const intervalId = window.setInterval(run, 12000);
+    const intervalId = window.setInterval(run, 30000);
 
     return () => {
       cancelled = true;

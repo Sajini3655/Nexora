@@ -22,13 +22,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class ChatService {
+
+    public record ChatSessionSummaryView(ChatSession session, long messageCount, String lastMessagePreview) {
+    }
 
     private final ChatSessionRepository sessionRepo;
     private final ChatMessageRepository messageRepo;
@@ -185,6 +190,43 @@ public class ChatService {
                     return content;
                 })
                 .orElse("");
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatSessionSummaryView> getAllProjectSessionsWithSummary(Long projectId, Authentication authentication) {
+        List<ChatSession> sessions = getAllProjectSessions(projectId, authentication);
+        if (sessions.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> sessionIds = sessions.stream()
+                .map(ChatSession::getId)
+                .toList();
+
+        Map<Long, Long> messageCounts = new HashMap<>();
+        for (ChatMessageRepository.SessionMessageCountView row : messageRepo.countBySessionIds(sessionIds)) {
+            messageCounts.put(row.getSessionId(), row.getMessageCount());
+        }
+
+        Map<Long, String> lastPreviews = new HashMap<>();
+        for (ChatMessageRepository.SessionLastMessageView row : messageRepo.findLatestMessageBySessionIds(sessionIds)) {
+            String content = row.getContent();
+            if (content == null) {
+                lastPreviews.put(row.getSessionId(), "");
+            } else if (content.length() > 100) {
+                lastPreviews.put(row.getSessionId(), content.substring(0, 100) + "...");
+            } else {
+                lastPreviews.put(row.getSessionId(), content);
+            }
+        }
+
+        return sessions.stream()
+                .map(session -> new ChatSessionSummaryView(
+                        session,
+                        messageCounts.getOrDefault(session.getId(), 0L),
+                        lastPreviews.getOrDefault(session.getId(), "")
+                ))
+                .toList();
     }
 
     @Transactional(readOnly = true)
