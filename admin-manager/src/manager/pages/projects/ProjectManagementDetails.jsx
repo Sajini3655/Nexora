@@ -25,7 +25,6 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ChatBubbleRoundedIcon from "@mui/icons-material/ChatBubbleRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { useParams } from "react-router-dom";
-import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import api from "../../../services/api";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import ChatBox from "../../../dev/pages/chat/src/ChatBox";
@@ -33,13 +32,12 @@ import { getProjectSessions } from "../../../dev/pages/chat/src/api";
 import {
   assignManagerTaskAssignee,
   createManagerTask,
-  fetchManagerDevelopers,
-  fetchProjectDetails,
   getErrorMessage,
   suggestManagerTaskAssignment,
   updateProject,
   updateManagerTask,
 } from "../../../services/managerService";
+import { useProjectDetails, useManagerDevelopers } from "../../data/useManager";
 
 const emptyTaskForm = {
   title: "",
@@ -145,14 +143,18 @@ export default function ProjectManagementDetails() {
   const { projectId } = useParams();
   const { user, loading: authLoading } = useAuth();
 
-  const [project, setProject] = useState(null);
-  const [developers, setDevelopers] = useState([]);
+  const projectDetailsQuery = useProjectDetails(projectId, !authLoading);
+  const developersQuery = useManagerDevelopers();
+
+  const project = projectDetailsQuery.data;
+  const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
+  const loading = projectDetailsQuery.isLoading || developersQuery.isLoading;
+  const error = projectDetailsQuery.error?.message || developersQuery.error?.message || "";
+
   const [editProjectName, setEditProjectName] = useState("");
   const [editProjectDescription, setEditProjectDescription] = useState("");
   const [newTask, setNewTask] = useState(emptyTaskForm);
 
-  const [loading, setLoading] = useState(true);
-  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [savingProjectDetails, setSavingProjectDetails] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
 
@@ -177,7 +179,6 @@ export default function ProjectManagementDetails() {
   const [originalTaskDraft, setOriginalTaskDraft] = useState(null);
   const [originalDeveloperId, setOriginalDeveloperId] = useState("");
 
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
@@ -186,57 +187,12 @@ export default function ProjectManagementDetails() {
   const [chatListError, setChatListError] = useState("");
   const [sessions, setSessions] = useState([]);
 
-  const loadProject = async (background = false) => {
-    try {
-      if (background) {
-        setBackgroundLoading(true);
-      } else {
-        setLoading(true);
-      }
-      setError("");
-
-      const [projectData, developersData] = await Promise.all([
-        fetchProjectDetails(projectId),
-        fetchManagerDevelopers(),
-      ]);
-
-      if (!projectData) {
-        setProject(null);
-        setError("Project not found or not accessible for this manager.");
-        return;
-      }
-
-      setProject(projectData);
-      setDevelopers(Array.isArray(developersData) ? developersData : []);
-      setEditProjectName(getProjectName(projectData));
-      setEditProjectDescription(getProjectDescription(projectData));
-    } catch (err) {
-      setError(getErrorMessage(err, "Failed to load project details."));
-      setProject(null);
-    } finally {
-      if (background) {
-        setBackgroundLoading(false);
-      } else {
-        setLoading(false);
-      }
-    }
-  };
-
   useEffect(() => {
-    loadProject();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
-
-  const liveTopics = useMemo(
-    () => ["/topic/manager.dashboard", "/topic/tasks", "/topic/projects"],
-    []
-  );
-  useLiveRefresh(liveTopics, () => loadProject(true), { debounceMs: 650 });
-
-  const tasks = useMemo(() => (Array.isArray(project?.tasks) ? project.tasks : []), [project]);
-
-  const currentUserId = String(user?.id || user?.email || "");
-  const currentUserName = user?.name || user?.email || "Manager";
+    if (project && !editProjectName) {
+      setEditProjectName(getProjectName(project));
+      setEditProjectDescription(getProjectDescription(project));
+    }
+  }, [project, editProjectName]);
 
   const loadProjectSessions = useCallback(async () => {
     if (!projectId || authLoading) return;
@@ -391,7 +347,8 @@ export default function ProjectManagementDetails() {
     setStoryPointForm(emptyStoryPointForm);
     setEditingStoryPointId(null);
     // Reload project to ensure developer dashboard reflects latest changes
-    loadProject();
+    projectDetailsQuery.refetch();
+    developersQuery.refetch();
   };
 
   const hasUnsavedChanges = () => {
@@ -457,7 +414,8 @@ export default function ProjectManagementDetails() {
       setOriginalDeveloperId(selectedDeveloperId);
       
       // Single reload after all saves are done
-      await loadProject();
+      projectDetailsQuery.refetch();
+      developersQuery.refetch();
     } catch (err) {
       setError(getErrorMessage(err, "Failed to save changes."));
     } finally {
@@ -533,7 +491,7 @@ export default function ProjectManagementDetails() {
       setNewTask(emptyTaskForm);
       setAddTaskSuggestion(null);
       setSuccess("Task added successfully.");
-      await loadProject();
+      projectDetailsQuery.refetch();
     } catch (err) {
       setError(getErrorMessage(err, "Failed to add task."));
     } finally {
@@ -610,7 +568,7 @@ export default function ProjectManagementDetails() {
     try {
       await assignManagerTaskAssignee(Number(selectedTask.id), Number(selectedDeveloperId));
       setSuccess("Task assignment updated.");
-      await loadProject();
+      await projectDetailsQuery.refetch();
       const refreshedTask = (Array.isArray(project?.tasks) ? project.tasks : []).find((task) => String(task.id) === String(selectedTask.id));
       if (refreshedTask) {
         setSelectedTask(refreshedTask);
@@ -646,7 +604,7 @@ export default function ProjectManagementDetails() {
 
       setTaskDraft({});
       setSuccess("Task details updated successfully.");
-      await loadProject();
+      projectDetailsQuery.refetch();
     } catch (err) {
       setError(getErrorMessage(err, "Failed to save task details."));
     } finally {

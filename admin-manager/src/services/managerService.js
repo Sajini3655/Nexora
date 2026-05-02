@@ -68,10 +68,10 @@ export const fetchDeveloperProgressSummary = async (developerId) => {
   return response.data;
 };
 
-const getProjectKey = (project) =>
+export const getProjectKey = (project) =>
   String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
 
-const getTaskProjectKey = (task) =>
+export const getTaskProjectKey = (task) =>
   String(
     task?.projectId ??
       task?.project_id ??
@@ -84,7 +84,7 @@ const getTaskProjectKey = (task) =>
       ""
   );
 
-const getTaskProjectName = (task) =>
+export const getTaskProjectName = (task) =>
   String(
     task?.projectName ??
       task?.project?.name ??
