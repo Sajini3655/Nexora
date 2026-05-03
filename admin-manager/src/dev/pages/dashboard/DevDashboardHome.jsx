@@ -260,7 +260,6 @@ export default function DevDashboardHome() {
               value={totals.tasks}
               hint={`${totals.activeTasks} active`}
               icon="📋"
-              tone="blue"
             />
 
             <StatCard
@@ -268,7 +267,6 @@ export default function DevDashboardHome() {
               value={totals.completedTasks}
               hint={`${totals.completedPoints} points done`}
               icon="✓"
-              tone="green"
             />
 
             <StatCard
@@ -276,7 +274,6 @@ export default function DevDashboardHome() {
               value={`${totals.progress}%`}
               hint={`${totals.completedPoints}/${totals.totalPoints} points`}
               icon="📊"
-              tone="purple"
             />
 
             <StatCard
@@ -284,7 +281,6 @@ export default function DevDashboardHome() {
               value={totals.tasks}
               hint="Converted to tasks"
               icon="🎫"
-              tone="cyan"
             />
           </Box>
 
@@ -348,76 +344,49 @@ export default function DevDashboardHome() {
   );
 }
 
-function StatCard({ title, value, hint, icon, tone = "purple" }) {
-  const colors = {
-    blue: {
-      text: "#93c5fd",
-      bg: "rgba(59,130,246,0.14)",
-      border: "rgba(59,130,246,0.26)",
-      glow: "rgba(59,130,246,0.08)",
-    },
-    green: {
-      text: "#86efac",
-      bg: "rgba(34,197,94,0.12)",
-      border: "rgba(34,197,94,0.24)",
-      glow: "rgba(34,197,94,0.08)",
-    },
-    purple: {
-      text: "#c4b5fd",
-      bg: "rgba(124,92,255,0.14)",
-      border: "rgba(124,92,255,0.26)",
-      glow: "rgba(124,92,255,0.08)",
-    },
-    cyan: {
-      text: "#67e8f9",
-      bg: "rgba(6,182,212,0.12)",
-      border: "rgba(6,182,212,0.24)",
-      glow: "rgba(6,182,212,0.08)",
-    },
-  };
-
-  const color = colors[tone] || colors.purple;
-
+function StatCard({ title, value, hint, icon }) {
   return (
     <Paper
       elevation={0}
       sx={{
-        p: 2.5,
-        minHeight: 148,
-        borderRadius: 3,
-        background:
-          "linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035))",
-        border: "1px solid rgba(148,163,184,0.16)",
-        boxShadow: `0 20px 50px rgba(0,0,0,0.24), inset 0 0 40px ${color.glow}`,
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        "&:hover": {
-          borderColor: color.border,
-          boxShadow: `0 25px 60px rgba(0,0,0,0.32), inset 0 0 50px ${color.glow}`,
-        },
+        p: 1.6,
+        borderRadius: 2,
+        bgcolor: "#0f1b2f",
+        border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      <Stack spacing={1.5}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <Box sx={{ fontSize: 28 }}>{icon}</Box>
+      <Stack spacing={1.2}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: 2,
+              display: "grid",
+              placeItems: "center",
+              bgcolor: "rgba(124,92,255,0.14)",
+              color: "#c4b5fd",
+            }}
+          >
+            {icon}
+          </Box>
           <Typography
             sx={{
               color: "#94a3b8",
-              fontWeight: 900,
-              textTransform: "uppercase",
-              letterSpacing: 0.6,
-              fontSize: 11.5,
+              fontWeight: 700,
+              fontSize: "0.85rem",
             }}
           >
             {title}
           </Typography>
-        </Stack>
+        </Box>
 
         <Box>
           <Typography
             sx={{
               fontWeight: 950,
               color: "#f8fafc",
-              fontSize: 32,
+              fontSize: "1.75rem",
               lineHeight: 1.1,
             }}
           >
@@ -426,11 +395,10 @@ function StatCard({ title, value, hint, icon, tone = "purple" }) {
         </Box>
 
         <Typography
-          variant="body2"
+          variant="caption"
           sx={{
-            color: "#94a3b8",
-            fontSize: 13.5,
-            lineHeight: 1.4,
+            color: "#cbd5e1",
+            fontSize: "0.8rem",
           }}
         >
           {hint}
