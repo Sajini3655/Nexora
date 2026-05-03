@@ -142,11 +142,14 @@ function buildSummaryPreview(session) {
 export default function ProjectManagementDetails() {
   const { projectId } = useParams();
   const { user, loading: authLoading } = useAuth();
+  const currentUserId = user?.id != null ? String(user.id) : "";
+  const currentUserName = user?.name || user?.email || "Manager";
 
   const projectDetailsQuery = useProjectDetails(projectId, !authLoading);
   const developersQuery = useManagerDevelopers();
 
   const project = projectDetailsQuery.data;
+  const tasks = Array.isArray(project?.tasks) ? project.tasks : [];
   const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
   const loading = projectDetailsQuery.isLoading || developersQuery.isLoading;
   const error = projectDetailsQuery.error?.message || developersQuery.error?.message || "";
@@ -186,6 +189,16 @@ export default function ProjectManagementDetails() {
   const [chatListLoading, setChatListLoading] = useState(false);
   const [chatListError, setChatListError] = useState("");
   const [sessions, setSessions] = useState([]);
+
+  const backgroundLoading =
+    savingProjectDetails ||
+    addingTask ||
+    savingAssignment ||
+    savingTaskDetails ||
+    savingStoryPoint ||
+    savingAllChanges ||
+    loadingStoryPoints ||
+    chatListLoading;
 
   useEffect(() => {
     if (project && !editProjectName) {
