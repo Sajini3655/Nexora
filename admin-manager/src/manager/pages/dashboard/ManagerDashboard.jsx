@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -140,127 +140,98 @@ function SmallBadge({ children, color = "#cbd5e1", glow = "rgba(148,163,184,0.12
   );
 }
 
-function IconPill({ icon, color, bg }) {
-  return (
-    <Box
-      sx={{
-        width: 36,
-        height: 36,
-        borderRadius: 2.2,
-        display: "grid",
-        placeItems: "center",
-        color,
-        background: bg,
-        border: `1px solid ${bg.replace("0.14", "0.28").replace("0.16", "0.32").replace("0.18", "0.34")}`,
-        boxShadow: `0 10px 26px ${bg}`,
-        flex: "0 0 auto",
-        "& svg": { fontSize: 20 },
-      }}
-    >
-      {icon}
-    </Box>
-  );
-}
-
 function StatCard({ label, value, hint, icon, color, bg }) {
   return (
     <Paper
       sx={{
-        p: 1.55,
-        minHeight: 134,
-        borderRadius: 3,
-        border: "1px solid rgba(148,163,184,0.16)",
-        background:
-          "linear-gradient(145deg, rgba(15,23,42,0.82) 0%, rgba(15,23,42,0.62) 100%)",
-        boxShadow: `0 14px 38px rgba(0,0,0,0.23), inset 0 1px 0 rgba(255,255,255,0.035)`,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        gap: 1.15,
-        overflow: "hidden",
-        position: "relative",
-        transition: "all 180ms ease",
-        "&::after": {
-          content: '""',
-          position: "absolute",
-          width: 95,
-          height: 95,
-          right: -34,
-          top: -34,
-          borderRadius: "50%",
-          background: bg,
-          filter: "blur(6px)",
-          opacity: 0.75,
-        },
-        "&:hover": {
-          transform: "translateY(-2px)",
-          borderColor: "rgba(148,163,184,0.26)",
-          boxShadow: "0 20px 48px rgba(0,0,0,0.32)",
-        },
+        p: 1.6,
+        borderRadius: 2,
+        bgcolor: "#0f1b2f",
+        border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.2} sx={{ position: "relative", zIndex: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+        <Box
+          sx={{
+            width: 34,
+            height: 34,
+            borderRadius: 2,
+            display: "grid",
+            placeItems: "center",
+            bgcolor: "rgba(124,92,255,0.14)",
+            color: "#c4b5fd",
+          }}
+        >
+          {icon}
+        </Box>
+
         <Box sx={{ minWidth: 0 }}>
           <Typography
             variant="caption"
-            sx={{
-              color: "#94a3b8",
-              fontWeight: 900,
-              textTransform: "uppercase",
-              letterSpacing: 0.55,
-              fontSize: "0.7rem",
-            }}
+            sx={{ color: "#94a3b8", fontWeight: 700 }}
           >
             {label}
           </Typography>
-          <Typography sx={{ mt: 0.75, fontSize: 32, lineHeight: 1, fontWeight: 950, color: "#f8fafc" }}>
+
+          <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
             {value}
           </Typography>
         </Box>
-        <IconPill icon={icon} color={color} bg={bg} />
-      </Stack>
+      </Box>
 
-      <Typography variant="caption" sx={{ position: "relative", zIndex: 1, color: "#64748b", fontSize: "0.76rem" }}>
-        {hint}
-      </Typography>
+      {hint ? (
+        <Typography variant="caption" sx={{ color: "#64748b", fontSize: "0.76rem", display: "block", mt: 0.8 }}>
+          {hint}
+        </Typography>
+      ) : null}
     </Paper>
   );
 }
 
-function DashboardMetricCard({ label, value, hint, icon, color, bg }) {
+function DashboardMetricCard({ label, value, hint, icon }) {
   return (
     <Paper
       sx={{
-        p: 1.25,
-        minHeight: 98,
-        borderRadius: 2.6,
-        border: "1px solid rgba(148,163,184,0.13)",
-        borderLeft: `4px solid ${color}`,
-        background: "rgba(15,23,42,0.54)",
-        transition: "all 160ms ease",
-        "&:hover": {
-          background: "rgba(20,29,52,0.72)",
-          borderColor: "rgba(148,163,184,0.22)",
-          boxShadow: "0 12px 28px rgba(0,0,0,0.22)",
-        },
+        p: 1.6,
+        borderRadius: 2,
+        bgcolor: "#0f1b2f",
+        border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1.05}>
-        <IconPill icon={icon} color={color} bg={bg} />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+        <Box
+          sx={{
+            width: 34,
+            height: 34,
+            borderRadius: 2,
+            display: "grid",
+            placeItems: "center",
+            bgcolor: "rgba(124,92,255,0.14)",
+            color: "#c4b5fd",
+          }}
+        >
+          {icon}
+        </Box>
+
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 900, textTransform: "uppercase", fontSize: "0.69rem" }}>
+          <Typography
+            variant="caption"
+            sx={{ color: "#94a3b8", fontWeight: 700 }}
+          >
             {label}
           </Typography>
-          <Typography sx={{ mt: 0.25, fontSize: 22, lineHeight: 1.05, fontWeight: 950, color: "#f8fafc" }}>
+
+          <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
             {value}
           </Typography>
-          {hint ? (
-            <Typography variant="caption" sx={{ display: "block", mt: 0.35, color: "#64748b", fontSize: "0.73rem" }}>
-              {hint}
-            </Typography>
-          ) : null}
         </Box>
-      </Stack>
+      </Box>
+
+      {hint ? (
+        <Typography variant="caption" sx={{ color: "#64748b", fontSize: "0.76rem", display: "block", mt: 0.8 }}>
+          {hint}
+        </Typography>
+      ) : null}
     </Paper>
   );
 }
@@ -269,29 +240,46 @@ function TicketMetricCard({ label, value, hint, icon, color, bg }) {
   return (
     <Paper
       sx={{
-        p: 1.35,
-        minHeight: 112,
-        borderRadius: 2.7,
-        border: "1px solid rgba(148,163,184,0.15)",
-        background:
-          "linear-gradient(180deg, rgba(15,23,42,0.82) 0%, rgba(15,23,42,0.58) 100%)",
-        boxShadow: `0 12px 30px rgba(0,0,0,0.2), 0 0 0 1px ${bg}`,
+        p: 1.6,
+        borderRadius: 2,
+        bgcolor: "#0f1b2f",
+        border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-        <Box>
-          <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 900, textTransform: "uppercase", letterSpacing: 0.45, fontSize: "0.69rem" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+        <Box
+          sx={{
+            width: 34,
+            height: 34,
+            borderRadius: 2,
+            display: "grid",
+            placeItems: "center",
+            bgcolor: "rgba(124,92,255,0.14)",
+            color: "#c4b5fd",
+          }}
+        >
+          {icon}
+        </Box>
+
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="caption"
+            sx={{ color: "#94a3b8", fontWeight: 700 }}
+          >
             {label}
           </Typography>
-          <Typography sx={{ mt: 0.6, fontSize: 28, lineHeight: 1, fontWeight: 950, color: "#f8fafc" }}>
+
+          <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
             {value}
           </Typography>
         </Box>
-        <IconPill icon={icon} color={color} bg={bg} />
-      </Stack>
-      <Typography variant="caption" sx={{ mt: 0.85, display: "block", color: "#64748b", fontSize: "0.75rem" }}>
-        {hint}
-      </Typography>
+      </Box>
+
+      {hint ? (
+        <Typography variant="caption" sx={{ color: "#64748b", fontSize: "0.76rem", display: "block", mt: 0.8 }}>
+          {hint}
+        </Typography>
+      ) : null}
     </Paper>
   );
 }
@@ -364,6 +352,7 @@ function TaskFocusRow({ task, type, getTaskTitle, getTaskDate }) {
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
+  const [expandProjects, setExpandProjects] = useState(false);
   const projectsQuery = useManagerProjects();
   const tasksQuery = useManagerTasks();
   const developersQuery = useManagerDevelopers();
@@ -706,8 +695,6 @@ export default function ManagerDashboard() {
         icon={<DashboardRoundedIcon />}
         title="Manager Dashboard"
         subtitle="Track project delivery, inbound tickets, team workload, and developer progress."
-        actionLabel="View Projects"
-        onAction={() => navigate("/manager/projects")}
       />
 
       {/* Show errors inline inside their relevant widgets instead of a global banner */}
@@ -719,8 +706,6 @@ export default function ManagerDashboard() {
             value={projectRows.length}
             hint={`${activeProjectCount} active projects`}
             icon={<FolderRoundedIcon />}
-            color="#7dd3fc"
-            bg="rgba(56,189,248,0.16)"
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
@@ -729,8 +714,6 @@ export default function ManagerDashboard() {
             value={atRiskProjectCount}
             hint="Low progress"
             icon={<PriorityHighRoundedIcon />}
-            color="#fda4af"
-            bg="rgba(253,164,175,0.16)"
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
@@ -739,8 +722,6 @@ export default function ManagerDashboard() {
             value={`${completionRate}%`}
             hint={`${doneWeighted}/${totalWeighted} points completed`}
             icon={<TrendingUpRoundedIcon />}
-            color="#a5b4fc"
-            bg="rgba(99,102,241,0.16)"
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
@@ -749,8 +730,6 @@ export default function ManagerDashboard() {
             value={doneWeighted}
             hint="Point value completed"
             icon={<DoneAllRoundedIcon />}
-            color="#86efac"
-            bg="rgba(34,197,94,0.16)"
           />
         </Grid>
       </Grid>
@@ -775,8 +754,9 @@ export default function ManagerDashboard() {
           {projectRows.length === 0 ? (
             <EmptyMiniState title="No projects found." text="All projects will appear here once they are loaded." />
           ) : (
+            <>
             <Grid container spacing={1.2}>
-              {projectRows.map((project) => {
+              {(expandProjects ? projectRows : projectRows.slice(0, 3)).map((project) => {
                 const progressTone = project.progress >= 80 ? "#86efac" : project.progress >= 40 ? "#7dd3fc" : "#fda4af";
                 const progressBg = project.progress >= 80 ? "rgba(34,197,94,0.14)" : project.progress >= 40 ? "rgba(56,189,248,0.14)" : "rgba(244,63,94,0.14)";
 
@@ -785,11 +765,11 @@ export default function ManagerDashboard() {
                     <Paper
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`/manager/project-management/${project.id}`)}
+                      onClick={() => navigate(`/manager/projects/${getProjectId(project)}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          navigate(`/manager/project-management/${project.id}`);
+                          navigate(`/manager/projects/${getProjectId(project)}`);
                         }
                       }}
                       sx={{
@@ -866,6 +846,23 @@ export default function ManagerDashboard() {
                 );
               })}
             </Grid>
+            {projectRows.length > 3 && (
+              <Box sx={{ mt: 1.4, textAlign: "center" }}>
+                <Button
+                  onClick={() => setExpandProjects(!expandProjects)}
+                  sx={{
+                    textTransform: "none",
+                    color: "#a5b4fc",
+                    fontWeight: 800,
+                    fontSize: "0.95rem",
+                    "&:hover": { color: "#c4b5fd" },
+                  }}
+                >
+                  {expandProjects ? "Show fewer projects ↑" : `View all ${projectRows.length} projects ↓`}
+                </Button>
+              </Box>
+            )}
+            </>
           )}
         </Box>
       </Paper>
@@ -924,16 +921,16 @@ export default function ManagerDashboard() {
 
           <Grid container spacing={1.2}>
             <Grid item xs={12} sm={6} lg={3}>
-              <TicketMetricCard label="Open Tickets" value={openTicketCount} hint="Active inbound requests" icon={<ConfirmationNumberRoundedIcon />} color="#7dd3fc" bg="rgba(56,189,248,0.16)" />
+              <TicketMetricCard label="Open Tickets" value={openTicketCount} hint="Active inbound requests" icon={<ConfirmationNumberRoundedIcon />} />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
-              <TicketMetricCard label="High Priority" value={highPriorityTicketCount} hint="Needs manager attention" icon={<PriorityHighRoundedIcon />} color="#fda4af" bg="rgba(244,63,94,0.16)" />
+              <TicketMetricCard label="High Priority" value={highPriorityTicketCount} hint="Needs manager attention" icon={<PriorityHighRoundedIcon />} />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
-              <TicketMetricCard label="Latest Tickets" value={latestTicketCount} hint="Recent snapshot items" icon={<FiberNewRoundedIcon />} color="#c4b5fd" bg="rgba(124,92,255,0.16)" />
+              <TicketMetricCard label="Latest Tickets" value={latestTicketCount} hint="Recent snapshot items" icon={<FiberNewRoundedIcon />} />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
-              <TicketMetricCard label="Status" value={latestTicketCount > 0 ? "Active" : "None"} hint="Inbound pipeline" icon={<RadarRoundedIcon />} color="#fdba74" bg="rgba(251,146,60,0.16)" />
+              <TicketMetricCard label="Status" value={latestTicketCount > 0 ? "Active" : "None"} hint="Inbound pipeline" icon={<RadarRoundedIcon />} />
             </Grid>
           </Grid>
         </Box>

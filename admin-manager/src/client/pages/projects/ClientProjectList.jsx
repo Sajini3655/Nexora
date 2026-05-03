@@ -2,6 +2,7 @@ import React from "react";
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
   LinearProgress,
@@ -9,6 +10,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { Link } from "react-router-dom";
+import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import { useClientProjects } from "../../services/useClient";
 
 export default function ClientProjectList() {
@@ -95,6 +98,28 @@ export default function ClientProjectList() {
                   <Typography variant="caption" sx={{ color: "#94a3b8", mt: 1, display: "block" }}>
                     {project.progress}% complete • Last update {project.eta}
                   </Typography>
+
+                  <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+                    <Button
+                      component={Link}
+                      to={`/client/projects/${project.id}`}
+                      size="small"
+                      variant="contained"
+                      sx={{
+                        textTransform: "none",
+                        bgcolor: "#6d5dfc",
+                        color: "#fff",
+                        px: 1.8,
+                        py: 0.9,
+                        fontWeight: 700,
+                        borderRadius: 2,
+                        boxShadow: "none",
+                        "&:hover": { bgcolor: "#5b4ee6" },
+                      }}
+                    >
+                      View details
+                    </Button>
+                  </Box>
                 </Box>
               ))}
             </Stack>

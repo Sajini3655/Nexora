@@ -14,6 +14,7 @@ import AdminTimesheets from "./admin/pages/timesheets/AdminTimesheets.jsx";
 import ManagerDashboard from "./manager/pages/dashboard/ManagerDashboard.jsx";
 import AddProject from "./manager/pages/projects/AddProject.jsx";
 import ProjectManagement from "./manager/pages/projects/ProjectManagement.jsx";
+import ProjectDetailsPage from "./manager/pages/projects/ProjectDetailsPage.jsx";
 import ProjectManagementDetails from "./manager/pages/projects/ProjectManagementDetails.jsx";
 import AIAssignment from "./manager/pages/ai/AIAssignment.jsx";
 import ManagerTimesheets from "./manager/pages/timesheets/ManagerTimesheets.jsx";
@@ -36,6 +37,7 @@ import DevTimesheets from "./dev/pages/timesheets/DevTimesheets.jsx";
 // Client dashboard
 import ClientDashboardHome from "./client/pages/dashboard/ClientDashboardHome.jsx";
 import ClientProjectList from "./client/pages/projects/ClientProjectList.jsx";
+import ClientProjectDetails from "./client/pages/projects/ClientProjectDetails.jsx";
 import ClientTicketList from "./client/pages/tickets/ClientTicketList.jsx";
 import ClientProfile from "./client/pages/profile/ClientProfile.jsx";
 import ClientSettings from "./client/pages/settings/ClientSettings.jsx";
@@ -198,7 +200,7 @@ export default function App() {
           path="/manager/projects/:projectId"
           element={
             <UnifiedShell role="MANAGER">
-              <ProjectManagementDetails />
+              <ProjectDetailsPage />
             </UnifiedShell>
           }
         />
@@ -307,6 +309,7 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
         <Route path="/client" element={<UnifiedShell role="CLIENT"><ClientDashboardHome /></UnifiedShell>} />
         <Route path="/client/projects" element={<UnifiedShell role="CLIENT"><ClientProjectList /></UnifiedShell>} />
+        <Route path="/client/projects/:projectId" element={<UnifiedShell role="CLIENT"><ClientProjectDetails /></UnifiedShell>} />
         <Route path="/client/tickets" element={<UnifiedShell role="CLIENT"><ClientTicketList /></UnifiedShell>} />
         <Route path="/client/history" element={<UnifiedShell role="CLIENT"><ClientHistory /></UnifiedShell>} />
         <Route path="/client/profile" element={<UnifiedShell role="CLIENT"><ClientProfile /></UnifiedShell>} />
