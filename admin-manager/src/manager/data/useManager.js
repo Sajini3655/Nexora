@@ -22,8 +22,10 @@ export function useManagerProjects(enabled = true) {
     queryKey: managerKeys.projects(),
     queryFn: fetchProjects,
     enabled,
-    refetchInterval: 30000,
-    staleTime: 0,
+    // Reduce polling to be less aggressive and avoid continuous UI refreshing
+    refetchInterval: 120000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -32,8 +34,9 @@ export function useManagerTasks(enabled = true) {
     queryKey: managerKeys.tasks(),
     queryFn: fetchManagerTasks,
     enabled,
-    refetchInterval: 30000,
-    staleTime: 0,
+    refetchInterval: 120000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -42,8 +45,9 @@ export function useManagerDevelopers(enabled = true) {
     queryKey: managerKeys.developers(),
     queryFn: fetchManagerDevelopers,
     enabled,
-    refetchInterval: 30000,
-    staleTime: 0,
+    refetchInterval: 120000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 }
 

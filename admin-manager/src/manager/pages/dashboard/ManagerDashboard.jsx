@@ -26,6 +26,7 @@ import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import { useNavigate } from "react-router-dom";
 import { useManagerProjects, useManagerTasks } from "../../data/useManager";
 import { useRecentEmailTickets } from "../../data/useManagerTickets";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloperProgress";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
@@ -365,6 +366,22 @@ export default function ManagerDashboard() {
   const projectsQuery = useManagerProjects();
   const tasksQuery = useManagerTasks();
   const emailTicketsQuery = useRecentEmailTickets();
+
+  // Trigger a coordinated refresh when live updates arrive
+  const loadDashboard = React.useCallback(async () => {
+    try {
+      await Promise.all([
+        projectsQuery.refetch(),
+        tasksQuery.refetch(),
+        emailTicketsQuery.refetch(),
+      ]);
+    } catch (e) {
+      // swallow — individual queries handle errors
+    }
+  }, [projectsQuery, tasksQuery, emailTicketsQuery]);
+
+  const liveTopics = React.useMemo(() => ["/topic/manager.dashboard", "/topic/tasks", "/topic/tickets"], []);
+  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 500 });
 
   const projects = Array.isArray(projectsQuery.data) ? projectsQuery.data : [];
   const tasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
