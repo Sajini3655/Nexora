@@ -74,7 +74,6 @@ export default function ClientDashboardHome() {
       <DashboardHero
         icon={<SupportAgentRoundedIcon />}
         title="Client Dashboard"
-        subtitle="Simple overview of your support tickets, project updates, and workstreams."
         actionLabel="View Tickets"
         component={Link}
         actionTo="/client/tickets"

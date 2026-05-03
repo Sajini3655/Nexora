@@ -694,7 +694,6 @@ export default function ManagerDashboard() {
       <DashboardHero
         icon={<DashboardRoundedIcon />}
         title="Manager Dashboard"
-        subtitle="Track project delivery, inbound tickets, team workload, and developer progress."
       />
 
       {/* Show errors inline inside their relevant widgets instead of a global banner */}

@@ -211,7 +211,6 @@ export default function DevDashboardHome() {
         <DashboardHero
           icon={<CodeRoundedIcon />}
           title="Developer Dashboard"
-          subtitle="Track assigned work, active projects, ticket updates, and delivery progress."
         />
       </Box>
 

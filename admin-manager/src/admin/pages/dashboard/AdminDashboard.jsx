@@ -249,7 +249,6 @@ export default function AdminDashboard() {
       <DashboardHero
         icon={<AdminPanelSettingsRoundedIcon />}
         title="Admin Dashboard"
-        subtitle="Overview of users, roles, invitations, and live system health."
       />
 
       <Box
