@@ -23,9 +23,9 @@ export default function PageHeader({
           <Typography
             variant="h5"
             sx={{
-              fontWeight: 950,
-              letterSpacing: -0.6,
-              lineHeight: 1.15
+              fontWeight: 900,
+              letterSpacing: -0.35,
+              lineHeight: 1.12
             }}
           >
             {title}
@@ -35,8 +35,8 @@ export default function PageHeader({
             <Typography
               variant="body2"
               sx={{
-                mt: 0.7,
-                opacity: 0.75,
+                mt: 0.55,
+                opacity: 0.72,
                 maxWidth: 860
               }}
             >
@@ -60,7 +60,7 @@ export default function PageHeader({
       </Box>
 
       {divider ? (
-        <Divider sx={{ mt: compact ? 2 : 2.5, opacity: 0.8 }} />
+        <Divider sx={{ mt: compact ? 1.8 : 2.2, opacity: 0.65 }} />
       ) : null}
     </Box>
   );

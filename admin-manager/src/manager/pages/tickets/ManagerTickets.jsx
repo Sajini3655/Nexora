@@ -336,9 +336,7 @@ export default function ManagerTickets() {
       </Stack>
 
       {actionError || fetchError ? (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {actionError || fetchError}
-        </Alert>
+        <ErrorNotice message={actionError || fetchError} severity="error" sx={{ mb: 2 }} dedupeKey="manager-tickets-error" />
       ) : null}
 
       {loading ? (

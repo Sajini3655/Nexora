@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -17,6 +16,7 @@ import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlin
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import Card from "../../../components/ui/Card.jsx";
+import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import { formatDate } from "../../../utils/formatDate.js";
 import {
   approveTimesheet,
@@ -121,8 +121,8 @@ export default function ManagerTimesheets() {
         </Stack>
       </Stack>
 
-      {error || fetchError ? <Alert severity="error">{error || fetchError}</Alert> : null}
-      {message ? <Alert severity="success">{message}</Alert> : null}
+      {error || fetchError ? <ErrorNotice message={error || fetchError} severity="error" dedupeKey="manager-timesheets-error" /> : null}
+      {message ? <ErrorNotice message={message} severity="success" dedupeKey="manager-timesheets-success" /> : null}
 
       <Grid container spacing={2}>
         {summaryCards.map((card) => (

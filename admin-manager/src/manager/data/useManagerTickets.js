@@ -16,6 +16,7 @@ export function useRecentEmailTickets(enabled = true) {
     queryKey: managerTicketKeys.recent(),
     queryFn: fetchRecentEmailTickets,
     enabled,
+    retry: false,
     // Reduce ticket polling frequency to avoid frequent UI refreshing
     refetchInterval: 120000,
     staleTime: 60000,

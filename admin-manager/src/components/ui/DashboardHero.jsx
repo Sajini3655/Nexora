@@ -24,20 +24,18 @@ export default function DashboardHero({
           <Stack direction="row" alignItems="center" spacing={1.4} sx={{ mb: 0.55 }}>
             <Box
               sx={{
-                width: 46,
-                height: 46,
+                width: 42,
+                height: 42,
                 borderRadius: "50%",
                 display: "grid",
                 placeItems: "center",
-                color: "#ddd6fe",
-                background:
-                  "radial-gradient(circle at 35% 30%, rgba(124,92,255,0.72), rgba(88,28,135,0.35) 68%, rgba(15,23,42,0.32))",
-                border: "1px solid rgba(167,139,250,0.38)",
-                boxShadow:
-                  "0 0 0 6px rgba(124,92,255,0.08), 0 18px 38px rgba(0,0,0,0.25)",
+                color: "#e2e8f0",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(148,163,184,0.12)",
+                boxShadow: "none",
                 flex: "0 0 auto",
                 "& svg": {
-                  fontSize: 25,
+                  fontSize: 22,
                 },
               }}
             >
@@ -47,10 +45,10 @@ export default function DashboardHero({
             <Typography
               variant="h4"
               sx={{
-                fontWeight: 950,
-                letterSpacing: -0.9,
+                fontWeight: 900,
+                letterSpacing: -0.35,
                 color: "#f8fafc",
-                lineHeight: 1.05,
+                lineHeight: 1.08,
               }}
             >
               {title}
@@ -61,7 +59,7 @@ export default function DashboardHero({
             variant="body2"
             sx={{
               color: "#94a3b8",
-              fontSize: 15,
+              fontSize: 14,
               maxWidth: 720,
             }}
           >
@@ -76,21 +74,19 @@ export default function DashboardHero({
             {...buttonProps}
             sx={{
               minWidth: 148,
-              height: 52,
+              height: 44,
               px: 2.4,
-              borderRadius: 2.4,
+              borderRadius: 2,
               textTransform: "none",
-              fontWeight: 900,
+              fontWeight: 850,
               color: "#f8fafc",
-              borderColor: "rgba(148,163,184,0.22)",
-              background:
-                "linear-gradient(135deg, rgba(15,23,42,0.78), rgba(30,41,59,0.58))",
-              boxShadow: "0 14px 34px rgba(0,0,0,0.24)",
+              borderColor: "rgba(148,163,184,0.14)",
+              background: "rgba(255,255,255,0.025)",
+              boxShadow: "none",
               "&:hover": {
-                borderColor: "rgba(124,92,255,0.58)",
-                background:
-                  "linear-gradient(135deg, rgba(124,92,255,0.26), rgba(56,189,248,0.13))",
-                boxShadow: "0 18px 42px rgba(124,92,255,0.18)",
+                borderColor: "rgba(148,163,184,0.20)",
+                background: "rgba(255,255,255,0.05)",
+                boxShadow: "none",
               },
             }}
           >
@@ -101,12 +97,10 @@ export default function DashboardHero({
 
       <Box
         sx={{
-          mt: 1.45,
-          height: 2,
+          mt: 1.2,
+          height: 1,
           borderRadius: 999,
-          background:
-            "linear-gradient(90deg, rgba(124,92,255,0.46) 0%, rgba(56,189,248,0.36) 42%, rgba(20,184,166,0.16) 72%, transparent 100%)",
-          boxShadow: "0 0 18px rgba(56,189,248,0.14)",
+          background: "linear-gradient(90deg, rgba(148,163,184,0.20) 0%, rgba(148,163,184,0.06) 100%)",
         }}
       />
     </Box>

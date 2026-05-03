@@ -3,8 +3,25 @@ import { API_BASE_URL } from "../utils/constants";
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,
+  // Fail fast on hung requests to avoid UI stuck states
+  timeout: 10000,
 });
 
+// Surface auth and network errors in a consistent shape
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Normalize error message structure for getErrorMessage usage
+    if (error?.response) {
+      return Promise.reject(error);
+    }
+
+    // Network / timeout / CORS errors
+    const timeout = error?.code === 'ECONNABORTED' || String(error?.message || '').toLowerCase().includes('timeout');
+    const message = timeout ? 'Request timed out. Please try again.' : error?.message || 'Network error.';
+    return Promise.reject(new Error(message));
+  }
+);
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {

@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -16,6 +15,7 @@ import { getErrorMessage } from "../../../services/managerService";
 import api from "../../../services/api";
 import { useManagerProjects, useManagerTasks } from "../../data/useManager";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 
 function isCompletedTask(task) {
   const status = String(task?.status || task?.taskStatus || "").toLowerCase();
@@ -166,8 +166,8 @@ export default function ProjectManagement() {
         </Stack>
       </Paper>
 
-      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
-      {success ? <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert> : null}
+      {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="project-management-error" /> : null}
+      {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="project-management-success" /> : null}
 
       <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", mb: 2 }}>
         <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Create New Project</Typography>

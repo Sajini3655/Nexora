@@ -7,18 +7,17 @@ export default function Card({ children, sx, ...props }) {
       elevation={0}
       {...props}
       sx={{
-        p: 2.5,
-        borderRadius: 4,
-        background:
-          "linear-gradient(180deg, rgba(17,24,39,0.92) 0%, rgba(11,18,32,0.88) 100%)",
-        border: "1px solid rgba(148,163,184,0.16)",
-        boxShadow: "0 22px 70px rgba(0,0,0,0.38)",
-        backdropFilter: "blur(14px)",
+        p: 2.25,
+        borderRadius: 3,
+        background: "rgba(15,23,42,0.74)",
+        border: "1px solid rgba(148,163,184,0.12)",
+        boxShadow: "0 10px 28px rgba(0,0,0,0.18)",
+        backdropFilter: "blur(12px)",
         transition: "transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease",
         "&:hover": {
-          transform: "translateY(-2px)",
-          borderColor: "rgba(124,92,255,0.28)",
-          boxShadow: "0 24px 80px rgba(0,0,0,0.46)",
+          transform: "translateY(-1px)",
+          borderColor: "rgba(91,108,255,0.20)",
+          boxShadow: "0 12px 32px rgba(0,0,0,0.22)",
         },
         ...sx
       }}

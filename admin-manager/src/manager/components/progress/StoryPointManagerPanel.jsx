@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   IconButton,
@@ -15,6 +14,7 @@ import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import api from "../../../services/api";
 import { useTaskStoryPoints } from "../../data/useTaskStoryPoints";
+import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 
 const emptyForm = {
   title: "",
@@ -205,8 +205,8 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
         )}
       </Stack>
 
-      {error ? <Alert severity="error" sx={{ mb: 1.2 }}>{error}</Alert> : null}
-      {success ? <Alert severity="success" sx={{ mb: 1.2 }}>{success}</Alert> : null}
+      {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 1.2 }} dedupeKey="storypoint-manager-error" /> : null}
+      {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 1.2 }} dedupeKey="storypoint-manager-success" /> : null}
 
       {selectedTask ? (
         <Typography variant="body2" sx={{ color: "#94a3b8", mb: 1.2 }}>

@@ -38,6 +38,7 @@ import {
   updateManagerTask,
 } from "../../../services/managerService";
 import { useProjectDetails, useManagerDevelopers } from "../../data/useManager";
+import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 
 const emptyTaskForm = {
   title: "",
@@ -152,11 +153,12 @@ export default function ProjectManagementDetails() {
   const tasks = Array.isArray(project?.tasks) ? project.tasks : [];
   const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
   const loading = projectDetailsQuery.isLoading || developersQuery.isLoading;
-  const error = projectDetailsQuery.error?.message || developersQuery.error?.message || "";
+  const queryError = projectDetailsQuery.error?.message || developersQuery.error?.message || "";
 
   const [editProjectName, setEditProjectName] = useState("");
   const [editProjectDescription, setEditProjectDescription] = useState("");
   const [newTask, setNewTask] = useState(emptyTaskForm);
+  const [actionError, setActionError] = useState("");
 
   const [savingProjectDetails, setSavingProjectDetails] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
@@ -383,7 +385,7 @@ export default function ProjectManagementDetails() {
     if (!selectedTask || !selectedTask.id || savingAllChanges) return;
 
     setSavingAllChanges(true);
-    setError("");
+    setActionError("");
     setSuccess("");
 
     try {
@@ -430,7 +432,7 @@ export default function ProjectManagementDetails() {
       projectDetailsQuery.refetch();
       developersQuery.refetch();
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to save changes."));
+      setActionError(getErrorMessage(err, "Failed to save changes."));
     } finally {
       setSavingAllChanges(false);
     }
@@ -447,7 +449,7 @@ export default function ProjectManagementDetails() {
       const response = await api.get(`/tasks/${taskId}/story-points`);
       setStoryPoints(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to load story points."));
+      setActionError(getErrorMessage(err, "Failed to load story points."));
       setStoryPoints([]);
     } finally {
       setLoadingStoryPoints(false);
@@ -456,7 +458,7 @@ export default function ProjectManagementDetails() {
 
   const handleSaveProjectDetails = async () => {
     setSavingProjectDetails(true);
-    setError("");
+    setActionError("");
     setSuccess("");
 
     try {
@@ -465,19 +467,12 @@ export default function ProjectManagementDetails() {
         description: editProjectDescription.trim(),
       });
 
-      setProject((prev) => ({
-        ...prev,
-        name: updated.name,
-        projectName: updated.name,
-        description: updated.description,
-        projectDescription: updated.description,
-      }));
-
       setEditProjectName(updated.name);
       setEditProjectDescription(updated.description);
       setSuccess("Project details updated successfully.");
+      await projectDetailsQuery.refetch();
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to save project details."));
+      setActionError(getErrorMessage(err, "Failed to save project details."));
     } finally {
       setSavingProjectDetails(false);
     }
@@ -487,7 +482,7 @@ export default function ProjectManagementDetails() {
     if (!project || !canAddTask) return;
 
     setAddingTask(true);
-    setError("");
+    setActionError("");
     setSuccess("");
 
     try {
@@ -506,7 +501,7 @@ export default function ProjectManagementDetails() {
       setSuccess("Task added successfully.");
       projectDetailsQuery.refetch();
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to add task."));
+      setActionError(getErrorMessage(err, "Failed to add task."));
     } finally {
       setAddingTask(false);
     }
@@ -514,12 +509,12 @@ export default function ProjectManagementDetails() {
 
   const handleSuggestAssigneeForAddTask = async () => {
     if (!newTask.title.trim()) {
-      setError("Enter a task title before getting AI suggestion.");
+      setActionError("Enter a task title before getting AI suggestion.");
       return;
     }
 
     setSuggestingAddTask(true);
-    setError("");
+    setActionError("");
     setAddTaskSuggestion(null);
 
     try {
@@ -535,7 +530,7 @@ export default function ProjectManagementDetails() {
         setNewTask((prev) => ({ ...prev, assignedToId: String(recommendedId) }));
       }
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to get AI suggestion."));
+      setActionError(getErrorMessage(err, "Failed to get AI suggestion."));
     } finally {
       setSuggestingAddTask(false);
     }
@@ -545,7 +540,7 @@ export default function ProjectManagementDetails() {
     if (!selectedTask) return;
 
     setSuggesting(true);
-    setError("");
+    setActionError("");
     setSuggestion(null);
 
     try {
@@ -562,7 +557,7 @@ export default function ProjectManagementDetails() {
         setSelectedDeveloperId(String(recommendedId));
       }
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to get AI suggestion."));
+      setActionError(getErrorMessage(err, "Failed to get AI suggestion."));
     } finally {
       setSuggesting(false);
     }
@@ -570,12 +565,12 @@ export default function ProjectManagementDetails() {
 
   const handleSaveAssignment = async () => {
     if (!selectedTask || !selectedDeveloperId) {
-      setError("Select a developer before saving assignment.");
+      setActionError("Select a developer before saving assignment.");
       return;
     }
 
     setSavingAssignment(true);
-    setError("");
+    setActionError("");
     setSuccess("");
 
     try {
@@ -587,7 +582,7 @@ export default function ProjectManagementDetails() {
         setSelectedTask(refreshedTask);
       }
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to save assignment."));
+      setActionError(getErrorMessage(err, "Failed to save assignment."));
     } finally {
       setSavingAssignment(false);
     }
@@ -596,7 +591,7 @@ export default function ProjectManagementDetails() {
   const handleSaveTaskDetails = async () => {
     if (!selectedTask || !selectedTask.id) return;
 
-    setError("");
+    setActionError("");
     setSuccess("");
     setSavingTaskDetails(true);
 
@@ -619,7 +614,7 @@ export default function ProjectManagementDetails() {
       setSuccess("Task details updated successfully.");
       projectDetailsQuery.refetch();
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to save task details."));
+      setActionError(getErrorMessage(err, "Failed to save task details."));
     } finally {
       setSavingTaskDetails(false);
     }
@@ -629,7 +624,7 @@ export default function ProjectManagementDetails() {
     if (!canSaveStoryPoint || !selectedTask) return;
 
     setSavingStoryPoint(true);
-    setError("");
+    setActionError("");
     setSuccess("");
 
     try {
@@ -644,7 +639,7 @@ export default function ProjectManagementDetails() {
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to add story point."));
+      setActionError(getErrorMessage(err, "Failed to add story point."));
     } finally {
       setSavingStoryPoint(false);
     }
@@ -663,7 +658,7 @@ export default function ProjectManagementDetails() {
     if (!editingStoryPointId || !canSaveStoryPoint || !selectedTask) return;
 
     setSavingStoryPoint(true);
-    setError("");
+    setActionError("");
     setSuccess("");
 
     try {
@@ -679,7 +674,7 @@ export default function ProjectManagementDetails() {
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to update story point."));
+      setActionError(getErrorMessage(err, "Failed to update story point."));
     } finally {
       setSavingStoryPoint(false);
     }
@@ -688,7 +683,7 @@ export default function ProjectManagementDetails() {
   const handleDeleteStoryPoint = async (storyPointId) => {
     if (!selectedTask) return;
 
-    setError("");
+    setActionError("");
     setSuccess("");
 
     try {
@@ -697,7 +692,7 @@ export default function ProjectManagementDetails() {
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to delete story point."));
+      setActionError(getErrorMessage(err, "Failed to delete story point."));
     }
   };
 
@@ -718,7 +713,7 @@ export default function ProjectManagementDetails() {
   if (!project) {
     return (
       <Box sx={{ maxWidth: 1200, mx: "auto", mt: 4 }}>
-        <Alert severity="error">{error || "Project not found."}</Alert>
+        <ErrorNotice message={error || "Project not found."} severity="error" dedupeKey="project-not-found-error" />
       </Box>
     );
   }
@@ -737,8 +732,8 @@ export default function ProjectManagementDetails() {
         </Typography>
       </Paper>
 
-      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
-      {success ? <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert> : null}
+      {(actionError || queryError) ? <ErrorNotice message={actionError || queryError} severity="error" sx={{ mb: 2 }} dedupeKey="project-management-action-error" /> : null}
+      {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="project-management-success" /> : null}
 
       <Stack spacing={2}>
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
@@ -857,7 +852,7 @@ export default function ProjectManagementDetails() {
                 </Stack>
               </Paper>
             ) : chatListError ? (
-              <Alert severity="warning">{chatListError}</Alert>
+              <ErrorNotice message={chatListError} severity="warning" dedupeKey="project-chatlist-error" />
             ) : activeSessions.length === 0 && endedSessions.length === 0 ? (
               <Paper
                 sx={{
@@ -1126,9 +1121,7 @@ export default function ProjectManagementDetails() {
               />
             </Box>
           ) : (
-            <Alert severity="info" sx={{ m: 2 }}>
-              Sign in to use the project chat.
-            </Alert>
+            <ErrorNotice message={"Sign in to use the project chat."} severity="info" sx={{ m: 2 }} dedupeKey="project-chat-signin-info" />
           )}
         </DialogContent>
       </Dialog>
@@ -1291,7 +1284,20 @@ function Metric({ label, value }) {
       <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ mt: 0.3, fontWeight: 800, color: "#e5e7eb" }}>
+      <Typography
+        variant="body2"
+        sx={{
+          mt: 0.3,
+          fontWeight: 800,
+          color: "#e5e7eb",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          wordBreak: "break-word",
+        }}
+      >
         {value}
       </Typography>
     </Box>

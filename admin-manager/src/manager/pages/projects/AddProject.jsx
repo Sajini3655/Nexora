@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   MenuItem,
@@ -11,6 +10,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { createProject, getErrorMessage } from "../../../services/managerService";
+import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import { Plus, Trash2 } from "lucide-react";
 
 const emptyTask = {
@@ -178,8 +178,8 @@ export default function AddProject() {
         </Typography>
       </Paper>
 
-      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
-      {success ? <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert> : null}
+      {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="add-project-error" /> : null}
+      {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="add-project-success" /> : null}
 
       <Stack spacing={2}>
         {/* PROJECT DETAILS SECTION */}

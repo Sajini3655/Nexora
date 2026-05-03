@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
-import AssignmentTurnedInRoundedIcon from "@mui/icons-material/AssignmentTurnedInRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import DoneAllRoundedIcon from "@mui/icons-material/DoneAllRounded";
 import ConfirmationNumberRoundedIcon from "@mui/icons-material/ConfirmationNumberRounded";
@@ -24,16 +23,18 @@ import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import { useNavigate } from "react-router-dom";
-import { useManagerProjects, useManagerTasks } from "../../data/useManager";
+import { useManagerProjects, useManagerTasks, useManagerDevelopers } from "../../data/useManager";
 import { useRecentEmailTickets } from "../../data/useManagerTickets";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloperProgress";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
+import ErrorNotice from "../../../components/ui/ErrorNotice.jsx";
 
 const sectionCardSx = {
   p: { xs: 1.6, md: 1.9 },
   borderRadius: 3,
+  overflow: "hidden",
   border: "1px solid rgba(148,163,184,0.16)",
   background:
     "linear-gradient(180deg, rgba(15,23,42,0.78) 0%, rgba(15,23,42,0.62) 100%)",
@@ -365,54 +366,103 @@ export default function ManagerDashboard() {
   const navigate = useNavigate();
   const projectsQuery = useManagerProjects();
   const tasksQuery = useManagerTasks();
+  const developersQuery = useManagerDevelopers();
   const emailTicketsQuery = useRecentEmailTickets();
+  const { refetch: refetchProjects } = projectsQuery;
+  const { refetch: refetchTasks } = tasksQuery;
+  const { refetch: refetchDevelopers } = developersQuery;
+  const { refetch: refetchEmailTickets } = emailTicketsQuery;
 
   // Trigger a coordinated refresh when live updates arrive
   const loadDashboard = React.useCallback(async () => {
     try {
       await Promise.all([
-        projectsQuery.refetch(),
-        tasksQuery.refetch(),
-        emailTicketsQuery.refetch(),
+        refetchProjects(),
+        refetchTasks(),
+        refetchDevelopers(),
+        refetchEmailTickets(),
       ]);
     } catch (e) {
       // swallow — individual queries handle errors
     }
-  }, [projectsQuery, tasksQuery, emailTicketsQuery]);
+  }, [refetchProjects, refetchTasks, refetchDevelopers, refetchEmailTickets]);
 
-  const liveTopics = React.useMemo(() => ["/topic/manager.dashboard", "/topic/tasks", "/topic/tickets"], []);
-  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 500 });
+  const liveTopics = React.useMemo(
+    () => [
+      "/topic/manager.dashboard",
+      "/topic/tasks",
+      "/topic/developers",
+    ],
+    []
+  );
+  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 1000 });
+
+  React.useEffect(() => {
+    // Only refresh if tab becomes visible after being hidden (page resume)
+    const refreshWhenResumed = () => {
+      if (document.visibilityState === "visible") {
+        loadDashboard();
+      }
+    };
+
+    document.addEventListener("visibilitychange", refreshWhenResumed);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refreshWhenResumed);
+    };
+  }, [loadDashboard]);
 
   const projects = Array.isArray(projectsQuery.data) ? projectsQuery.data : [];
-  const tasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
+  const managerTasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
+  const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
   const tickets = normalizeTicketList(emailTicketsQuery.data);
-  const loading = projectsQuery.isLoading || tasksQuery.isLoading || emailTicketsQuery.isLoading;
-  const refreshing = projectsQuery.isFetching || tasksQuery.isFetching || emailTicketsQuery.isFetching;
+  const loading = projectsQuery.isLoading && tasksQuery.isLoading && emailTicketsQuery.isLoading;
+  const refreshing = projectsQuery.isFetching || tasksQuery.isFetching || developersQuery.isFetching || emailTicketsQuery.isFetching;
   const error =
     projectsQuery.error?.message ||
     tasksQuery.error?.message ||
+    developersQuery.error?.message ||
     emailTicketsQuery.error?.message ||
     "";
 
   const normalizeTaskStatus = (task) =>
     String(task?.status || task?.taskStatus || task?.state || "")
       .trim()
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/[\s_-]+/g, " ");
 
   const isCompletedTask = (task) => {
     const status = normalizeTaskStatus(task);
-    return (
+    const completedByStatus = (
       status === "done" ||
       status === "completed" ||
       status === "complete" ||
       status === "closed" ||
-      status === "resolved"
+      status === "resolved" ||
+      status === "finished"
     );
+
+    if (completedByStatus) return true;
+
+    const totalPointValue = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+    const completedPointValue = Number(task?.completedPointValue ?? task?.completedStoryPoints ?? 0);
+    return totalPointValue > 0 && completedPointValue >= totalPointValue;
   };
 
   const getTaskTitle = (task) => task?.title || task?.taskName || task?.name || "Untitled Task";
 
-  const getTaskDate = (task) => task?.dueDate || task?.deadline || task?.targetDate || null;
+  const getTaskDate = (task) => task?.dueDate || task?.deadline || task?.targetDate || task?.plannedEndDate || task?.due_on || null;
+
+  const hasTaskAssignee = (task) => Boolean(
+    task?.assignedToId ??
+    task?.assigneeId ??
+    task?.assigned_to_id ??
+    task?.assignedTo?.id ??
+    task?.assignee?.id ??
+    task?.assignedUser?.id ??
+    task?.assignedToName ??
+    task?.assigneeName
+  );
 
   const getProjectId = (project) =>
     String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
@@ -422,6 +472,35 @@ export default function ManagerDashboard() {
 
   const getProjectDescription = (project) =>
     project?.description ?? project?.projectDescription ?? "No description available.";
+
+  const tasks = useMemo(() => {
+    const merged = [];
+    const seen = new Set();
+
+    const addTask = (task) => {
+      if (!task || typeof task !== "object") return;
+
+      const idKey = String(
+        task?.id ??
+        task?.taskId ??
+        task?.task_id ??
+        task?.uuid ??
+        ""
+      ).trim();
+
+      if (idKey && seen.has(idKey)) return;
+      if (idKey) seen.add(idKey);
+      merged.push(task);
+    };
+
+    managerTasks.forEach(addTask);
+    projects.forEach((project) => {
+      const projectTasks = Array.isArray(project?.tasks) ? project.tasks : [];
+      projectTasks.forEach(addTask);
+    });
+
+    return merged;
+  }, [managerTasks, projects]);
 
   const tasksByProject = useMemo(() => {
     const grouped = new Map();
@@ -505,12 +584,12 @@ export default function ManagerDashboard() {
 
   const completionRate = useMemo(() => {
     const totalPointValue = tasks.reduce(
-      (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0),
+      (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0),
       0
     );
     const completedPointValue = tasks.reduce((sum, task) => {
-      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
-      return sum + Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
+      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+      return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0);
 
     if (totalPointValue === 0) return 0;
@@ -518,14 +597,14 @@ export default function ManagerDashboard() {
   }, [tasks]);
 
   const totalWeighted = useMemo(
-    () => tasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0), 0),
+    () => tasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0), 0),
     [tasks]
   );
 
   const doneWeighted = useMemo(
     () => tasks.reduce((sum, task) => {
-      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
-      return sum + Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
+      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+      return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0),
     [tasks]
   );
@@ -581,7 +660,7 @@ export default function ManagerDashboard() {
     : 0;
 
   const assignedTaskCount = useMemo(
-    () => tasks.filter((task) => normalizeTaskStatus(task) === "assigned").length,
+    () => tasks.filter((task) => hasTaskAssignee(task)).length,
     [tasks]
   );
 
@@ -631,7 +710,7 @@ export default function ManagerDashboard() {
         onAction={() => navigate("/manager/projects")}
       />
 
-      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
+      {/* Show errors inline inside their relevant widgets instead of a global banner */}
 
       <Grid container spacing={1.6} sx={{ mb: 2.4 }}>
         <Grid item xs={12} sm={6} lg={3}>
@@ -646,12 +725,12 @@ export default function ManagerDashboard() {
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
-            label="Total Tasks"
-            value={tasks.length}
-            hint={`${openTasks.length} open tasks`}
-            icon={<AssignmentTurnedInRoundedIcon />}
-            color="#c4b5fd"
-            bg="rgba(124,92,255,0.16)"
+            label="At Risk Projects"
+            value={atRiskProjectCount}
+            hint="Low progress"
+            icon={<PriorityHighRoundedIcon />}
+            color="#fda4af"
+            bg="rgba(253,164,175,0.16)"
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
@@ -684,28 +763,111 @@ export default function ManagerDashboard() {
               <SmallBadge color="#7dd3fc" glow="rgba(56,189,248,0.14)">ACTIVE: {activeProjectCount}</SmallBadge>
             </Stack>
             <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mt: 0.35 }}>
-              Project health summary without duplicating the full project list.
+              Full project list with delivery progress, task counts, and weighted completion.
             </Typography>
           </Box>
-          <Button variant="outlined" size="small" onClick={() => navigate("/manager/projects")} sx={{ textTransform: "none" }}>
-            View All Projects
-          </Button>
         </Stack>
 
         <Grid container spacing={1.2}>
-          <Grid item xs={12} sm={6} lg={3}>
-            <DashboardMetricCard label="Active Projects" value={activeProjectCount} hint="Currently moving" icon={<BoltRoundedIcon />} color="#60a5fa" bg="rgba(96,165,250,0.14)" />
-          </Grid>
-          <Grid item xs={12} sm={6} lg={3}>
-            <DashboardMetricCard label="Planning Projects" value={planningProjectCount} hint="Waiting for tasks" icon={<ScheduleRoundedIcon />} color="#fbbf24" bg="rgba(251,191,36,0.14)" />
-          </Grid>
-          <Grid item xs={12} sm={6} lg={3}>
-            <DashboardMetricCard label="Completed Projects" value={completedProjectCount} hint="Fully delivered" icon={<CheckCircleRoundedIcon />} color="#86efac" bg="rgba(134,239,172,0.14)" />
-          </Grid>
-          <Grid item xs={12} sm={6} lg={3}>
-            <DashboardMetricCard label="At Risk Projects" value={atRiskProjectCount} hint="Low progress" icon={<PriorityHighRoundedIcon />} color="#fda4af" bg="rgba(253,164,175,0.14)" />
-          </Grid>
         </Grid>
+
+        <Box sx={{ mt: 1.8 }}>
+          {projectRows.length === 0 ? (
+            <EmptyMiniState title="No projects found." text="All projects will appear here once they are loaded." />
+          ) : (
+            <Grid container spacing={1.2}>
+              {projectRows.map((project) => {
+                const progressTone = project.progress >= 80 ? "#86efac" : project.progress >= 40 ? "#7dd3fc" : "#fda4af";
+                const progressBg = project.progress >= 80 ? "rgba(34,197,94,0.14)" : project.progress >= 40 ? "rgba(56,189,248,0.14)" : "rgba(244,63,94,0.14)";
+
+                return (
+                  <Grid item xs={12} md={6} xl={4} key={project.id || project.name}>
+                    <Paper
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/manager/project-management/${project.id}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          navigate(`/manager/project-management/${project.id}`);
+                        }
+                      }}
+                      sx={{
+                        p: 1.5,
+                        height: "100%",
+                        borderRadius: 2.4,
+                        border: "1px solid rgba(148,163,184,0.14)",
+                        background: "rgba(15,23,42,0.58)",
+                        cursor: "pointer",
+                        transition: "transform 160ms ease, border-color 160ms ease, background 160ms ease",
+                        outline: "none",
+                        "&:hover": {
+                          transform: "translateY(-2px)",
+                          borderColor: "rgba(125,211,252,0.35)",
+                          background: "rgba(15,23,42,0.72)",
+                        },
+                        "&:focus-visible": {
+                          boxShadow: "0 0 0 3px rgba(125,211,252,0.22)",
+                        },
+                      }}
+                    >
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} sx={{ mb: 0.45 }}>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 900, color: "#f8fafc", fontSize: "0.98rem" }} noWrap>
+                            {project.name}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "#94a3b8",
+                              mt: 0,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {project.description}
+                          </Typography>
+                        </Box>
+                        <SmallBadge color={progressTone} glow={progressBg}>
+                          {project.status}
+                        </SmallBadge>
+                      </Stack>
+
+                      <Typography variant="caption" sx={{ color: "#cbd5e1", display: "block", mb: 0.2 }}>
+                        {project.doneTasks}/{project.totalTasks} tasks complete · {project.completedPointValue}/{project.totalPointValue} points
+                      </Typography>
+
+                      <LinearProgress
+                        variant="determinate"
+                        value={project.progress}
+                        sx={{
+                          height: 7,
+                          borderRadius: 999,
+                          bgcolor: "rgba(255,255,255,0.08)",
+                          mb: 0.65,
+                          "& .MuiLinearProgress-bar": { bgcolor: progressTone },
+                        }}
+                      />
+
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                        <SmallBadge color="#bfdbfe" glow="rgba(96,165,250,0.14)">
+                          {project.totalTasks} TASKS
+                        </SmallBadge>
+                        <SmallBadge color="#ddd6fe" glow="rgba(124,92,255,0.14)">
+                          {project.progress}%
+                        </SmallBadge>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          )}
+        </Box>
       </Paper>
 
       <Paper
@@ -731,9 +893,24 @@ export default function ManagerDashboard() {
                 <Typography sx={{ fontWeight: 950, fontSize: "1rem", color: "#f8fafc" }}>Ticket Snapshot</Typography>
                 <SmallBadge color="#7dd3fc" glow="rgba(56,189,248,0.14)">OPEN: {openTicketCount}</SmallBadge>
               </Stack>
-              <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mt: 0.35 }}>
-                Compact inbound ticket overview. Full ticket details stay in the Tickets page.
-              </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "#94a3b8",
+                    mt: 0.35,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                  }}
+                >
+                  Compact inbound ticket overview. Full ticket details stay in the Tickets page.
+                </Typography>
+
+                {emailTicketsQuery.error ? (
+                  <ErrorNotice message={emailTicketsQuery.error.message || String(emailTicketsQuery.error)} severity="error" sx={{ mt: 1, mb: 1.2 }} dedupeKey="manager-email-tickets-error" />
+                ) : null}
             </Box>
             <Button
               variant="outlined"
@@ -775,9 +952,34 @@ export default function ManagerDashboard() {
             <SmallBadge color="#ddd6fe" glow="rgba(124,92,255,0.14)">STORY: {storyPointsLabel}</SmallBadge>
             <SmallBadge color="#a7f3d0" glow="rgba(34,197,94,0.14)">WEIGHTED: {weightedPointsLabel}</SmallBadge>
             <SmallBadge color="#fed7aa" glow="rgba(251,146,60,0.14)">DELAYED: {delayedTaskCount}</SmallBadge>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => Promise.all([developersQuery.refetch(), tasksQuery.refetch()])}
+              sx={{
+                minWidth: "auto",
+                px: 1.1,
+                py: 0.25,
+                lineHeight: 1,
+                borderRadius: 999,
+                textTransform: "none",
+                borderColor: "rgba(148,163,184,0.32)",
+                color: "#cbd5e1",
+              }}
+            >
+              Refresh
+            </Button>
           </Stack>
         </Stack>
-        <ManagerDeveloperProgress />
+        <ManagerDeveloperProgress
+          hideSummary
+          hideHeader
+          developersData={developers}
+          tasksData={tasks}
+          loadingOverride={developersQuery.isLoading || tasksQuery.isLoading}
+          errorOverride={developersQuery.error || tasksQuery.error || null}
+          onRetry={() => Promise.all([developersQuery.refetch(), tasksQuery.refetch()])}
+        />
       </Paper>
 
       <Paper sx={sectionCardSx}>

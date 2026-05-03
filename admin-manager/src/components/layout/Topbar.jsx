@@ -46,12 +46,11 @@ export default function Topbar({ onMenuClick }) {
         width: `calc(100% - ${layoutGaps.topbar.sideInset * 2}px)`,
         height: layoutGaps.topbar.height,
         justifyContent: "center",
-        borderRadius: "0 0 24px 24px",
-        background:
-          "linear-gradient(135deg, rgba(51,45,88,0.96) 0%, rgba(15,23,42,0.97) 52%, rgba(7,34,44,0.96) 100%)",
-        border: "1px solid rgba(148,163,184,0.16)",
-        boxShadow: "0 18px 55px rgba(0,0,0,0.35)",
-        backdropFilter: "blur(20px)",
+        borderRadius: "0 0 20px 20px",
+        background: "rgba(11,17,32,0.94)",
+        border: "1px solid rgba(148,163,184,0.12)",
+        boxShadow: "0 10px 28px rgba(0,0,0,0.18)",
+        backdropFilter: "blur(14px)",
         zIndex: 1400,
       }}
     >
@@ -70,12 +69,12 @@ export default function Topbar({ onMenuClick }) {
             width: 42,
             height: 42,
             color: "#e5e7eb",
-            border: "1px solid rgba(255,255,255,0.13)",
-            background: "rgba(255,255,255,0.055)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            background: "rgba(255,255,255,0.03)",
+            boxShadow: "none",
             "&:hover": {
-              background: "rgba(124,92,255,0.18)",
-              borderColor: "rgba(167,139,250,0.34)",
+              background: "rgba(255,255,255,0.06)",
+              borderColor: "rgba(148,163,184,0.18)",
             },
           }}
         >
@@ -87,9 +86,9 @@ export default function Topbar({ onMenuClick }) {
             width: 34,
             height: 34,
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #7c5cff, #38bdf8)",
-            boxShadow: "0 12px 35px rgba(124,92,255,0.35)",
-            border: "1px solid rgba(255,255,255,0.18)",
+            background: "linear-gradient(135deg, #5b6cff, #60a5fa)",
+            boxShadow: "0 10px 24px rgba(91,108,255,0.16)",
+            border: "1px solid rgba(255,255,255,0.10)",
             flexShrink: 0,
           }}
         />
@@ -97,11 +96,11 @@ export default function Topbar({ onMenuClick }) {
         <Box sx={{ minWidth: 0 }}>
           <Typography
             sx={{
-              fontWeight: 950,
+              fontWeight: 900,
               color: "#f8fafc",
-              letterSpacing: -0.35,
+              letterSpacing: -0.2,
               lineHeight: 1.05,
-              fontSize: 18,
+              fontSize: 17,
             }}
           >
             Nexora
@@ -120,8 +119,8 @@ export default function Topbar({ onMenuClick }) {
                 px: 1.25,
                 py: 0.7,
                 borderRadius: 999,
-                background: "rgba(255,255,255,0.045)",
-                border: "1px solid rgba(148,163,184,0.14)",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(148,163,184,0.10)",
               }}
             >
               <Typography
@@ -143,11 +142,11 @@ export default function Topbar({ onMenuClick }) {
                 label={roleLabel}
                 sx={{
                   height: 23,
-                  color: "#ddd6fe",
-                  fontWeight: 950,
-                  fontSize: 11,
-                  background: "rgba(124,92,255,0.18)",
-                  border: "1px solid rgba(167,139,250,0.30)",
+                    color: "#e2e8f0",
+                    fontWeight: 850,
+                    fontSize: 10.5,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(148,163,184,0.16)",
                 }}
               />
             </Box>
@@ -157,10 +156,10 @@ export default function Topbar({ onMenuClick }) {
                 width: 42,
                 height: 42,
                 color: "#e5e7eb",
-                border: "1px solid rgba(148,163,184,0.16)",
-                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(148,163,184,0.12)",
+                background: "rgba(255,255,255,0.03)",
                 "&:hover": {
-                  background: "rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.06)",
                 },
               }}
             >
@@ -172,8 +171,8 @@ export default function Topbar({ onMenuClick }) {
               sx={{
                 p: 0.55,
                 borderRadius: "50%",
-                border: "1px solid rgba(167,139,250,0.28)",
-                background: "rgba(124,92,255,0.10)",
+                border: "1px solid rgba(148,163,184,0.16)",
+                background: "rgba(255,255,255,0.03)",
               }}
             >
               <Avatar
@@ -181,10 +180,10 @@ export default function Topbar({ onMenuClick }) {
                   width: 37,
                   height: 37,
                   fontSize: 15,
-                  fontWeight: 950,
+                  fontWeight: 900,
                   color: "#fff",
-                  background: "linear-gradient(135deg, #7c5cff, #6d5dfc)",
-                  boxShadow: "0 12px 28px rgba(124,92,255,0.28)",
+                  background: "linear-gradient(135deg, #5b6cff, #4857d8)",
+                  boxShadow: "0 10px 22px rgba(91,108,255,0.16)",
                 }}
               >
                 {initials}

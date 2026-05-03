@@ -55,10 +55,9 @@ export default function UnifiedSidebar({
           pt: 1.2,
           pb: 2,
           color: "#e5e7eb",
-          background:
-            "linear-gradient(180deg, rgba(29,34,58,0.98) 0%, rgba(12,18,32,0.99) 100%)",
-          borderRight: "1px solid rgba(148,163,184,0.14)",
-          boxShadow: "22px 0 80px rgba(0,0,0,0.50)",
+          background: "rgba(12,18,32,0.98)",
+          borderRight: "1px solid rgba(148,163,184,0.10)",
+          boxShadow: "18px 0 44px rgba(0,0,0,0.28)",
         },
       }}
     >
@@ -70,10 +69,10 @@ export default function UnifiedSidebar({
             width: 38,
             height: 38,
             color: "#e5e7eb",
-            border: "1px solid rgba(148,163,184,0.16)",
-            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(148,163,184,0.12)",
+            background: "rgba(255,255,255,0.03)",
             "&:hover": {
-              background: "rgba(255,255,255,0.08)",
+              background: "rgba(255,255,255,0.06)",
             },
           }}
         >
@@ -87,9 +86,9 @@ export default function UnifiedSidebar({
             <Typography
               sx={{
                 color: "#94a3b8",
-                fontWeight: 950,
-                fontSize: 11.5,
-                letterSpacing: 1,
+                fontWeight: 900,
+                fontSize: 11,
+                letterSpacing: 0.9,
                 textTransform: "uppercase",
                 mb: 1,
                 px: 1,
@@ -116,7 +115,7 @@ export default function UnifiedSidebar({
                   color: "#cbd5e1",
                   textDecoration: "none",
                   fontSize: 14.5,
-                  fontWeight: 850,
+                  fontWeight: 800,
                   border: "1px solid transparent",
                   transition: "all 160ms ease",
                   cursor: "pointer",
@@ -124,20 +123,19 @@ export default function UnifiedSidebar({
                   background: "transparent",
                   appearance: "none",
                   width: "100%",
-                  "& svg": { fontSize: 21, color: "#94a3b8" },
+                  "& svg": { fontSize: 20, color: "#94a3b8" },
                   "&:hover": {
                     color: "#ffffff",
-                    background: "rgba(255,255,255,0.055)",
-                    borderColor: "rgba(148,163,184,0.14)",
+                    background: "rgba(255,255,255,0.04)",
+                    borderColor: "rgba(148,163,184,0.10)",
                   },
                   ...(isActivePath(item)
                     ? {
                         color: "#ffffff",
-                        background:
-                          "linear-gradient(135deg, rgba(124,92,255,0.30), rgba(124,92,255,0.15))",
-                        borderColor: "rgba(167,139,250,0.26)",
-                        boxShadow: "0 12px 30px rgba(124,92,255,0.14)",
-                        "& svg": { color: "#c4b5fd" },
+                        background: "rgba(255,255,255,0.05)",
+                        borderColor: "rgba(91,108,255,0.18)",
+                        boxShadow: "none",
+                        "& svg": { color: "#dbe4ff" },
                       }
                     : {}),
                 }}
@@ -152,7 +150,7 @@ export default function UnifiedSidebar({
 
       {footer ? (
         <Box sx={{ mt: "auto", px: 1, pt: 1.5 }}>
-          <Typography sx={{ color: "#64748b", fontSize: 12 }}>{footer}</Typography>
+          <Typography sx={{ color: "#64748b", fontSize: 11.5 }}>{footer}</Typography>
         </Box>
       ) : null}
     </Drawer>

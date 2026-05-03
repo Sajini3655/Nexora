@@ -14,17 +14,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const theme = createTheme({
   palette: {
     mode: "dark",
-    primary: { main: "#7c5cff" },
-    secondary: { main: "#22c55e" },
+    primary: { main: "#5b6cff" },
+    secondary: { main: "#2fbf71" },
     background: {
-      default: "#0b1020",
-      paper: "rgba(255,255,255,0.06)"
+      default: "#0b1120",
+      paper: "rgba(255,255,255,0.05)"
     },
     text: {
-      primary: "#e7e9ee",
-      secondary: "rgba(231,233,238,0.72)"
+      primary: "#e8ebf2",
+      secondary: "rgba(232,235,242,0.70)"
     },
-    divider: "rgba(255,255,255,0.10)"
+    divider: "rgba(255,255,255,0.08)"
   },
 
   shape: { borderRadius: 16 },
@@ -32,20 +32,48 @@ const theme = createTheme({
   typography: {
     fontFamily: `Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`,
     fontSize: 15,
-    h5: { fontWeight: 900, letterSpacing: -0.4, fontSize: "1.7rem" },
-    h6: { fontWeight: 900, letterSpacing: -0.2, fontSize: "1.35rem" },
-    body1: { fontSize: "1.02rem" },
-    body2: { fontSize: "0.95rem" },
-    button: { textTransform: "none", fontWeight: 800 }
+    h1: { fontWeight: 950, letterSpacing: -1.2, fontSize: "2.15rem", lineHeight: 1.08 },
+    h2: { fontWeight: 950, letterSpacing: -1, fontSize: "1.8rem", lineHeight: 1.1 },
+    h3: { fontWeight: 950, letterSpacing: -0.8, fontSize: "1.55rem", lineHeight: 1.12 },
+    h4: { fontWeight: 950, letterSpacing: -0.6, fontSize: "1.3rem", lineHeight: 1.15 },
+    h5: { fontWeight: 900, letterSpacing: -0.4, fontSize: "1.12rem", lineHeight: 1.2 },
+    h6: { fontWeight: 900, letterSpacing: -0.25, fontSize: "1rem", lineHeight: 1.25 },
+    subtitle1: { fontWeight: 700, fontSize: "0.98rem", lineHeight: 1.45 },
+    subtitle2: { fontWeight: 700, fontSize: "0.88rem", lineHeight: 1.45 },
+    body1: { fontSize: "0.92rem", lineHeight: 1.55 },
+    body2: { fontSize: "0.86rem", lineHeight: 1.5 },
+    caption: { fontSize: "0.78rem", lineHeight: 1.45 },
+    overline: { fontSize: "0.73rem", lineHeight: 1.4, letterSpacing: 1.1 },
+    button: { textTransform: "none", fontWeight: 800, fontSize: "0.9rem" }
   },
 
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        html: {
+          fontSize: 15,
+        },
         body: {
+          fontFamily: `Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`,
+          fontSize: 15,
+          lineHeight: 1.5,
           backgroundImage:
-            "radial-gradient(1000px 600px at 20% 10%, rgba(124,92,255,0.26), transparent 60%), radial-gradient(900px 700px at 80% 20%, rgba(34,197,94,0.16), transparent 55%)",
+            "radial-gradient(1000px 600px at 20% 10%, rgba(91,108,255,0.14), transparent 60%), radial-gradient(900px 700px at 80% 20%, rgba(47,191,113,0.08), transparent 55%)",
           backgroundAttachment: "fixed"
+        },
+        "*, *::before, *::after": {
+          boxSizing: "border-box",
+        },
+        "button, input, textarea, select": {
+          fontFamily: `Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`,
+        }
+      }
+    },
+
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          fontFamily: `Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial`,
         }
       }
     },
@@ -53,7 +81,8 @@ const theme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundImage: "none"
+          backgroundImage: "none",
+          borderColor: "rgba(148,163,184,0.14)"
         }
       }
     },
@@ -71,7 +100,13 @@ const theme = createTheme({
 
     MuiButton: {
       styleOverrides: {
-        root: { borderRadius: 14, paddingInline: 16, height: 44 }
+        root: { borderRadius: 12, paddingInline: 16, height: 42, fontWeight: 800 },
+        outlined: {
+          borderColor: "rgba(148,163,184,0.20)",
+        },
+        contained: {
+          boxShadow: "none",
+        }
       }
     },
 
@@ -86,17 +121,17 @@ const theme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          borderRadius: 14,
-          backgroundColor: "rgba(255,255,255,0.04)",
+          borderRadius: 12,
+          backgroundColor: "rgba(255,255,255,0.03)",
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "rgba(255,255,255,0.22)"
+            borderColor: "rgba(255,255,255,0.18)"
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "rgba(124,92,255,0.65)"
+            borderColor: "rgba(91,108,255,0.55)"
           }
         },
         notchedOutline: {
-          borderColor: "rgba(255,255,255,0.12)"
+          borderColor: "rgba(255,255,255,0.10)"
         }
       }
     },
