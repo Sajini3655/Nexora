@@ -23,7 +23,8 @@ import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import { useNavigate } from "react-router-dom";
-import { useManagerProjects, useManagerTasks, useManagerDevelopers } from "../../data/useManager";
+import { useQueryClient } from "@tanstack/react-query";
+import { useManagerProjects, useManagerTasks, useManagerDevelopers, managerKeys } from "../../data/useManager";
 import { useRecentEmailTickets } from "../../data/useManagerTickets";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloperProgress";
@@ -362,19 +363,21 @@ export default function ManagerDashboard() {
   const { refetch: refetchDevelopers } = developersQuery;
   const { refetch: refetchEmailTickets } = emailTicketsQuery;
 
-  // Trigger a coordinated refresh when live updates arrive
-  const loadDashboard = React.useCallback(async () => {
+  const queryClient = useQueryClient();
+
+  // Trigger lightweight invalidation when live updates arrive
+  const loadDashboard = React.useCallback(() => {
     try {
-      await Promise.all([
-        refetchProjects(),
-        refetchTasks(),
-        refetchDevelopers(),
-        refetchEmailTickets(),
-      ]);
+      // Invalidate relevant caches instead of forcing individual refetches.
+      // This lets react-query decide whether to refetch based on staleness.
+      queryClient.invalidateQueries({ queryKey: managerKeys.projects() });
+      queryClient.invalidateQueries({ queryKey: managerKeys.tasks() });
+      queryClient.invalidateQueries({ queryKey: managerKeys.developers() });
+      queryClient.invalidateQueries({ queryKey: ["recentEmailTickets"] });
     } catch (e) {
       // swallow — individual queries handle errors
     }
-  }, [refetchProjects, refetchTasks, refetchDevelopers, refetchEmailTickets]);
+  }, [queryClient]);
 
   const liveTopics = React.useMemo(
     () => [
@@ -758,6 +761,8 @@ export default function ManagerDashboard() {
               {(expandProjects ? projectRows : projectRows.slice(0, 3)).map((project) => {
                 const progressTone = project.progress >= 80 ? "#86efac" : project.progress >= 40 ? "#7dd3fc" : "#fda4af";
                 const progressBg = project.progress >= 80 ? "rgba(34,197,94,0.14)" : project.progress >= 40 ? "rgba(56,189,248,0.14)" : "rgba(244,63,94,0.14)";
+                const statusTone = project.status === "Active" ? "#86efac" : project.status === "Completed" ? "#7dd3fc" : "#fda4af";
+                const statusBg = project.status === "Active" ? "rgba(34,197,94,0.14)" : project.status === "Completed" ? "rgba(56,189,248,0.14)" : "rgba(244,63,94,0.14)";
 
                 return (
                   <Grid item xs={12} md={6} xl={4} key={project.id || project.name}>
@@ -811,7 +816,7 @@ export default function ManagerDashboard() {
                             {project.description}
                           </Typography>
                         </Box>
-                        <SmallBadge color={progressTone} glow={progressBg}>
+                        <SmallBadge color={statusTone} glow={statusBg}>
                           {project.status}
                         </SmallBadge>
                       </Stack>

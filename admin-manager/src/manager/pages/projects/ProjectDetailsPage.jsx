@@ -17,6 +17,7 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import ChatBox from "../../../dev/pages/chat/src/ChatBox";
 import { getProjectSessions } from "../../../dev/pages/chat/src/api";
 import { useProjectDetails } from "../../data/useManager";
@@ -127,23 +128,15 @@ export default function ProjectDetailsPage() {
     }
   }, [projectId, authLoading]);
 
+  // initial load
   useEffect(() => {
-    let cancelled = false;
+    loadProjectSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
-    const run = async () => {
-      if (cancelled) return;
-      await loadProjectSessions();
-    };
-
-    run();
-
-    const intervalId = window.setInterval(run, 12000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [loadProjectSessions]);
+  // Use websocket live updates instead of polling to refresh sessions
+  const liveTopics = useMemo(() => ["/topic/projects", projectId ? `/topic/projects/${projectId}/sessions` : null].filter(Boolean), [projectId]);
+  useLiveRefresh(liveTopics, loadProjectSessions, { debounceMs: 800 });
 
   const activeSessions = useMemo(
     () => sessions.filter((session) => !session.ended),
