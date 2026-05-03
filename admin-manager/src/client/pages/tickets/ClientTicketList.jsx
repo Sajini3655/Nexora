@@ -226,17 +226,17 @@ export default function ClientTicketList() {
                       borderBottom: "1px solid rgba(255,255,255,0.06)",
                     }}
                   >
-                    <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       {ticket.title}
                     </Typography>
-                    <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
                       {ticket.category || "-"}
                     </Typography>
                     <StatusChip status={ticket.status} />
-                    <Typography sx={{ color: "#cbd5e1", fontSize: 13 }}>
+                    <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
                       {ticket.priority}
                     </Typography>
-                    <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
                       {ticket.updatedAt}
                     </Typography>
                   </Box>

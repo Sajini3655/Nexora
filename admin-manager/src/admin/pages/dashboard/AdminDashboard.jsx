@@ -488,7 +488,7 @@ function SectionCard({ title, subtitle, children }) {
       }}
     >
       <Box sx={{ mb: 1.8 }}>
-        <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+        <Typography variant="h6" sx={{ fontWeight: 900 }}>
           {title}
         </Typography>
 
@@ -535,7 +535,7 @@ function SmallInfoCard({ title, value, icon, badge, badgeTone = "neutral" }) {
             {title}
           </Typography>
 
-          <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+          <Typography variant="h6" sx={{ fontWeight: 900 }}>
             {value}
           </Typography>
         </Box>
@@ -750,7 +750,7 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           {item.icon}
         </Box>
         <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontWeight: 900, fontSize: 16 }}>
+          <Typography variant="h6" sx={{ fontWeight: 900 }}>
             {item.title}
           </Typography>
         </Box>
@@ -788,11 +788,11 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           {/* Service Overview */}
           <Box>
             <Typography
-              sx={{ fontWeight: 700, fontSize: 12, color: "#94a3b8", mb: 0.8 }}
+              sx={{ variant: "caption", fontWeight: 700, color: "#94a3b8", mb: 0.8 }}
             >
               SERVICE OVERVIEW
             </Typography>
-            <Typography sx={{ color: "#e5e7eb", fontSize: 14 }}>
+            <Typography variant="body2" sx={{ color: "#e5e7eb" }}>
               {item.description}
             </Typography>
           </Box>
@@ -802,20 +802,20 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           {/* Details List */}
           <Box>
             <Typography
-              sx={{ fontWeight: 700, fontSize: 12, color: "#94a3b8", mb: 1 }}
+              sx={{ variant: "caption", fontWeight: 700, color: "#94a3b8", mb: 1 }}
             >
               SERVICE DETAILS
             </Typography>
             <Stack spacing={1.2}>
               {item.details && item.details.map((detail, idx) => (
                 <Box key={idx} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                  <Typography variant="caption" sx={{ color: "#94a3b8" }}>
                     {detail.label}
                   </Typography>
                   <Typography
+                    variant="body2"
                     sx={{
                       color: "#e5e7eb",
-                      fontSize: 13,
                       fontWeight: 600,
                       textAlign: "right",
                       maxWidth: "60%",
@@ -841,17 +841,10 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
                   border: `1px solid ${getStatusColor(item.value)}30`,
                 }}
               >
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: 12,
-                    color: getStatusColor(item.value),
-                    mb: 0.6,
-                  }}
-                >
+                <Typography variant="caption" sx={{ fontWeight: 700, color: getStatusColor(item.value), mb: 0.6 }}>
                   ⚠ ISSUE
                 </Typography>
-                <Typography sx={{ color: "#e5e7eb", fontSize: 13 }}>
+                <Typography variant="body2" sx={{ color: "#e5e7eb" }}>
                   {item.issue}
                 </Typography>
               </Box>
@@ -870,17 +863,10 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
                   border: "1px solid rgba(59,130,246,0.25)",
                 }}
               >
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: 12,
-                    color: "#93c5fd",
-                    mb: 0.6,
-                  }}
-                >
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#93c5fd", mb: 0.6 }}>
                   💡 RECOMMENDED ACTION
                 </Typography>
-                <Typography sx={{ color: "#e5e7eb", fontSize: 13 }}>
+                <Typography variant="body2" sx={{ color: "#e5e7eb" }}>
                   {item.action}
                 </Typography>
               </Box>

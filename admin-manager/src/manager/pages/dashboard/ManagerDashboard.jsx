@@ -173,7 +173,7 @@ function StatCard({ label, value, hint, icon, color, bg }) {
             {label}
           </Typography>
 
-          <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+          <Typography variant="h6" sx={{ fontWeight: 900 }}>
             {value}
           </Typography>
         </Box>
