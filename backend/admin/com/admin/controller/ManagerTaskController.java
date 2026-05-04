@@ -20,7 +20,7 @@ public class ManagerTaskController {
 
     @GetMapping("/developers")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public ResponseEntity<List<DeveloperSummaryDto>> developers() {
+    public ResponseEntity<List<DeveloperSummaryDto>> developers(Authentication authentication) {
         return ResponseEntity.ok(taskAssignmentService.listDevelopers());
     }
 
