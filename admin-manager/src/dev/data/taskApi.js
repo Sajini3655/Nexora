@@ -133,10 +133,19 @@ function mapBackendTaskToUi(taskDto, existingUiTask) {
     totalPointValue,
     completedPointValue,
     progressPercentage,
+    estimatedPoints: numberOrZero(taskDto.estimatedPoints ?? existingUiTask?.estimatedPoints),
 
     storyPoints: totalStoryPoints,
     subtasks: Array.isArray(existingUiTask?.subtasks) ? existingUiTask.subtasks : [],
   };
+}
+
+export async function createTaskStoryPoint(taskId, { title, description = null, pointValue }) {
+  const res = await apiFetch(`/tasks/${encodeURIComponent(taskId)}/story-points`, {
+    method: "POST",
+    body: JSON.stringify({ title, description, pointValue }),
+  });
+  return res.json();
 }
 
 export async function fetchAssignedTasksFromBackend() {

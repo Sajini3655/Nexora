@@ -114,3 +114,22 @@ export function useMarkStoryPointTodo() {
     },
   });
 }
+
+/**
+ * Create a story point (for developers assigned to the task)
+ */
+export function useCreateStoryPoint() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, data }) =>
+      // import is dynamic to avoid circular issues; taskApi exports createTaskStoryPoint
+      import("./taskApi").then((m) => m.createTaskStoryPoint(taskId, data)),
+    onSuccess: (_data, variables) => {
+      const taskId = String(variables.taskId);
+      queryClient.invalidateQueries({ queryKey: devTaskKeys.storyPoints(taskId) });
+      queryClient.invalidateQueries({ queryKey: devTaskKeys.taskProgress(taskId) });
+      queryClient.invalidateQueries({ queryKey: devTaskKeys.assignedTask(taskId) });
+      queryClient.invalidateQueries({ queryKey: devTaskKeys.assignedTasks() });
+    },
+  });
+}

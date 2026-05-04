@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
+import { Alert, Box, Chip, CircularProgress, Grid, Typography, TextField, Button, Stack } from "@mui/material";
 import Card from "../../../components/ui/Card.jsx";
 import ProgressBar from "../../components/tasks/ProgressBar";
 import StoryPointChecklist from "../../components/tasks/StoryPointChecklist";
@@ -13,7 +13,7 @@ import {
   markStoryPointTodo,
   syncAssignedTasksToLocalStoreSafe,
 } from "../../data/taskApi";
-import { useAssignedTask, useTaskProgress, useTaskStoryPoints } from "../../data/useDevTasks";
+import { useAssignedTask, useTaskProgress, useTaskStoryPoints, useCreateStoryPoint } from "../../data/useDevTasks";
 
 function getTaskStatus(task) {
   return String(task?.status || "Assigned");
@@ -32,9 +32,17 @@ export default function DevTaskView() {
   const [storyPointError, setStoryPointError] = useState("");
 
   // React Query hooks
-  const { data: task, isLoading: taskLoading, error: taskError } = useAssignedTask(id, !!id);
-  const { data: progressData, isLoading: progressLoading, error: progressError } = useTaskProgress(id, !!id);
-  const { data: storyPoints = [], isLoading: storyPointsLoading, error: storyPointsError } = useTaskStoryPoints(id, !!id);
+  const taskQuery = useAssignedTask(id, !!id);
+  const progressQuery = useTaskProgress(id, !!id);
+  const storyPointsQuery = useTaskStoryPoints(id, !!id);
+
+  const { data: task, isLoading: taskLoading, error: taskError } = taskQuery;
+  const { data: progressData, isLoading: progressLoading, error: progressError } = progressQuery;
+  const { data: storyPoints = [], isLoading: storyPointsLoading, error: storyPointsError } = storyPointsQuery;
+
+  const createMutation = useCreateStoryPoint();
+  const [newTitle, setNewTitle] = useState("");
+  const [newPoints, setNewPoints] = useState(1);
 
   const loading = taskLoading || progressLoading || storyPointsLoading;
   const error = taskError?.message || progressError?.message || storyPointsError?.message || "";
@@ -55,7 +63,7 @@ export default function DevTaskView() {
         await markStoryPointDone(storyPoint.id);
       }
 
-      await loadStoryPointData(task.id, task);
+      await Promise.all([storyPointsQuery.refetch(), progressQuery.refetch(), taskQuery.refetch()]);
     } catch (err) {
       setStoryPointError(err?.message || "Failed to update story point.");
     } finally {
@@ -140,15 +148,44 @@ export default function DevTaskView() {
 
             <Box sx={{ mt: 2.2 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                Story Points
-              </Typography>
-              <StoryPointChecklist
-                storyPoints={storyPoints}
-                loading={false}
-                error={storyPointError}
-                togglingId={togglingStoryPointId}
-                onToggle={handleToggleStoryPoint}
-              />
+                  Story Points
+                </Typography>
+              <Box sx={{ mt: 1, mb: 1 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="caption" sx={{ color: "#94a3b8" }}>Budget:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{task.estimatedPoints ?? "-"} pts</Typography>
+                  <Typography variant="caption" sx={{ color: "#94a3b8", ml: 2 }}>Allocated:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{progressData?.totalPointValue || 0} pts</Typography>
+                  <Typography variant="caption" sx={{ color: "#94a3b8", ml: 2 }}>Remaining:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{Math.max(0, (task.estimatedPoints || 0) - (progressData?.totalPointValue || 0))} pts</Typography>
+                </Stack>
+              </Box>
+
+              <Box sx={{ mb: 1 }}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
+                  <TextField size="small" label="Title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} sx={{ flex: 1 }} />
+                  <TextField size="small" label="Points" type="number" inputProps={{ min: 1 }} value={newPoints} onChange={(e) => setNewPoints(Math.max(1, Number(e.target.value || 1)))} sx={{ width: 120 }} />
+                  <Button variant="contained" disabled={!newTitle.trim() || createMutation.isLoading || (task.estimatedPoints || 0) <= 0 || Number(newPoints) > Math.max(0, (task.estimatedPoints || 0) - (progressData?.totalPointValue || 0))} onClick={async () => {
+                    try {
+                      await createMutation.mutateAsync({ taskId: task.id, data: { title: newTitle.trim(), description: null, pointValue: Number(newPoints) } });
+                      setNewTitle("");
+                      setNewPoints(1);
+                    } catch (err) {
+                      setStoryPointError(err?.message || "Failed to create story point.");
+                    }
+                  }}>
+                    {createMutation.isLoading ? "Adding..." : "Add"}
+                  </Button>
+                </Stack>
+              </Box>
+
+                <StoryPointChecklist
+                  storyPoints={storyPoints}
+                  loading={false}
+                  error={storyPointError}
+                  togglingId={togglingStoryPointId}
+                  onToggle={handleToggleStoryPoint}
+                />
             </Box>
           </Card>
         </Grid>

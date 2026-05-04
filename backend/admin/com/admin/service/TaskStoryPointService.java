@@ -32,8 +32,20 @@ public class TaskStoryPointService {
     public TaskStoryPointDto createStoryPoint(String actorEmail, Long taskId, CreateTaskStoryPointRequest request) {
         User actor = getUserByEmail(actorEmail);
         TaskItem task = getTask(taskId);
+        validateCanCreateStoryPoint(actor, task, request.getPointValue());
 
-        validateManagerCanManageStoryPoints(actor, task);
+        // Ensure task has estimatedPoints set and positive
+        Integer taskEstimated = task.getEstimatedPoints();
+        if (taskEstimated == null || taskEstimated <= 0) {
+            throw new RuntimeException("Task must have estimated points set before creating story points");
+        }
+
+        // Ensure total point values do not exceed task.estimatedPoints
+        List<TaskStoryPoint> existing = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(task.getId());
+        long existingTotal = existing.stream().mapToLong(p -> p.getPointValue() == null ? 0 : p.getPointValue()).sum();
+        if (existingTotal + (request.getPointValue() == null ? 0 : request.getPointValue()) > taskEstimated) {
+            throw new RuntimeException("Adding this story point would exceed the task's estimated points");
+        }
 
         TaskStoryPoint storyPoint = TaskStoryPoint.builder()
                 .task(task)
@@ -72,6 +84,23 @@ public class TaskStoryPointService {
         TaskStoryPoint storyPoint = getStoryPoint(storyPointId);
 
         validateManagerCanManageStoryPoints(actor, storyPoint.getTask());
+
+        // When updating a story point, ensure the total does not exceed task.estimatedPoints
+        TaskItem task = storyPoint.getTask();
+        Integer taskEstimated = task.getEstimatedPoints();
+        if (taskEstimated == null || taskEstimated <= 0) {
+            throw new RuntimeException("Task must have estimated points set before updating story points");
+        }
+
+        List<TaskStoryPoint> existing = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(task.getId());
+        long othersTotal = existing.stream()
+                .filter(p -> !Objects.equals(p.getId(), storyPoint.getId()))
+                .mapToLong(p -> p.getPointValue() == null ? 0 : p.getPointValue())
+                .sum();
+
+        if (othersTotal + (request.getPointValue() == null ? 0 : request.getPointValue()) > taskEstimated) {
+            throw new RuntimeException("Updating this story point would exceed the task's estimated points");
+        }
 
         storyPoint.setTitle(request.getTitle().trim());
         storyPoint.setDescription(request.getDescription());
@@ -228,7 +257,7 @@ public class TaskStoryPointService {
         if (progress == 0) {
             nextStatus = TaskStatus.TODO;
         } else if (progress == 100) {
-            nextStatus = TaskStatus.COMPLETED;
+            nextStatus = TaskStatus.DONE;
         } else {
             nextStatus = TaskStatus.IN_PROGRESS;
         }
@@ -247,7 +276,7 @@ public class TaskStoryPointService {
         if (progress == 0) {
             status = TaskStatus.TODO;
         } else if (progress == 100) {
-            status = TaskStatus.COMPLETED;
+            status = TaskStatus.DONE;
         } else {
             status = TaskStatus.IN_PROGRESS;
         }
@@ -351,6 +380,38 @@ public class TaskStoryPointService {
         if (!Objects.equals(task.getAssignedTo().getId(), developer.getId())) {
             throw new AccessDeniedException("You can only update story points for your assigned tasks");
         }
+    }
+
+    private void validateCanCreateStoryPoint(User actor, TaskItem task, Integer newPointValue) {
+        if (actor.getAllRoles().contains(Role.ADMIN)) {
+            return;
+        }
+
+        if (actor.getAllRoles().contains(Role.MANAGER)) {
+            Long actorId = actor.getId();
+            Long taskCreatorId = task.getCreatedBy() == null ? null : task.getCreatedBy().getId();
+            Long projectManagerId = task.getProject() == null || task.getProject().getManager() == null
+                    ? null
+                    : task.getProject().getManager().getId();
+
+            if (Objects.equals(actorId, taskCreatorId) || Objects.equals(actorId, projectManagerId)) {
+                return;
+            }
+            throw new AccessDeniedException("You are not allowed to manage story points for this task");
+        }
+
+        if (actor.getAllRoles().contains(Role.DEVELOPER)) {
+            Long assignedDevId = task.getAssignedTo() == null ? null : task.getAssignedTo().getId();
+            if (assignedDevId == null) {
+                throw new AccessDeniedException("Task is not assigned to a developer");
+            }
+            if (!Objects.equals(assignedDevId, actor.getId())) {
+                throw new AccessDeniedException("You can only add story points for your assigned tasks");
+            }
+            return;
+        }
+
+        throw new AccessDeniedException("Only managers or assigned developers can create story points");
     }
 
     private void validateManagerCanManageStoryPoints(User actor, TaskItem task) {

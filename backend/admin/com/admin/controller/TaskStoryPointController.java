@@ -18,7 +18,7 @@ public class TaskStoryPointController {
     private final TaskStoryPointService taskStoryPointService;
 
     @PostMapping("/api/tasks/{taskId}/story-points")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','DEVELOPER')")
     public ResponseEntity<TaskStoryPointDto> createStoryPoint(
             Authentication authentication,
             @PathVariable Long taskId,

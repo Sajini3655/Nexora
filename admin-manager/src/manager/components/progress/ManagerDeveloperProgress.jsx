@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { Box, Chip, Paper, Stack, Typography, Button } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
 import { useManagerDevelopers, useManagerTasks } from "../../data/useManager";
-import { getErrorMessage } from "../../../services/managerService";
+import { fetchDeveloperProgressSummary, getErrorMessage } from "../../../services/managerService";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import DeveloperProgressTable from "./DeveloperProgressTable";
 
@@ -242,12 +243,6 @@ export default function ManagerDeveloperProgress({
   const rawError = hasExternalData
     ? (errorOverride || null)
     : (developersQuery?.error || tasksQuery?.error || null);
-  const isForbidden = rawError?.response?.status === 403;
-  const error = rawError
-    ? isForbidden
-      ? "You don't have permission to view developer progress. Switch to a Manager account or ask an admin to grant Manager access."
-      : getErrorMessage(rawError, rawError.message || "Failed to load developer progress")
-    : "";
 
   const developers = hasExternalData
     ? developersData
@@ -256,16 +251,72 @@ export default function ManagerDeveloperProgress({
     ? tasksData
     : (Array.isArray(tasksQuery?.data) ? tasksQuery.data : []);
 
+  const developerIds = useMemo(
+    () => (Array.isArray(developers) ? developers.map((developer) => String(developer?.id ?? "")).filter(Boolean) : []),
+    [developers]
+  );
+
+  const backendProgressQuery = useQuery({
+    queryKey: ["manager", "developerProgress", developerIds.join(",")],
+    enabled: developerIds.length > 0,
+    retry: false,
+    queryFn: async () => {
+      const requests = await Promise.allSettled(
+        developers.map((developer) => fetchDeveloperProgressSummary(developer.id))
+      );
+
+      const rows = requests.map((result, index) => {
+        const developer = developers[index] || {};
+
+        if (result.status === "fulfilled" && result.value) {
+          return result.value;
+        }
+
+        return {
+          developerId: developer.id,
+          developerName: developer.name || "Developer",
+          assignedTasks: 0,
+          completedTasks: 0,
+          inProgressTasks: 0,
+          totalStoryPoints: 0,
+          completedStoryPoints: 0,
+          totalPointValue: 0,
+          completedPointValue: 0,
+          averageProgress: 0,
+        };
+      });
+
+      const allFailed = requests.length > 0 && requests.every((result) => result.status === "rejected");
+      if (allFailed) {
+        const firstError = requests.find((result) => result.status === "rejected");
+        throw firstError?.reason || new Error("Failed to load developer progress");
+      }
+
+      return rows;
+    },
+  });
+
   const hasAnyData = (Array.isArray(developers) && developers.length > 0) || (Array.isArray(tasks) && tasks.length > 0);
-  const effectiveLoading = loading && !hasAnyData;
+  const effectiveLoading = (loading || backendProgressQuery.isLoading || backendProgressQuery.isFetching) && !hasAnyData;
 
   const rows = useMemo(() => {
+    if (Array.isArray(backendProgressQuery.data) && backendProgressQuery.data.length > 0) {
+      return backendProgressQuery.data;
+    }
     return buildSummariesFromTasks(developers, tasks);
-  }, [developers, tasks]);
+  }, [backendProgressQuery.data, developers, tasks]);
 
   const delayedTaskCount = useMemo(() => {
     return tasks.filter(isDelayedTask).length;
   }, [tasks]);
+
+  const effectiveError = rawError || backendProgressQuery.error || null;
+  const effectiveForbidden = effectiveError?.response?.status === 403;
+  const effectiveErrorText = effectiveError
+    ? effectiveForbidden
+      ? "You don't have permission to view developer progress. Switch to a Manager account or ask an admin to grant Manager access."
+      : getErrorMessage(effectiveError, effectiveError.message || "Failed to load developer progress")
+    : "";
 
   const totals = useMemo(() => {
     const assignedTasks = rows.reduce((sum, row) => sum + Number(row.assignedTasks || 0), 0);
@@ -319,10 +370,10 @@ export default function ManagerDeveloperProgress({
       ) : null}
 
       {effectiveLoading ? <Typography variant="body2" sx={{ color: "#94a3b8" }}>Loading developer progress...</Typography> : null}
-      {error ? (
+      {effectiveErrorText ? (
         <Box sx={{ mb: 1.2 }}>
-          <ErrorNotice message={error} severity={isForbidden ? "info" : "warning"} sx={{ mb: 1 }} dedupeKey="manager-developer-progress-error" />
-          {!isForbidden ? (
+          <ErrorNotice message={effectiveErrorText} severity={effectiveForbidden ? "info" : "warning"} sx={{ mb: 1 }} dedupeKey="manager-developer-progress-error" />
+          {!effectiveForbidden ? (
             <Button size="small" variant="outlined" onClick={() => {
               if (typeof onRetry === "function") {
                 onRetry();
@@ -330,6 +381,7 @@ export default function ManagerDeveloperProgress({
                 developersQuery.refetch();
                 tasksQuery.refetch();
               }
+              backendProgressQuery.refetch();
             }}>
               Retry
             </Button>
