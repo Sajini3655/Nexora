@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../context/AuthContext.jsx";
 import {
   fetchProjects,
   fetchManagerTasks,
@@ -9,17 +10,24 @@ import {
   getTaskProjectName,
 } from "../../services/managerService";
 
+export function getManagerQueryScope(user) {
+  return String(user?.id ?? user?.email ?? user?.role ?? "anonymous");
+}
+
 export const managerKeys = {
-  all: ["manager"],
-  projects: () => [...managerKeys.all, "projects"],
-  tasks: () => [...managerKeys.all, "tasks"],
-  developers: () => [...managerKeys.all, "developers"],
-  projectDetails: (projectId) => [...managerKeys.all, "projectDetails", projectId],
+  all: (scope) => ["manager", scope],
+  projects: (scope) => [...managerKeys.all(scope), "projects"],
+  tasks: (scope) => [...managerKeys.all(scope), "tasks"],
+  developers: (scope) => [...managerKeys.all(scope), "developers"],
+  projectDetails: (scope, projectId) => [...managerKeys.all(scope), "projectDetails", projectId],
 };
 
 export function useManagerProjects(enabled = true) {
+  const { user } = useAuth() || {};
+  const scope = getManagerQueryScope(user);
+
   return useQuery({
-    queryKey: managerKeys.projects(),
+    queryKey: managerKeys.projects(scope),
     queryFn: fetchProjects,
     enabled,
     retry: false,
@@ -33,8 +41,11 @@ export function useManagerProjects(enabled = true) {
 }
 
 export function useManagerTasks(enabled = true) {
+  const { user } = useAuth() || {};
+  const scope = getManagerQueryScope(user);
+
   return useQuery({
-    queryKey: managerKeys.tasks(),
+    queryKey: managerKeys.tasks(scope),
     queryFn: fetchManagerTasks,
     enabled,
     retry: false,
@@ -47,8 +58,11 @@ export function useManagerTasks(enabled = true) {
 }
 
 export function useManagerDevelopers(enabled = true) {
+  const { user } = useAuth() || {};
+  const scope = getManagerQueryScope(user);
+
   return useQuery({
-    queryKey: managerKeys.developers(),
+    queryKey: managerKeys.developers(scope),
     queryFn: fetchManagerDevelopers,
     enabled,
     retry: false,

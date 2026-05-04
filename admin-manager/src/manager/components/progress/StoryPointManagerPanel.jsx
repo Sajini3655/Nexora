@@ -36,7 +36,8 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
 
   const storyPointsQuery = useTaskStoryPoints(selectedTaskId);
   const storyPoints = Array.isArray(storyPointsQuery.data) ? storyPointsQuery.data : [];
-  const loading = storyPointsQuery.isLoading || storyPointsQuery.isFetching;
+  const loading = storyPointsQuery.isLoading;
+  const refreshing = storyPointsQuery.isFetching && !loading && storyPoints.length > 0;
 
   const selectedTask = useMemo(
     () => tasks.find((task) => String(task?.id) === String(selectedTaskId)) || null,

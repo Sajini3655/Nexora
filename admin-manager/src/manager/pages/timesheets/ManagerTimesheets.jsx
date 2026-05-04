@@ -41,10 +41,10 @@ export default function ManagerTimesheets() {
 
   const itemsQuery = useTeamTimesheets(filter);
   const summaryQuery = useTeamTimesheetsSummary();
-  
   const items = Array.isArray(itemsQuery.data) ? itemsQuery.data : [];
   const summary = summaryQuery.data || null;
-  const loading = itemsQuery.isLoading || itemsQuery.isFetching || summaryQuery.isLoading || summaryQuery.isFetching;
+  const loading = itemsQuery.isLoading || summaryQuery.isLoading;
+  const refreshing = (itemsQuery.isFetching || summaryQuery.isFetching) && !loading && (items.length > 0 || summary !== null);
   const fetchError = itemsQuery.error?.message || summaryQuery.error?.message || "";
 
   const summaryCards = useMemo(() => ([
@@ -143,6 +143,12 @@ export default function ManagerTimesheets() {
           </Button>
         ))}
       </Stack>
+
+      {refreshing ? (
+        <Typography variant="body2" sx={{ color: "#94a3b8", textAlign: "right", mt: -1 }}>
+          Refreshing timesheets...
+        </Typography>
+      ) : null}
 
       {loading ? (
         <Card sx={{ p: 3 }}>

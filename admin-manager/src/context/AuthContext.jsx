@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import useApi from "../hooks/useApi.jsx";
 import { normalizeRole, normalizeRoles } from "../utils/permissions";
 
@@ -6,15 +7,21 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const api = useApi();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [moduleAccess, setModuleAccess] = useState(null);
   const [accessLoading, setAccessLoading] = useState(false);
 
+  function clearAuthCaches() {
+    queryClient.clear();
+  }
+
   // Load current user if token exists
   async function loadMe() {
     const token = localStorage.getItem("token");
     if (!token) {
+      clearAuthCaches();
       setUser(null);
       setModuleAccess(null);
       setAccessLoading(false);
@@ -53,6 +60,7 @@ export function AuthProvider({ children }) {
       return normalizedUser;
     } catch (err) {
       console.warn("loadMe failed, clearing token", err);
+      clearAuthCaches();
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       setUser(null);
@@ -63,6 +71,7 @@ export function AuthProvider({ children }) {
   }
 
   async function login({ email, password }) {
+    clearAuthCaches();
     const res = await api.post("/auth/login", { email, password });
     const { token } = res.data;
     if (!token) throw new Error("No token received");
@@ -72,6 +81,7 @@ export function AuthProvider({ children }) {
 
   // Register function for normal registration (if needed)
   async function register({ name, email, password, role }) {
+    clearAuthCaches();
     const res = await api.post("/auth/register", { name, email, password, role });
     const { token } = res.data;
     if (!token) throw new Error("No token received on registration");
@@ -90,6 +100,7 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
+    clearAuthCaches();
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);

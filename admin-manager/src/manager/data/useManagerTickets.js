@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../../context/AuthContext.jsx";
 import api from "../../services/api";
+import { getManagerQueryScope } from "./useManager";
 
 export const managerTicketKeys = {
-  all: ["managerTickets"],
-  recent: () => [...managerTicketKeys.all, "recent"],
+  all: (scope) => ["managerTickets", scope],
+  recent: (scope) => [...managerTicketKeys.all(scope), "recent"],
 };
 
 async function fetchRecentEmailTickets() {
@@ -12,8 +14,11 @@ async function fetchRecentEmailTickets() {
 }
 
 export function useRecentEmailTickets(enabled = true) {
+  const { user } = useAuth() || {};
+  const scope = getManagerQueryScope(user);
+
   return useQuery({
-    queryKey: managerTicketKeys.recent(),
+    queryKey: managerTicketKeys.recent(scope),
     queryFn: fetchRecentEmailTickets,
     enabled,
     retry: false,

@@ -22,6 +22,8 @@ public class TicketDto {
     private Long projectId;
     private String projectName;
     private Long assignedTaskId;
+    private Long managerId;
+    private Long clientId;
     private Long createdById;
     private String createdByName;
     private Long assignedToId;

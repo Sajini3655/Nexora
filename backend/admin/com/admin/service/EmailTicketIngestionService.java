@@ -4,15 +4,20 @@ import com.admin.dto.InboundEmailTicketRequest;
 import com.admin.dto.InboundEmailTicketResponse;
 import com.admin.dto.TicketDto;
 import com.admin.entity.Project;
+import com.admin.entity.Role;
 import com.admin.entity.Ticket;
 import com.admin.entity.User;
 import com.admin.repository.ProjectRepository;
 import com.admin.repository.TicketRepository;
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +27,8 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class EmailTicketIngestionService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailTicketIngestionService.class);
 
     private static final Set<String> ISSUE_KEYWORDS = Set.of(
             "bug", "issue", "error", "crash", "failed", "failing", "exception", "not working", "broken", "defect", "problem"
@@ -55,26 +62,27 @@ public class EmailTicketIngestionService {
         if (!shouldCreateTicket) {
             return InboundEmailTicketResponse.builder()
                     .ignored(true)
-                .reason(aiClassification.isUnknown()
-                    ? "Email ignored because no bug/issue keywords were detected"
-                    : aiClassification.getReason())
+                    .reason(aiClassification.isUnknown()
+                            ? "Email ignored because no bug/issue keywords were detected"
+                            : aiClassification.getReason())
                     .build();
         }
 
-        Project project = resolveProject(request, subject, body)
-                .orElseThrow(() -> new RuntimeException("Unable to resolve project from email. Provide projectId/projectName or include 'Project: <name>' in the email."));
+        User senderUser = fromEmail == null ? null : userRepository.findByEmailIgnoreCase(fromEmail).orElse(null);
+        User senderClient = isClient(senderUser) ? senderUser : null;
 
-        User manager = project.getManager();
-        User createdBy = fromEmail == null ? null : userRepository.findByEmailIgnoreCase(fromEmail).orElse(null);
+        RoutingDecision routing = resolveRouting(request, subject, body, senderClient);
 
         Ticket ticket = Ticket.builder()
                 .title(subject)
-                .description(buildDescription(body, fromEmail, project.getName()))
-                .status("OPEN")
+                .description(buildDescription(body, fromEmail, routing.project == null ? "UNASSIGNED" : routing.project.getName()))
+                .status(routing.unassigned ? "UNASSIGNED" : "OPEN")
                 .priority(classifyPriority(scanText))
-                .createdBy(createdBy)
-                .assignedTo(manager)
-                .project(project)
+                .createdBy(senderUser)
+                .assignedTo(null)
+                .manager(routing.manager)
+                .client(senderClient)
+                .project(routing.project)
                 .sourceChannel("EMAIL")
                 .sourceEmail(fromEmail)
                 .sourceSubject(subject)
@@ -83,17 +91,54 @@ public class EmailTicketIngestionService {
         Ticket saved = ticketRepository.save(ticket);
         liveUpdatePublisher.publishTicketsChanged("created");
 
-        if (manager != null && manager.getEmail() != null && !manager.getEmail().isBlank()) {
-            mailService.sendManagerTicketNotification(manager.getEmail(), manager.getName(), project.getName(), saved.getId(), subject);
+        log.info("email_ticket_routing ticketId={} projectId={} managerId={} clientId={} unassigned={} route={}",
+                saved.getId(),
+                routing.project == null ? null : routing.project.getId(),
+                routing.manager == null ? null : routing.manager.getId(),
+                senderClient == null ? null : senderClient.getId(),
+                routing.unassigned,
+                routing.reason);
+
+        if (routing.manager != null && routing.manager.getEmail() != null && !routing.manager.getEmail().isBlank()) {
+            mailService.sendManagerTicketNotification(
+                    routing.manager.getEmail(),
+                    routing.manager.getName(),
+                    routing.project == null ? "Unspecified Project" : routing.project.getName(),
+                    saved.getId(),
+                    subject
+            );
         }
 
         TicketDto dto = toTicketDto(saved);
 
         return InboundEmailTicketResponse.builder()
                 .ignored(false)
-                .reason("Ticket created and routed to project manager")
+                .reason(routing.reason)
                 .ticket(dto)
                 .build();
+    }
+
+    private RoutingDecision resolveRouting(InboundEmailTicketRequest request, String subject, String body, User senderClient) {
+        Optional<Project> explicitProject = resolveProject(request, subject, body);
+        if (explicitProject.isPresent()) {
+            Project project = explicitProject.get();
+            return new RoutingDecision(project, project.getManager(), false, "Ticket routed using explicit/inferred project match");
+        }
+
+        if (senderClient != null) {
+            Set<Project> historicalProjects = new LinkedHashSet<>();
+            ticketRepository.findByClientId(senderClient.getId()).stream()
+                    .map(Ticket::getProject)
+                    .filter(p -> p != null && p.getManager() != null)
+                    .forEach(historicalProjects::add);
+
+            if (historicalProjects.size() == 1) {
+                Project project = historicalProjects.iterator().next();
+                return new RoutingDecision(project, project.getManager(), false, "Ticket routed by client historical single-project match");
+            }
+        }
+
+        return new RoutingDecision(null, null, true, "No reliable project/manager match. Routed to admin UNASSIGNED queue");
     }
 
     private Optional<Project> resolveProject(InboundEmailTicketRequest request, String subject, String body) {
@@ -111,10 +156,25 @@ public class EmailTicketIngestionService {
 
         String extractedProject = extractProjectName(subject + "\n" + body);
         if (extractedProject != null) {
-            return projectRepository.findByNameIgnoreCase(extractedProject);
+            Optional<Project> byName = projectRepository.findByNameIgnoreCase(extractedProject);
+            if (byName.isPresent()) {
+                return byName;
+            }
+
+            String lowered = extractedProject.toLowerCase(Locale.ROOT);
+            List<Project> fuzzy = projectRepository.findAll().stream()
+                    .filter(p -> p.getName() != null && p.getName().toLowerCase(Locale.ROOT).contains(lowered))
+                    .toList();
+            if (fuzzy.size() == 1) {
+                return Optional.of(fuzzy.get(0));
+            }
         }
 
         return Optional.empty();
+    }
+
+    private boolean isClient(User user) {
+        return user != null && user.getAllRoles().contains(Role.CLIENT);
     }
 
     private String classifyPriority(String scanText) {
@@ -189,6 +249,8 @@ public class EmailTicketIngestionService {
                 .priority(ticket.getPriority())
                 .projectId(ticket.getProject() == null ? null : ticket.getProject().getId())
                 .projectName(ticket.getProject() == null ? null : ticket.getProject().getName())
+                .managerId(ticket.getManager() == null ? null : ticket.getManager().getId())
+                .clientId(ticket.getClient() == null ? null : ticket.getClient().getId())
                 .createdById(ticket.getCreatedBy() == null ? null : ticket.getCreatedBy().getId())
                 .createdByName(ticket.getCreatedBy() == null ? null : ticket.getCreatedBy().getName())
                 .assignedToId(ticket.getAssignedTo() == null ? null : ticket.getAssignedTo().getId())
@@ -199,5 +261,7 @@ public class EmailTicketIngestionService {
                 .updatedAt(ticket.getUpdatedAt())
                 .build();
     }
-}
 
+    private record RoutingDecision(Project project, User manager, boolean unassigned, String reason) {
+    }
+}
