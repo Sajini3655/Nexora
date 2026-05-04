@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Box, Chip, Paper, Stack, Typography, Button } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useManagerDevelopers, useManagerTasks } from "../../data/useManager";
@@ -101,13 +101,6 @@ function buildSummariesFromTasks(developers, tasks) {
     return candidate == null || candidate === "" ? "" : String(candidate);
   };
 
-  console.log("🔍 buildSummariesFromTasks DEBUG:", { 
-    developerCount: Array.isArray(developers) ? developers.length : 0,
-    taskCount: Array.isArray(tasks) ? tasks.length : 0,
-    firstTask: Array.isArray(tasks) ? tasks[0] : null,
-    firstDev: Array.isArray(developers) ? developers[0] : null,
-  });
-
   (Array.isArray(developers) ? developers : []).forEach((developer) => {
     const key = String(developer?.id ?? "");
     const devName = developer?.name || "Developer";
@@ -135,30 +128,13 @@ function buildSummariesFromTasks(developers, tasks) {
   (Array.isArray(tasks) ? tasks : []).forEach((task) => {
     let key = getTaskAssigneeId(task);
 
-    console.log(`  Task: ${task?.title || task?.name || "N/A"} | Raw assignee fields:`, {
-      assignedToId: task?.assignedToId,
-      assigneeId: task?.assigneeId,
-      assigned_to_id: task?.assigned_to_id,
-      assignedTo: task?.assignedTo,
-      assignee: task?.assignee,
-      assignedUser: task?.assignedUser,
-      assignedToName: task?.assignedToName,
-      assigneeName: task?.assigneeName,
-      assigned_to_name: task?.assigned_to_name,
-      candidateId: key,
-      allKeys: Object.keys(task || {}).filter((k) => /assigned|assignee|developer|user/i.test(k)),
-    });
-
     if (!key) {
       const assigneeName = normalizeName(getTaskAssigneeName(task));
       if (assigneeName && developerNameToId.has(assigneeName)) {
         key = developerNameToId.get(assigneeName);
-        console.log(`  Found assignee by name: "${assigneeName}" -> key: "${key}"`);
       } else {
-        console.log(`  No assignee found for task: ${task?.title || task?.name || "N/A"}`);
       }
     } else {
-      console.log(`  Found assignee by ID: "${key}"`);
     }
 
     if (!key) return;
@@ -192,8 +168,6 @@ function buildSummariesFromTasks(developers, tasks) {
       task?.completedPointValue ?? completedStoryPoints ?? (taskIsCompleted(task) ? totalPointValue : 0)
     );
 
-    console.log(`  Task: ${task?.title || "N/A"} | Assignee: ${summary.developerName} | Points: ${totalPointValue} | Completed: ${completedPointValue}`);
-
     summary.assignedTasks += 1;
     summary.completedTasks += taskIsCompleted(task) ? 1 : 0;
     summary.inProgressTasks += taskIsCompleted(task) ? 0 : 1;
@@ -211,15 +185,11 @@ function buildSummariesFromTasks(developers, tasks) {
           ? Math.round((summary.completedTasks * 100) / summary.assignedTasks)
           : 0;
 
-    console.log(`  FINAL: ${summary.developerName} | Assigned: ${summary.assignedTasks} | Total Points: ${summary.totalPointValue} | Completed: ${summary.completedPointValue} | Progress: ${averageProgress}%`);
-
     return {
       ...summary,
       averageProgress,
     };
   });
-
-  console.log("📊 Final rows:", results);
   return results;
 }
 
@@ -231,6 +201,7 @@ export default function ManagerDeveloperProgress({
   loadingOverride,
   errorOverride,
   onRetry,
+  onTotalsChange,
 }) {
   // Only create queries if external data NOT provided - avoids query overhead
   const hasExternalData = Array.isArray(developersData) && Array.isArray(tasksData);
@@ -310,7 +281,8 @@ export default function ManagerDeveloperProgress({
     return tasks.filter(isDelayedTask).length;
   }, [tasks]);
 
-  const effectiveError = rawError || backendProgressQuery.error || null;
+  const hasUsableRows = Array.isArray(rows) && rows.length > 0;
+  const effectiveError = hasUsableRows ? null : (rawError || backendProgressQuery.error || null);
   const effectiveForbidden = effectiveError?.response?.status === 403;
   const effectiveErrorText = effectiveError
     ? effectiveForbidden
@@ -327,6 +299,19 @@ export default function ManagerDeveloperProgress({
 
     return { assignedTasks, completedPoints, totalPoints, completedPointValue, totalPointValue };
   }, [rows]);
+
+  useEffect(() => {
+    if (typeof onTotalsChange !== "function") return;
+
+    onTotalsChange({
+      assignedTasks: totals.assignedTasks,
+      completedStoryPoints: totals.completedPoints,
+      totalStoryPoints: totals.totalPoints,
+      completedPointValue: totals.completedPointValue,
+      totalPointValue: totals.totalPointValue,
+      delayedTaskCount,
+    });
+  }, [onTotalsChange, totals, delayedTaskCount]);
 
   return (
     <Paper
@@ -392,4 +377,7 @@ export default function ManagerDeveloperProgress({
     </Paper>
   );
 }
+
+
+
 

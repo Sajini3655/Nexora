@@ -31,6 +31,20 @@ import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloper
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
 import ErrorNotice from "../../../components/ui/ErrorNotice.jsx";
+import {
+  buildSummariesFromTasks,
+  calculateDeveloperProgressTotals,
+  isDelayedTask,
+  taskIsCompleted,
+} from "../../utils/developerProgressUtils.js";
+
+
+
+const handleDeveloperProgressTotalsChange = (totals = {}) => {
+  // Safe fallback handler for ManagerDeveloperProgress totals.
+  // This prevents ManagerDashboard from crashing if totals are emitted.
+  console.debug("Developer progress totals:", totals);
+};
 
 const sectionCardSx = {
   p: { xs: 1.6, md: 1.9 },
@@ -74,6 +88,14 @@ function normalizeTicketPriority(ticket) {
     .replace(/[\s_-]+/g, " ")
     .trim()
     .toLowerCase();
+
+
+const handleDeveloperProgressTotalsChange = (totals = {}) => {
+  // Safe fallback handler for ManagerDeveloperProgress totals.
+  // This prevents ManagerDashboard from crashing if totals are emitted.
+  console.debug("Developer progress totals:", totals);
+};
+
 }
 
 function getTicketTimestamp(ticket) {
@@ -115,6 +137,7 @@ function isVisibleSnapshotTicket(ticket) {
 }
 
 function SmallBadge({ children, color = "#cbd5e1", glow = "rgba(148,163,184,0.12)" }) {
+
   return (
     <Box
       component="span"
@@ -142,6 +165,7 @@ function SmallBadge({ children, color = "#cbd5e1", glow = "rgba(148,163,184,0.12
 }
 
 function StatCard({ label, value, hint, icon, color, bg }) {
+
   return (
     <Paper
       sx={{
@@ -190,6 +214,7 @@ function StatCard({ label, value, hint, icon, color, bg }) {
 }
 
 function DashboardMetricCard({ label, value, hint, icon }) {
+
   return (
     <Paper
       sx={{
@@ -238,6 +263,7 @@ function DashboardMetricCard({ label, value, hint, icon }) {
 }
 
 function TicketMetricCard({ label, value, hint, icon, color, bg }) {
+
   return (
     <Paper
       sx={{
@@ -286,6 +312,7 @@ function TicketMetricCard({ label, value, hint, icon, color, bg }) {
 }
 
 function EmptyMiniState({ title, text }) {
+
   return (
     <Paper
       sx={{
@@ -306,6 +333,7 @@ function EmptyMiniState({ title, text }) {
 
 function TaskFocusRow({ task, type, getTaskTitle, getTaskDate }) {
   const isDone = type === "done";
+
   return (
     <Box
       sx={{
@@ -354,6 +382,7 @@ function TaskFocusRow({ task, type, getTaskTitle, getTaskDate }) {
 export default function ManagerDashboard() {
   const navigate = useNavigate();
   const [expandProjects, setExpandProjects] = useState(false);
+  const [developerProgressTotalsFromTable, setDeveloperProgressTotalsFromTable] = useState(null);
   const projectsQuery = useManagerProjects();
   const tasksQuery = useManagerTasks();
   const developersQuery = useManagerDevelopers();
@@ -398,6 +427,7 @@ export default function ManagerDashboard() {
     };
 
     document.addEventListener("visibilitychange", refreshWhenResumed);
+
 
     return () => {
       document.removeEventListener("visibilitychange", refreshWhenResumed);
@@ -574,32 +604,20 @@ export default function ManagerDashboard() {
     [projectRows]
   );
 
-  const completionRate = useMemo(() => {
-    const totalPointValue = tasks.reduce(
-      (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0),
-      0
-    );
-    const completedPointValue = tasks.reduce((sum, task) => {
-      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
-      return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
-    }, 0);
-
-    if (totalPointValue === 0) return 0;
-    return Math.round((completedPointValue / totalPointValue) * 100);
-  }, [tasks]);
-
-  const totalWeighted = useMemo(
-    () => tasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0), 0),
-    [tasks]
+  const developerProgressRows = useMemo(
+    () => buildSummariesFromTasks(developers, tasks),
+    [developers, tasks]
   );
 
-  const doneWeighted = useMemo(
-    () => tasks.reduce((sum, task) => {
-      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
-      return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
-    }, 0),
-    [tasks]
+  const developerProgressTotals = useMemo(
+    () => calculateDeveloperProgressTotals(developerProgressRows, tasks),
+    [developerProgressRows, tasks]
   );
+  const completionRate = developerProgressTotals.completionRate;
+
+  const totalWeighted = developerProgressTotals.totalPointValue;
+
+  const doneWeighted = developerProgressTotals.completedPointValue;
 
   const openTasks = useMemo(() => tasks.filter((task) => !isCompletedTask(task)), [tasks]);
 
@@ -651,25 +669,40 @@ export default function ManagerDashboard() {
     ? Math.round(projectRows.reduce((sum, project) => sum + project.progress, 0) / projectRows.length)
     : 0;
 
-  const assignedTaskCount = useMemo(
-    () => tasks.filter((task) => hasTaskAssignee(task)).length,
-    [tasks]
-  );
+  const assignedTaskCount = developerProgressTotals.assignedTasks;
 
-  const delayedTaskCount = useMemo(
-    () => tasks.filter((task) => {
-      const dateValue = getTaskDate(task);
-      if (!dateValue) return false;
-      const date = new Date(dateValue);
-      return !isCompletedTask(task) && date.getTime() > 0 && date.getTime() < Date.now();
-    }).length,
-    [tasks]
-  );
+  const delayedTaskCount = developerProgressTotals.delayedTaskCount;
+const progressTotals = useMemo(() => {
+    return developerProgressRows.reduce(
+      (acc, row) => {
+        acc.assignedTasks += Number(row.assignedTasks || 0);
+        acc.completedStoryPoints += Number(row.completedStoryPoints || 0);
+        acc.totalStoryPoints += Number(row.totalStoryPoints || 0);
+        acc.completedPointValue += Number(row.completedPointValue || 0);
+        acc.totalPointValue += Number(row.totalPointValue || 0);
+        return acc;
+      },
+      {
+        assignedTasks: 0,
+        completedStoryPoints: 0,
+        totalStoryPoints: 0,
+        completedPointValue: 0,
+        totalPointValue: 0,
+      }
+    );
+  }, [developerProgressRows]);
 
-  const storyPointsLabel = `${doneWeighted}/${totalWeighted}`;
-  const weightedPointsLabel = `${doneWeighted}/${totalWeighted}`;
+  const displayedWeightedProgress =
+    progressTotals.totalPointValue > 0
+      ? Math.round((progressTotals.completedPointValue * 100) / progressTotals.totalPointValue)
+      : completionRate;
+
+  const displayedWeightedDone = progressTotals.completedPointValue;
+  const storyPointsLabel = `${progressTotals.completedStoryPoints}/${progressTotals.totalStoryPoints}`;
+  const weightedPointsLabel = `${progressTotals.completedPointValue}/${progressTotals.totalPointValue}`;
 
   if (loading) {
+
     return (
       <Box sx={{ p: 3, minHeight: "52vh", display: "grid", placeItems: "center" }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -679,6 +712,7 @@ export default function ManagerDashboard() {
       </Box>
     );
   }
+
 
   return (
     <Box sx={{ pb: { xs: 2, md: 3 } }}>
@@ -721,15 +755,15 @@ export default function ManagerDashboard() {
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             label="Weighted Progress"
-            value={`${completionRate}%`}
-            hint={`${doneWeighted}/${totalWeighted} points completed`}
+            value={`${displayedWeightedProgress}%`}
+            hint={`${progressTotals.completedPointValue}/${progressTotals.totalPointValue} points completed`}
             icon={<TrendingUpRoundedIcon />}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             label="Weighted Done"
-            value={doneWeighted}
+            value={progressTotals.completedPointValue}
             hint="Point value completed"
             icon={<DoneAllRoundedIcon />}
           />
@@ -763,6 +797,7 @@ export default function ManagerDashboard() {
                 const progressBg = project.progress >= 80 ? "rgba(34,197,94,0.14)" : project.progress >= 40 ? "rgba(56,189,248,0.14)" : "rgba(244,63,94,0.14)";
                 const statusTone = project.status === "Active" ? "#86efac" : project.status === "Completed" ? "#7dd3fc" : "#fda4af";
                 const statusBg = project.status === "Active" ? "rgba(34,197,94,0.14)" : project.status === "Completed" ? "rgba(56,189,248,0.14)" : "rgba(244,63,94,0.14)";
+
 
                 return (
                   <Grid item xs={12} md={6} xl={4} key={project.id || project.name}>
@@ -980,6 +1015,7 @@ export default function ManagerDashboard() {
           loadingOverride={developersQuery.isLoading || tasksQuery.isLoading}
           errorOverride={developersQuery.error || tasksQuery.error || null}
           onRetry={() => Promise.all([developersQuery.refetch(), tasksQuery.refetch()])}
+          onTotalsChange={handleDeveloperProgressTotalsChange}
         />
       </Paper>
 
@@ -1044,3 +1080,13 @@ export default function ManagerDashboard() {
     </Box>
   );
 }
+
+
+
+
+
+
+
+
+
+
