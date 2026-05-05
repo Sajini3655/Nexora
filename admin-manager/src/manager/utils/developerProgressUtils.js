@@ -28,13 +28,19 @@ export function buildSummariesFromTasks(developers, tasks) {
   const getTaskAssigneeName = (task) =>
     task?.assignedToName ||
     task?.assigneeName ||
+    task?.assignedDeveloperName ||
+    task?.developerName ||
     task?.assigned_to_name ||
     task?.assignedTo?.name ||
     task?.assignee?.name ||
     task?.assignedUser?.name ||
+    task?.developer?.name ||
+    task?.user?.name ||
     task?.assignedTo?.fullName ||
     task?.assignee?.fullName ||
     task?.assignedUser?.fullName ||
+    task?.developer?.fullName ||
+    task?.user?.fullName ||
     "";
 
   const getNestedAssigneeId = (value) => {
@@ -67,6 +73,8 @@ export function buildSummariesFromTasks(developers, tasks) {
       task?.assignedToId ??
       task?.assigneeId ??
       task?.assigned_to_id ??
+      task?.assignedDeveloperId ??
+      task?.developerId ??
       getNestedAssigneeId(task?.assignedTo) ??
       getNestedAssigneeId(task?.assignee) ??
       getNestedAssigneeId(task?.assignedUser) ??

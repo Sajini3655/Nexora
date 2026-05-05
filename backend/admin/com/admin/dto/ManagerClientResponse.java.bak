@@ -1,0 +1,15 @@
+package com.admin.dto;
+
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ManagerClientResponse {
+    private Long id;
+    private String name;
+    private String email;
+    private String role;
+}

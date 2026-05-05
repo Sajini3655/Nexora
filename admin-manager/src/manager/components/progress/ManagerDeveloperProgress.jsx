@@ -209,8 +209,8 @@ export default function ManagerDeveloperProgress({
 }) {
   // Only create queries if external data NOT provided - avoids query overhead
   const hasExternalData = Array.isArray(developersData) && Array.isArray(tasksData);
-  const developersQuery = hasExternalData ? null : useManagerDevelopers();
-  const tasksQuery = hasExternalData ? null : useManagerTasks();
+  const developersQuery = useManagerDevelopers();
+  const tasksQuery = useManagerTasks();
 
   const loading = hasExternalData
     ? Boolean(loadingOverride)
@@ -231,9 +231,10 @@ export default function ManagerDeveloperProgress({
     [developers]
   );
 
+  // Disable backend query when external data is provided
   const backendProgressQuery = useQuery({
     queryKey: ["manager", "developerProgress", developerIds.join(",")],
-    enabled: developerIds.length > 0,
+    enabled: developerIds.length > 0 && !hasExternalData,
     retry: false,
     queryFn: async () => {
       const requests = await Promise.allSettled(
@@ -299,22 +300,22 @@ export default function ManagerDeveloperProgress({
       : getErrorMessage(effectiveError, effectiveError.message || "Failed to load developer progress")
     : "";
 
-  const totals = useMemo(() => {
-    const assignedTasks = rows.reduce((sum, row) => sum + Number(row.assignedTasks || 0), 0);
-    const completedPoints = rows.reduce((sum, row) => sum + Number(row.completedStoryPoints || 0), 0);
-    const totalPoints = rows.reduce((sum, row) => sum + Number(row.totalStoryPoints || 0), 0);
-    const completedPointValue = rows.reduce((sum, row) => sum + Number(row.completedPointValue || 0), 0);
-    const totalPointValue = rows.reduce((sum, row) => sum + Number(row.totalPointValue || 0), 0);
-
-    return { assignedTasks, completedPoints, totalPoints, completedPointValue, totalPointValue };
-  }, [rows]);
-
-  const lastEmittedTotalsRef = useRef(null);
-
   const visibleRows = useMemo(
     () => (Array.isArray(rows) ? rows : []).filter((row) => Number(row.assignedTasks ?? 0) > 0),
     [rows]
   );
+
+  const totals = useMemo(() => {
+    const assignedTasks = visibleRows.reduce((sum, row) => sum + Number(row.assignedTasks || 0), 0);
+    const completedPoints = visibleRows.reduce((sum, row) => sum + Number(row.completedStoryPoints || 0), 0);
+    const totalPoints = visibleRows.reduce((sum, row) => sum + Number(row.totalStoryPoints || 0), 0);
+    const completedPointValue = visibleRows.reduce((sum, row) => sum + Number(row.completedPointValue || 0), 0);
+    const totalPointValue = visibleRows.reduce((sum, row) => sum + Number(row.totalPointValue || 0), 0);
+
+    return { assignedTasks, completedPoints, totalPoints, completedPointValue, totalPointValue };
+  }, [visibleRows]);
+
+  const lastEmittedTotalsRef = useRef(null);
 
   useEffect(() => {
     if (typeof onTotalsChange !== "function") return;
