@@ -22,6 +22,7 @@ public class TaskAssignmentService {
     private final UserRepository userRepository;
     private final DeveloperProfileRepository profileRepository;
     private final DeveloperSkillRepository skillRepository;
+    private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final TaskStoryPointRepository storyPointRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
@@ -39,6 +40,45 @@ public class TaskAssignmentService {
         return devUsers.stream()
                 .map(this::toDeveloperSummary)
                 .sorted(Comparator.comparing(DeveloperSummaryDto::getName, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeveloperSummaryDto> listDevelopers(String actorEmail) {
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
+        if (actor.getAllRoles().contains(Role.ADMIN)) {
+            return listDevelopers();
+        }
+
+        if (!actor.getAllRoles().contains(Role.MANAGER)) {
+            return List.of();
+        }
+
+        Set<Long> visibleDeveloperIds = getManagerVisibleTasks(actor).stream()
+                .map(TaskItem::getAssignedTo)
+                .filter(Objects::nonNull)
+                .map(User::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (visibleDeveloperIds.isEmpty()) {
+            return List.of();
+        }
+
+        return userRepository.findAll().stream()
+                .filter(user -> Boolean.TRUE.equals(user.getEnabled()))
+                .filter(user -> user.getAllRoles().contains(Role.DEVELOPER))
+                .filter(user -> visibleDeveloperIds.contains(user.getId()))
+                .map(this::toDeveloperSummary)
+                .sorted(Comparator.comparing(DeveloperSummaryDto::getName, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+    }
+
+    private List<TaskItem> getManagerVisibleTasks(User manager) {
+        return projectRepository.findByManagerOrderByCreatedAtDesc(manager).stream()
+                .flatMap(project -> taskRepository.findByProject_Id(project.getId()).stream())
                 .collect(Collectors.toList());
     }
 

@@ -26,8 +26,9 @@ export function useTeamTimesheets(status = "ALL", enabled = true) {
     queryKey: timesheetKeys.teamWithStatus(scope, status),
     queryFn: () => fetchTeamTimesheetsWithStatus(status),
     enabled,
-    refetchInterval: 30000,
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -39,7 +40,8 @@ export function useTeamTimesheetsSummary(enabled = true) {
     queryKey: timesheetKeys.teamSummary(scope),
     queryFn: fetchTeamTimesheetSummary,
     enabled,
-    refetchInterval: 30000,
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }

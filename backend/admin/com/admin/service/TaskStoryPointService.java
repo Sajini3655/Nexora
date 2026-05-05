@@ -189,14 +189,21 @@ public class TaskStoryPointService {
             throw new AccessDeniedException("You are not allowed to view this developer progress");
         }
 
-        List<TaskItem> developerTasks = taskRepository.findByAssignedToId(developer.getId());
+        List<TaskItem> developerTasks = actorIsManager
+            ? taskRepository.findByAssignedToId(developer.getId()).stream()
+                .filter(task -> task.getProject() != null
+                    && task.getProject().getManager() != null
+                    && Objects.equals(task.getProject().getManager().getId(), actor.getId()))
+                .toList()
+            : taskRepository.findByAssignedToId(developer.getId());
+
         long assignedTasks = developerTasks.size();
         long completedTasks = developerTasks.stream().filter(this::isTaskCompleted).count();
         long inProgressTasks = developerTasks.stream().filter(task -> task.getStatus() == TaskStatus.IN_PROGRESS).count();
 
-        long totalStoryPoints = storyPointRepository.countByTaskAssignedToId(developer.getId());
-        long completedStoryPoints = storyPointRepository.countByTaskAssignedToIdAndStatus(developer.getId(), StoryPointStatus.DONE);
         ProgressTotals totals = calculateAggregateTotals(developerTasks);
+        long totalStoryPoints = totals.totalStoryPoints;
+        long completedStoryPoints = totals.completedStoryPoints;
 
         int averageProgress = calculatePercentage(totals.completedPointValue, totals.totalPointValue);
 

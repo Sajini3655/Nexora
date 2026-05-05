@@ -22,9 +22,8 @@ export function useRecentEmailTickets(enabled = true) {
     queryFn: fetchRecentEmailTickets,
     enabled,
     retry: false,
-    // Reduce ticket polling frequency to avoid frequent UI refreshing
-    refetchInterval: 120000,
-    staleTime: 60000,
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }

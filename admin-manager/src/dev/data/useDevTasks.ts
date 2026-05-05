@@ -29,8 +29,9 @@ export function useAssignedTasks(enabled = true) {
     queryKey: devTaskKeys.assignedTasks(),
     queryFn: fetchAssignedTasksFromBackend,
     enabled,
-    refetchInterval: 30000, // 30 seconds
-    staleTime: 0, // Always stale, refetch in background
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -54,8 +55,9 @@ export function useProjectTasks(projectId: string | null | undefined, enabled = 
     queryKey: devTaskKeys.projectTasks(projectId || ""),
     queryFn: () => fetchProjectTasksFromBackend(projectId!),
     enabled: enabled && !!projectId,
-    refetchInterval: 30000, // 30 seconds
-    staleTime: 0, // Always stale, refetch in background
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

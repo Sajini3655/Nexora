@@ -21,7 +21,7 @@ public class ManagerTaskController {
     @GetMapping("/developers")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<List<DeveloperSummaryDto>> developers(Authentication authentication) {
-        return ResponseEntity.ok(taskAssignmentService.listDevelopers());
+        return ResponseEntity.ok(taskAssignmentService.listDevelopers(authentication.getName()));
     }
 
     @PostMapping("/tasks/suggest")

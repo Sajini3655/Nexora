@@ -22,8 +22,9 @@ export function useClientTickets(enabled = true) {
     queryKey: clientDataKeys.tickets(),
     queryFn: fetchClientTickets,
     enabled,
-    refetchInterval: 30000, // 30 seconds
-    staleTime: 0, // Always stale, refetch in background
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -35,8 +36,9 @@ export function useClientProjects(enabled = true) {
     queryKey: clientDataKeys.projects(),
     queryFn: fetchClientProjects,
     enabled,
-    refetchInterval: 30000, // 30 seconds
-    staleTime: 0, // Always stale, refetch in background
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
