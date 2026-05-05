@@ -23,4 +23,7 @@ public class CreateProjectRequest {
     @Valid
     @NotEmpty(message = "At least one task is required")
     private List<ProjectTaskRequest> tasks;
+
+    // Optional client assignment (manager selects a client when creating a project)
+    private Long clientId;
 }

@@ -23,10 +23,10 @@ export default function ClientProjectList() {
       <Stack spacing={3}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 900 }}>
-            Workstreams
+            Projects
           </Typography>
           <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
-            Workstreams are grouped from your live support tickets.
+            These are the projects assigned to your account.
           </Typography>
         </Box>
 
@@ -47,7 +47,7 @@ export default function ClientProjectList() {
             </Box>
           ) : projects.length === 0 ? (
             <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-              No workstreams found.
+              No projects assigned to your account yet.
             </Typography>
           ) : (
             <Stack spacing={1.5}>

@@ -12,8 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
-import { useClientTickets } from "../../services/useClient";
-import { buildProjectsFromTickets } from "../../services/clientService";
+import { useClientProjects, useClientTickets } from "../../services/useClient";
 
 function getDateLabel(value) {
   if (!value) return "-";
@@ -43,18 +42,24 @@ function SummaryRow({ label, value }) {
 export default function ClientProjectDetails() {
   const { projectId } = useParams();
   const {
+    data: projects = [],
+    isLoading: projectsLoading,
+  } = useClientProjects();
+  const {
     data: tickets = [],
     isLoading: loading,
     error: queryError,
   } = useClientTickets();
 
-  const projects = useMemo(() => buildProjectsFromTickets(tickets), [tickets]);
   const project = useMemo(
     () => projects.find((item) => String(item.id) === String(projectId)),
     [projects, projectId]
   );
 
-  const projectTickets = project?.tickets || [];
+  const projectTickets = useMemo(
+    () => tickets.filter((ticket) => String(ticket.projectId ?? "") === String(project?.id ?? projectId)),
+    [tickets, project?.id, projectId]
+  );
   const openCount = projectTickets.filter((ticket) => ticket.status === "Open").length;
   const inProgressCount = projectTickets.filter((ticket) => ticket.status === "In Progress").length;
   const resolvedCount = projectTickets.filter((ticket) => ticket.status === "Done").length;
@@ -70,7 +75,7 @@ export default function ClientProjectDetails() {
 
   const recentTickets = useMemo(() => projectTickets.slice(0, 5), [projectTickets]);
 
-  if (loading) {
+  if (loading || projectsLoading) {
     return (
       <Box sx={{ display: "grid", placeItems: "center", minHeight: 280 }}>
         <CircularProgress sx={{ color: "#6d5dfc" }} />
@@ -94,7 +99,7 @@ export default function ClientProjectDetails() {
           Project not found
         </Typography>
         <Typography variant="body2" sx={{ color: "#94a3b8", mb: 2 }}>
-          The workstream you are looking for does not exist or has not yet been created from your support tickets.
+          The project you are looking for does not exist or is not assigned to your account.
         </Typography>
         <Button
           component={Link}
@@ -102,7 +107,7 @@ export default function ClientProjectDetails() {
           variant="outlined"
           sx={{ textTransform: "none", borderColor: "rgba(255,255,255,0.14)", color: "#cbd5e1" }}
         >
-          Back to workstreams
+          Back to projects
         </Button>
       </Paper>
     );
@@ -113,13 +118,13 @@ export default function ClientProjectDetails() {
       <Box sx={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Box>
           <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: 1 }}>
-            Workstream details
+            Project details
           </Typography>
           <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>
             {project.name}
           </Typography>
           <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1, maxWidth: 680 }}>
-            A client-facing workstream generated from your support tickets. Track progress, recent requests, and status for the current project.
+            A client-facing project assigned to your account. Track progress, recent requests, and status for the current project.
           </Typography>
         </Box>
 
@@ -131,7 +136,7 @@ export default function ClientProjectDetails() {
             variant="outlined"
             sx={{ textTransform: "none", borderColor: "rgba(255,255,255,0.14)", color: "#cbd5e1" }}
           >
-            Back to workstreams
+            Back to projects
           </Button>
         </Stack>
       </Box>
@@ -152,10 +157,10 @@ export default function ClientProjectDetails() {
               Overview
             </Typography>
             <Typography variant="body2" sx={{ color: "#94a3b8", mb: 3 }}>
-              This workstream is updated automatically from your client support requests. Review latest activity, status, and request details below.
+              This project is updated automatically from your client support requests. Review latest activity, status, and request details below.
             </Typography>
 
-            <SummaryRow label="Workstream" value={project.name} />
+            <SummaryRow label="Project" value={project.name} />
             <SummaryRow label="Status" value={project.status} />
             <SummaryRow label="Requests" value={`${projectTickets.length}`} />
             <SummaryRow label="Updated" value={lastUpdated} />
@@ -199,7 +204,7 @@ export default function ClientProjectDetails() {
               Request status
             </Typography>
             <Typography variant="body2" sx={{ color: "#94a3b8", mb: 3 }}>
-              See how the active requests for this workstream are distributed by status.
+              See how the active requests for this project are distributed by status.
             </Typography>
 
             <Box sx={{ display: "grid", gap: 1.25 }}>
@@ -261,12 +266,12 @@ export default function ClientProjectDetails() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>
-              Recent requests
+              Recent tickets
             </Typography>
 
             {projectTickets.length === 0 ? (
               <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-                No requests are attached to this workstream yet.
+                No tickets for this project yet.
               </Typography>
             ) : (
               <Box sx={{ overflowX: "auto" }}>
@@ -331,10 +336,10 @@ export default function ClientProjectDetails() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>
-              Workstream summary
+              Project summary
             </Typography>
             <Typography variant="body2" sx={{ color: "#94a3b8", mb: 2 }}>
-              {project.description || `${projectTickets.length} support request${projectTickets.length === 1 ? "" : "s"} currently grouped into this workstream.`}
+              {project.description || `${projectTickets.length} support request${projectTickets.length === 1 ? "" : "s"} currently grouped into this project.`}
             </Typography>
             <Stack spacing={1.25}>
               <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.8 }}>

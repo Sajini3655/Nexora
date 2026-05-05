@@ -16,6 +16,9 @@ public class ProjectResponse {
     private String description;
     private Long managerId;
     private String managerName;
+    private Long clientId;
+    private String clientName;
+    private String clientEmail;
     private Instant createdAt;
     private List<ProjectTaskResponse> tasks;
 }

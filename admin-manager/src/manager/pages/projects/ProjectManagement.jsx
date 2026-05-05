@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -8,10 +8,11 @@ import {
   Paper,
   Stack,
   TextField,
+  MenuItem,
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { getErrorMessage } from "../../../services/managerService";
+import { getErrorMessage, fetchManagerClients } from "../../../services/managerService";
 import api from "../../../services/api";
 import { useManagerProjects, useManagerTasks } from "../../data/useManager";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
@@ -42,14 +43,31 @@ export default function ProjectManagement() {
   const projects = Array.isArray(projectsQuery.data) ? projectsQuery.data : [];
   const tasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
   const loading = projectsQuery.isLoading || tasksQuery.isLoading;
-  const error =
+  const queryError =
     projectsQuery.error?.message ||
     tasksQuery.error?.message ||
     "";
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  
+
+  const [clients, setClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
+
   const [newProjectForm, setNewProjectForm] = useState({ name: "", description: "" });
   const [creatingProject, setCreatingProject] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchManagerClients();
+        if (mounted) setClients(list);
+      } catch (err) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const projectRows = useMemo(() => {
     const tasksByProject = new Map();
@@ -81,6 +99,8 @@ export default function ProjectManagement() {
         id: projectId,
         name: getProjectName(project),
         description: getProjectDescription(project),
+        clientName: project?.clientName || project?.client?.name || "",
+        clientEmail: project?.clientEmail || project?.client?.email || "",
         status,
         taskCount,
         completedTaskCount,
@@ -102,16 +122,18 @@ export default function ProjectManagement() {
     setSuccess("");
 
     try {
-      const created = await api.post("/projects", {
+      const created = await api.post("/manager/projects", {
         name: newProjectForm.name.trim(),
         description: newProjectForm.description.trim() || null,
+        clientId: selectedClientId ? Number(selectedClientId) : null,
       });
 
       setSuccess("New project created successfully!");
       setNewProjectForm({ name: "", description: "" });
-      
+      setSelectedClientId("");
+
       projectsQuery.refetch();
-      
+
       // Navigate to the new project after a short delay
       setTimeout(() => {
         navigate(`/manager/project-management/${created.id}`);
@@ -171,7 +193,7 @@ export default function ProjectManagement() {
 
       <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", mb: 2 }}>
         <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Create New Project</Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.5fr auto" }, gap: 1, alignItems: "center" }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.2fr 1fr auto" }, gap: 1, alignItems: "center" }}>
           <TextField
             size="small"
             label="Project name"
@@ -186,6 +208,18 @@ export default function ProjectManagement() {
             onChange={(e) => setNewProjectForm((prev) => ({ ...prev, description: e.target.value }))}
             placeholder="Optional description"
           />
+          <TextField
+            select
+            size="small"
+            label="Assign Client (optional)"
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+          >
+            <MenuItem value="">No client</MenuItem>
+            {clients.map((c) => (
+              <MenuItem key={c.id} value={String(c.id)}>{c.name || c.email}</MenuItem>
+            ))}
+          </TextField>
           <Button
             variant="contained"
             disabled={creatingProject || !newProjectForm.name.trim()}
@@ -222,6 +256,9 @@ export default function ProjectManagement() {
                     </Typography>
                     <Typography variant="caption" sx={{ color: "#94a3b8" }} noWrap>
                       {project.description}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mt: 0.4 }} noWrap>
+                      Client: {project.clientName || "No client assigned"}
                     </Typography>
                     <Box sx={{ mt: 0.7 }}>
                       <Button 

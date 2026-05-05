@@ -13,9 +13,9 @@ import SupportAgentRoundedIcon from "@mui/icons-material/SupportAgentRounded";
 import { Link } from "react-router-dom";
 
 import {
-  buildProjectsFromTickets,
+  enrichProjectsWithTickets,
 } from "../../services/clientService";
-import { useClientTickets } from "../../services/useClient";
+import { useClientProjects, useClientTickets } from "../../services/useClient";
 import ClientProjectTimeline from "../../components/dashboard/ClientProjectTimeline.jsx";
 import ClientQuickRequest from "../../components/dashboard/ClientQuickRequest.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
@@ -23,12 +23,13 @@ import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
 
 export default function ClientDashboardHome() {
+  const { data: projects = [], isLoading: projectsLoading, refetch: refetchProjects } = useClientProjects();
   // React Query hook - auto-refetch every 30s
-  const { data: tickets = [], isLoading: loading, isFetching: refreshing, error: queryError, refetch } = useClientTickets();
+  const { data: tickets = [], isLoading: loading, isFetching: refreshing, error: queryError, refetch: refetchTickets } = useClientTickets();
   
   const error = queryError?.message || "";
 
-  const projects = useMemo(() => buildProjectsFromTickets(tickets), [tickets]);
+  const projectSummaries = useMemo(() => enrichProjectsWithTickets(projects, tickets), [projects, tickets]);
 
   // Live refresh via WebSocket
   const liveTopics = useMemo(
@@ -36,13 +37,13 @@ export default function ClientDashboardHome() {
     []
   );
 
-  useLiveRefresh(liveTopics, refetch, { debounceMs: 900 });
+  useLiveRefresh(liveTopics, refetchTickets, { debounceMs: 900 });
 
   const stats = useMemo(() => {
     return [
       {
         title: "Open Tickets",
-        value: tickets.filter((ticket) => ticket.status === "Open").length,
+        value: tickets.filter((ticket) => ticket.status === "Open" || ticket.status === "In Progress").length,
       },
       {
         title: "In Progress",
@@ -54,14 +55,20 @@ export default function ClientDashboardHome() {
         value: tickets.filter((ticket) => ticket.status === "Done").length,
       },
       {
-        title: "Workstreams",
+        title: "Projects",
         value: projects.length,
       },
     ];
   }, [tickets, projects]);
 
   const recentTickets = tickets.slice(0, 5);
-  const activeProject = projects[0] || null;
+  const activeProject = projectSummaries[0] || null;
+  const activeProjectTickets = useMemo(() => {
+    if (!activeProject) return [];
+    return tickets.filter((ticket) => String(ticket.projectId ?? "") === String(activeProject.id));
+  }, [activeProject, tickets]);
+
+  const noProjects = !projectsLoading && projectSummaries.length === 0;
 
   return (
     <Stack
@@ -92,7 +99,7 @@ export default function ClientDashboardHome() {
         />
       ) : null}
 
-      {loading ? (
+      {loading || projectsLoading ? (
         <Box sx={{ display: "grid", placeItems: "center", minHeight: 260 }}>
           <CircularProgress sx={{ color: "#6d5dfc" }} />
         </Box>
@@ -114,14 +121,83 @@ export default function ClientDashboardHome() {
             ))}
           </Box>
 
-          <ClientProjectTimeline project={activeProject} tickets={tickets} />
+          <Paper
+            sx={{
+              p: 2.2,
+              borderRadius: 3,
+              bgcolor: "#0b1628",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "none",
+            }}
+          >
+            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mb: 2 }}>
+              <Box>
+                <Typography sx={{ fontWeight: 900, fontSize: 17 }}>
+                  Your Projects
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.4 }}>
+                  Only projects assigned to your account are shown here.
+                </Typography>
+              </Box>
+            </Box>
+
+            {noProjects ? (
+              <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                No projects assigned to your account yet.
+              </Typography>
+            ) : (
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 1.5 }}>
+                {projectSummaries.map((project) => (
+                  <Paper
+                    key={project.id}
+                    sx={{
+                      p: 1.8,
+                      borderRadius: 2,
+                      bgcolor: "#0f1b2f",
+                      border: "1px solid rgba(255,255,255,0.07)",
+                      boxShadow: "none",
+                    }}
+                  >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                      <Box>
+                        <Typography sx={{ fontWeight: 900 }}>{project.name}</Typography>
+                        <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                          Manager: {project.manager || "Client Support"} • {project.ticketCount || project.tickets?.length || 0} tickets
+                        </Typography>
+                      </Box>
+                      <StatusBadge label={project.status} />
+                    </Box>
+
+                    <Box sx={{ mt: 1.5 }}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={project.progress || 0}
+                        sx={{
+                          height: 7,
+                          borderRadius: 999,
+                          bgcolor: "rgba(255,255,255,0.08)",
+                          "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+                        }}
+                      />
+                      <Typography variant="caption" sx={{ color: "#94a3b8", mt: 0.8, display: "block" }}>
+                        {project.progress || 0}% complete • Last update {project.eta || "-"}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
+            )}
+          </Paper>
+
+          {noProjects ? null : (
+            <ClientProjectTimeline project={activeProject} tickets={activeProjectTickets} />
+          )}
           <ClientQuickRequest
-  onTicketCreated={(createdTicket) => {
-    const updatedTickets = [createdTicket, ...tickets];
-    setTickets(updatedTickets);
-    setProjects(buildProjectsFromTickets(updatedTickets));
-  }}
-/>
+            projects={projectSummaries}
+            onTicketCreated={async () => {
+              await Promise.all([refetchTickets(), refetchProjects()]);
+            }}
+          />
 
           <Box
             sx={{
@@ -174,9 +250,9 @@ export default function ClientDashboardHome() {
               )}
             </Panel>
 
-            <Panel title="Current Workstream">
+            <Panel title="Current Project">
               {!activeProject ? (
-                <EmptyText>No workstreams yet.</EmptyText>
+                <EmptyText>No projects yet.</EmptyText>
               ) : (
                 <Box>
                   <Typography sx={{ fontWeight: 900, fontSize: 20 }}>

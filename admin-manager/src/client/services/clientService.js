@@ -114,7 +114,7 @@ function parseTicketTitle(title) {
 function mapStatus(status) {
   const value = String(status || "").toUpperCase();
   if (value === "DONE" || value === "CLOSED" || value === "RESOLVED") return "Done";
-  if (value === "IN_PROGRESS" || value === "INPROGRESS") return "In Progress";
+  if (value === "IN_PROGRESS" || value === "INPROGRESS" || value === "ASSIGNED") return "In Progress";
   return "Open";
 }
 
@@ -129,13 +129,47 @@ function toUiProject(row, idx) {
   const progress = Number(row?.progress ?? row?.completion ?? 0);
   return {
     id: String(row?.id ?? row?.project_id ?? `CP-${idx + 1}`),
-    name: row?.name ?? row?.project_name ?? "Support Workstream",
+    name: row?.name ?? row?.project_name ?? "Client Project",
     manager: row?.manager_name ?? row?.manager ?? "Client Support",
     progress: Number.isFinite(progress) ? Math.max(0, Math.min(100, progress)) : 0,
     status: row?.status ?? row?.stage ?? "In Progress",
     eta: row?.eta ?? row?.due_date ?? "-",
+    clientId: row?.clientId ?? row?.client_id ?? null,
+    clientName: row?.clientName ?? row?.client_name ?? null,
+    description: row?.description ?? "",
     tickets: row?.tickets ?? [],
   };
+}
+
+export function enrichProjectsWithTickets(projects, tickets) {
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const safeTickets = Array.isArray(tickets) ? tickets : [];
+
+  return safeProjects.map((project) => {
+    const projectTickets = safeTickets.filter((ticket) => String(ticket?.projectId ?? "") === String(project.id));
+    const total = projectTickets.length;
+    const done = projectTickets.filter((ticket) => ticket.status === "Done").length;
+    const inProgress = projectTickets.filter((ticket) => ticket.status === "In Progress").length;
+    const latest = projectTickets
+      .map((ticket) => ticket.updatedAt || ticket.createdAt)
+      .find((date) => date && date !== "-") || project.eta || "-";
+
+    return {
+      ...project,
+      tickets: projectTickets,
+      ticketCount: total,
+      progress: total > 0 ? Math.round((done / total) * 100) : Number(project.progress || 0),
+      status:
+        total === 0
+          ? project.status || "Open"
+          : done === total
+            ? "Resolved"
+            : inProgress > 0
+              ? "In Progress"
+              : "Open",
+      eta: latest,
+    };
+  });
 }
 
 function toUiTicket(row, idx) {
@@ -210,8 +244,9 @@ export function getCachedClientTickets() {
 }
 
 export async function fetchClientProjects() {
-  const tickets = await fetchClientTickets();
-  return buildProjectsFromTickets(tickets);
+  const res = await apiFetch("/client/projects", { method: "GET" });
+  const data = await res.json();
+  return Array.isArray(data) ? data.map(toUiProject) : [];
 }
 
 export function buildProjectsFromTickets(tickets) {
@@ -284,7 +319,7 @@ export async function fetchClientTickets(options = {}) {
 
   ticketFetchPromise = (async () => {
     try {
-      const res = await ticketFetch("", { method: "GET" });
+      const res = await apiFetch("/client/tickets", { method: "GET" });
       const data = await res.json();
       const mapped = Array.isArray(data) ? data.map(toUiTicket) : [];
       writeTicketCache(mapped);
@@ -352,6 +387,10 @@ export async function fetchClientSummary() {
 }
 
 export async function createClientTicket(payload) {
+  if (!payload?.projectId) {
+    throw new Error("Please select a project before creating a ticket.");
+  }
+
   const category = payload.category || "General Support";
   const cleanTitle = String(payload.title || "").trim();
   const prefixedTitle = cleanTitle.startsWith("[")
@@ -359,16 +398,17 @@ export async function createClientTicket(payload) {
     : `[${category}] ${cleanTitle}`;
 
   const insertRow = {
+    projectId: Number(payload.projectId),
     title: prefixedTitle,
     description: payload.description,
     priority: String(payload.urgency || "Medium").toUpperCase(),
-    status: "OPEN",
+    category,
   };
 
   console.log("[createClientTicket] Sending POST request with:", insertRow);
 
   try {
-    const inserted = await ticketFetch("", {
+    const inserted = await apiFetch("/client/tickets", {
       method: "POST",
       body: JSON.stringify(insertRow),
     });

@@ -18,20 +18,20 @@ import {
 const emptyForm = {
   category: "",
   title: "",
-  project: "",
+  projectId: "",
   urgency: "Medium",
   description: "",
 };
 
-export default function ClientQuickRequest({ onTicketCreated }) {
+export default function ClientQuickRequest({ projects = [], onTicketCreated }) {
   const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const canCreate = useMemo(() => {
-    return Boolean(form.category && form.title.trim() && form.description.trim());
-  }, [form]);
+    return Boolean(projects.length > 0 && form.projectId && form.category && form.title.trim() && form.description.trim());
+  }, [form, projects.length]);
 
   const updateField = (field, value) => {
     setForm((prev) => ({
@@ -94,6 +94,25 @@ export default function ClientQuickRequest({ onTicketCreated }) {
             gap: 1.5,
           }}
         >
+          <TextField
+            select
+            label="Project"
+            size="small"
+            value={form.projectId}
+            onChange={(e) => updateField("projectId", e.target.value)}
+            SelectProps={{ native: true }}
+            fullWidth
+            disabled={projects.length === 0}
+            helperText={projects.length === 0 ? "No projects assigned to your account yet." : "Select the project this request belongs to."}
+          >
+            <option value="">Select a project</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </TextField>
+
           <CategoryPicker
             value={form.category}
             categories={clientTicketCategories}
@@ -119,14 +138,6 @@ export default function ClientQuickRequest({ onTicketCreated }) {
             size="small"
             value={form.title}
             onChange={(e) => updateField("title", e.target.value)}
-            fullWidth
-          />
-
-          <TextField
-            label="Project optional"
-            size="small"
-            value={form.project}
-            onChange={(e) => updateField("project", e.target.value)}
             fullWidth
           />
 

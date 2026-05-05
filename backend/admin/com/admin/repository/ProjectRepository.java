@@ -11,6 +11,8 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     long countByManager_Id(Long userId);
 
+    List<Project> findByClient_IdOrderByCreatedAtDesc(Long clientId);
+
     // 🔥 ADD THIS
     List<Project> findByManagerOrderByCreatedAtDesc(User manager);
 

@@ -15,4 +15,7 @@ public class UpdateProjectRequest {
 
     @NotBlank(message = "Project description is required")
     private String description;
+
+    // Optional client assignment or removal (null = unset)
+    private Long clientId;
 }

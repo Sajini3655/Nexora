@@ -36,6 +36,7 @@ import {
   suggestManagerTaskAssignment,
   updateProject,
   updateManagerTask,
+  fetchManagerClients,
 } from "../../../services/managerService";
 import { useProjectDetails, useManagerDevelopers } from "../../data/useManager";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
@@ -158,6 +159,8 @@ export default function ProjectManagementDetails() {
 
   const [editProjectName, setEditProjectName] = useState("");
   const [editProjectDescription, setEditProjectDescription] = useState("");
+  const [clients, setClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
   const [newTask, setNewTask] = useState(emptyTaskForm);
   const [actionError, setActionError] = useState("");
 
@@ -207,8 +210,22 @@ export default function ProjectManagementDetails() {
     if (project && !editProjectName) {
       setEditProjectName(getProjectName(project));
       setEditProjectDescription(getProjectDescription(project));
+      setSelectedClientId(project?.clientId ? String(project.clientId) : "");
     }
   }, [project, editProjectName]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchManagerClients();
+        if (mounted) setClients(list);
+      } catch (err) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const loadProjectSessions = useCallback(async () => {
     if (!projectId || authLoading) return;
@@ -458,6 +475,7 @@ export default function ProjectManagementDetails() {
       const updated = await updateProject(Number(projectId), {
         name: editProjectName.trim(),
         description: editProjectDescription.trim(),
+        clientId: selectedClientId ? Number(selectedClientId) : null,
       });
 
       setEditProjectName(updated.name);
@@ -741,9 +759,21 @@ export default function ProjectManagementDetails() {
             <Metric label="Description" value={getProjectDescription(project)} />
           </Box>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr auto" }, gap: 1, alignItems: "center" }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr auto" }, gap: 1, alignItems: "center" }}>
             <TextField size="small" label="Project name" value={editProjectName} onChange={(e) => setEditProjectName(e.target.value)} />
             <TextField size="small" label="Project description" value={editProjectDescription} onChange={(e) => setEditProjectDescription(e.target.value)} />
+            <TextField
+              select
+              size="small"
+              label="Assign Client (optional)"
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+            >
+              <MenuItem value="">No client</MenuItem>
+              {clients.map((c) => (
+                <MenuItem key={c.id} value={String(c.id)}>{c.name || c.email}</MenuItem>
+              ))}
+            </TextField>
             <Button variant="outlined" disabled={savingProjectDetails} onClick={handleSaveProjectDetails}>
               {savingProjectDetails ? "Saving..." : "Save Project Details"}
             </Button>

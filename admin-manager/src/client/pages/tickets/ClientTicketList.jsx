@@ -14,14 +14,14 @@ import CategoryPicker from "../../components/tickets/CategoryPicker";
 import {
   clientTicketCategories,
 } from "../../services/clientService";
-import { useClientTickets, useCreateClientTicket } from "../../services/useClient";
+import { useClientProjects, useClientTickets, useCreateClientTicket } from "../../services/useClient";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 
 const emptyForm = {
   category: "",
   title: "",
-  project: "",
+  projectId: "",
   urgency: "Medium",
   description: "",
 };
@@ -31,6 +31,7 @@ export default function ClientTicketList() {
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState(emptyForm);
 
+  const { data: projects = [] } = useClientProjects();
   // React Query hook - auto-refetch every 30s
   const { data: tickets = [], isLoading: loading, error: queryError, refetch: refetchTickets } = useClientTickets();
   const createMutation = useCreateClientTicket();
@@ -38,8 +39,8 @@ export default function ClientTicketList() {
   const error = queryError?.message || createMutation.error?.message || "";
 
   const canCreate = useMemo(() => {
-    return Boolean(form.category && form.title.trim() && form.description.trim());
-  }, [form]);
+    return Boolean(projects.length > 0 && form.projectId && form.category && form.title.trim() && form.description.trim());
+  }, [form, projects.length]);
 
   // Live refresh via WebSocket - refetch when tickets update
   const liveTopics = useMemo(() => ["/topic/tickets"], []);
@@ -99,6 +100,25 @@ export default function ClientTicketList() {
               gap: 1.5,
             }}
           >
+            <TextField
+              select
+              label="Project"
+              size="small"
+              value={form.projectId}
+              onChange={(e) => setForm((prev) => ({ ...prev, projectId: e.target.value }))}
+              SelectProps={{ native: true }}
+              fullWidth
+              disabled={projects.length === 0}
+              helperText={projects.length === 0 ? "No projects assigned to your account yet." : "Choose the project this ticket belongs to."}
+            >
+              <option value="">Select a project</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </TextField>
+
             <CategoryPicker
               value={form.category}
               categories={clientTicketCategories}
@@ -124,14 +144,6 @@ export default function ClientTicketList() {
               size="small"
               value={form.title}
               onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-              fullWidth
-            />
-
-            <TextField
-              label="Project optional"
-              size="small"
-              value={form.project}
-              onChange={(e) => setForm((prev) => ({ ...prev, project: e.target.value }))}
               fullWidth
             />
 

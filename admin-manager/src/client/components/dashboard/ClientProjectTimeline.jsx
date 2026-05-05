@@ -22,7 +22,7 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
         title: "Request received",
         description:
           total > 0
-            ? `${total} client request${total === 1 ? "" : "s"} captured in this workstream.`
+            ? `${total} client request${total === 1 ? "" : "s"} captured in this project.`
             : "No client requests have been added yet.",
         status: total > 0 ? "Completed" : "Pending",
       },
@@ -30,7 +30,7 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
         title: "Review and planning",
         description:
           total > 0
-            ? "The team has reviewed the request and grouped it into a workstream."
+            ? "The team has reviewed the request and grouped it into this project."
             : "Planning will start after a request is created.",
         status: total > 0 ? "Completed" : "Pending",
       },
@@ -56,7 +56,7 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
         title: "Resolved",
         description:
           total > 0 && done === total
-            ? "All tickets in this workstream are resolved."
+            ? "All tickets in this project are resolved."
             : "This milestone completes when all related tickets are resolved.",
         status: total > 0 && done === total ? "Completed" : "Pending",
       },
@@ -79,6 +79,27 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
         </Typography>
         <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1 }}>
           No project timeline available yet. Create a ticket to start tracking client progress.
+        </Typography>
+      </Paper>
+    );
+  }
+
+  if (project && tickets.length === 0) {
+    return (
+      <Paper
+        sx={{
+          p: 2.2,
+          borderRadius: 3,
+          bgcolor: "#0b1628",
+          border: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "none",
+        }}
+      >
+        <Typography sx={{ fontWeight: 900, fontSize: 17 }}>
+          Project Timeline
+        </Typography>
+        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1 }}>
+          No tickets for this project yet.
         </Typography>
       </Paper>
     );
@@ -108,7 +129,7 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
             Project Timeline
           </Typography>
           <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.4 }}>
-            Client-friendly milestone view for {project?.name || "your current workstream"}.
+            Client-friendly milestone view for {project?.name || "your current project"}.
           </Typography>
         </Box>
 

@@ -9,8 +9,9 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { createProject, getErrorMessage } from "../../../services/managerService";
+import { createProject, getErrorMessage, fetchManagerClients } from "../../../services/managerService";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
+import { useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 const emptyTask = {
@@ -35,6 +36,8 @@ export default function AddProject() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [clients, setClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
 
   const canCreate = useMemo(() => {
     if (!projectName.trim()) return false;
@@ -136,6 +139,7 @@ export default function AddProject() {
               }))
             : null,
       })),
+      clientId: selectedClientId ? Number(selectedClientId) : null,
     };
 
     try {
@@ -154,6 +158,19 @@ export default function AddProject() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchManagerClients();
+        if (mounted) setClients(list);
+      } catch (err) {
+        // ignore client load errors here
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <Box component="form" onSubmit={handleSubmit} autoComplete="off" sx={{ p: { xs: 2, md: 3 } }}>
@@ -202,6 +219,19 @@ export default function AddProject() {
               minRows={3}
               fullWidth
             />
+            <TextField
+              select
+              size="small"
+              label="Assign Client (optional)"
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              helperText={clients.length === 0 ? "No clients available" : "Select a client to assign"}
+            >
+              <MenuItem value="">No client</MenuItem>
+              {clients.map((c) => (
+                <MenuItem key={c.id} value={String(c.id)}>{c.name || c.email}</MenuItem>
+              ))}
+            </TextField>
           </Stack>
         </Paper>
 

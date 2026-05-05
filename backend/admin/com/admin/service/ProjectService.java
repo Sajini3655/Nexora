@@ -46,6 +46,18 @@ public class ProjectService {
                 .manager(manager)
                 .build();
 
+        // If a clientId was provided, resolve and assign the client
+        if (request.getClientId() != null) {
+            User client = userRepository.findById(request.getClientId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Selected client not found"));
+
+            if (!client.getAllRoles().contains(Role.CLIENT)) {
+                throw new AccessDeniedException("Selected user is not a client");
+            }
+
+            project.setClient(client);
+        }
+
         List<TaskItem> taskItems = request.getTasks().stream()
                 .map(taskRequest -> {
                     TaskItem task = TaskItem.builder()
@@ -95,6 +107,20 @@ public class ProjectService {
 
         project.setName(request.getName().trim());
         project.setDescription(request.getDescription().trim());
+
+        // Allow manager to change or unset the client assignment
+        if (request.getClientId() != null) {
+            User client = userRepository.findById(request.getClientId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Selected client not found"));
+
+            if (!client.getAllRoles().contains(Role.CLIENT)) {
+                throw new AccessDeniedException("Selected user is not a client");
+            }
+
+            project.setClient(client);
+        } else {
+            project.setClient(null);
+        }
 
         Project saved = projectRepository.save(project);
         liveUpdatePublisher.publishProjectsChanged("updated");
@@ -157,6 +183,9 @@ public class ProjectService {
                 .description(project.getDescription())
                 .managerId(project.getManager() == null ? null : project.getManager().getId())
                 .managerName(project.getManager() == null ? null : project.getManager().getName())
+            .clientId(project.getClient() == null ? null : project.getClient().getId())
+            .clientName(project.getClient() == null ? null : project.getClient().getName())
+            .clientEmail(project.getClient() == null ? null : project.getClient().getEmail())
                 .createdAt(project.getCreatedAt())
                 .tasks(project.getTasks().stream()
                         .map(task -> ProjectTaskResponse.builder()

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
@@ -31,6 +32,9 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     @Query("SELECT t FROM Ticket t WHERE t.client.id = :clientId OR (t.client IS NULL AND t.createdBy.id = :clientId) ORDER BY t.createdAt DESC")
     @EntityGraph(attributePaths = {"createdBy", "assignedTo", "project", "manager", "client"})
     List<Ticket> findClientVisibleTickets(@Param("clientId") Long clientId);
+
+    @EntityGraph(attributePaths = {"createdBy", "assignedTo", "project", "manager", "client"})
+    List<Ticket> findByProject_IdInOrderByCreatedAtDesc(Collection<Long> projectIds);
 
     @Query("SELECT t FROM Ticket t WHERE UPPER(COALESCE(t.status, '')) = UPPER(:status) AND t.manager.id = :managerId ORDER BY t.createdAt DESC")
     @EntityGraph(attributePaths = {"createdBy", "assignedTo", "project", "manager", "client"})

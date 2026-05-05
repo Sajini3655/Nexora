@@ -26,6 +26,11 @@ export const fetchProjects = async () => {
   return normalizeArray(response.data);
 };
 
+export const fetchManagerClients = async () => {
+  const response = await api.get("/manager/clients");
+  return normalizeArray(response.data);
+};
+
 export const fetchManagerTasks = async () => {
   const response = await api.get("/manager/tasks");
   return normalizeArray(response.data);

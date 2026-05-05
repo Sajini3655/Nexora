@@ -30,6 +30,10 @@ public class Project {
     @JoinColumn(name = "manager_id", nullable = false)
     private User manager;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id")
+    private User client;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
