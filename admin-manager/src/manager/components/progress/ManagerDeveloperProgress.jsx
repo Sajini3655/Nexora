@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { Box, Chip, Paper, Stack, Typography, Button } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
 import { useManagerDevelopers, useManagerTasks } from "../../data/useManager";
-import { fetchDeveloperProgressSummary, getErrorMessage } from "../../../services/managerService";
+import { getErrorMessage } from "../../../services/managerService";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import DeveloperProgressTable from "./DeveloperProgressTable";
 
@@ -45,15 +44,21 @@ function buildSummariesFromTasks(developers, tasks) {
   const getTaskAssigneeName = (task) =>
     task?.assignedToName ||
     task?.assigneeName ||
+    task?.assigned_to_name ||
     task?.assignedDeveloperName ||
     task?.developerName ||
-    task?.assigned_to_name ||
+    task?.assignedUserName ||
+    task?.userName ||
     task?.assignedTo?.name ||
     task?.assignee?.name ||
     task?.assignedUser?.name ||
+    task?.developer?.name ||
+    task?.user?.name ||
     task?.assignedTo?.fullName ||
     task?.assignee?.fullName ||
     task?.assignedUser?.fullName ||
+    task?.developer?.fullName ||
+    task?.user?.fullName ||
     "";
 
   const getNestedAssigneeId = (value) => {
@@ -94,6 +99,8 @@ function buildSummariesFromTasks(developers, tasks) {
       task?.assigned_to_id ??
       task?.assignedDeveloperId ??
       task?.developerId ??
+      task?.assignedUserId ??
+      task?.userId ??
       getNestedAssigneeId(task?.assignedTo) ??
       getNestedAssigneeId(task?.assignee) ??
       getNestedAssigneeId(task?.assignedUser) ??
@@ -202,109 +209,38 @@ export default function ManagerDeveloperProgress({
   hideHeader = false,
   developersData,
   tasksData,
+  projectsData,
   loadingOverride,
   errorOverride,
   onRetry,
   onTotalsChange,
 }) {
-  // Only create queries if external data NOT provided - avoids query overhead
-  const hasExternalData = Array.isArray(developersData) && Array.isArray(tasksData);
+  // Always call hooks in the same order, regardless of branch
   const developersQuery = useManagerDevelopers();
   const tasksQuery = useManagerTasks();
 
-  const loading = hasExternalData
-    ? Boolean(loadingOverride)
-    : (developersQuery?.isLoading || tasksQuery?.isLoading);
-  const rawError = hasExternalData
-    ? (errorOverride || null)
-    : (developersQuery?.error || tasksQuery?.error || null);
+  // Determine if external data is provided
+  const hasExternalData = Array.isArray(developersData) && Array.isArray(tasksData);
 
-  const developers = hasExternalData
-    ? developersData
-    : (Array.isArray(developersQuery?.data) ? developersQuery.data : []);
-  const tasks = hasExternalData
-    ? tasksData
-    : (Array.isArray(tasksQuery?.data) ? tasksQuery.data : []);
+  // Resolve effective data sources
+  const developers = hasExternalData ? developersData : (Array.isArray(developersQuery?.data) ? developersQuery.data : []);
+  const tasks = hasExternalData ? tasksData : (Array.isArray(tasksQuery?.data) ? tasksQuery.data : []);
 
-  const developerIds = useMemo(
-    () => (Array.isArray(developers) ? developers.map((developer) => String(developer?.id ?? "")).filter(Boolean) : []),
-    [developers]
-  );
+  // Resolve effective loading and error states
+  const loading = hasExternalData ? Boolean(loadingOverride) : (developersQuery?.isLoading || tasksQuery?.isLoading);
+  const rawError = hasExternalData ? (errorOverride || null) : (developersQuery?.error || tasksQuery?.error || null);
 
-  // Disable backend query when external data is provided
-  const backendProgressQuery = useQuery({
-    queryKey: ["manager", "developerProgress", developerIds.join(",")],
-    enabled: developerIds.length > 0 && !hasExternalData,
-    retry: false,
-    queryFn: async () => {
-      const requests = await Promise.allSettled(
-        developers.map((developer) => fetchDeveloperProgressSummary(developer.id))
-      );
-
-      const rows = requests.map((result, index) => {
-        const developer = developers[index] || {};
-
-        if (result.status === "fulfilled" && result.value) {
-          return result.value;
-        }
-
-        return {
-          developerId: developer.id,
-          developerName: developer.name || "Developer",
-          assignedTasks: 0,
-          completedTasks: 0,
-          inProgressTasks: 0,
-          totalStoryPoints: 0,
-          completedStoryPoints: 0,
-          totalPointValue: 0,
-          completedPointValue: 0,
-          averageProgress: 0,
-        };
-      });
-
-      const allFailed = requests.length > 0 && requests.every((result) => result.status === "rejected");
-      if (allFailed) {
-        const firstError = requests.find((result) => result.status === "rejected");
-        throw firstError?.reason || new Error("Failed to load developer progress");
-      }
-
-      return rows;
-    },
-  });
-
-  const hasAnyData = (Array.isArray(developers) && developers.length > 0) || (Array.isArray(tasks) && tasks.length > 0);
-  const effectiveLoading = (loading || backendProgressQuery.isLoading || backendProgressQuery.isFetching) && !hasAnyData;
-
+  // Build rows from provided/fetched data
   const rows = useMemo(() => {
-    if (hasExternalData) {
-      return buildSummariesFromTasks(developers, tasks);
-    }
-
-    if (Array.isArray(backendProgressQuery.data) && backendProgressQuery.data.length > 0) {
-      return backendProgressQuery.data;
-    }
-
     return buildSummariesFromTasks(developers, tasks);
-  }, [hasExternalData, backendProgressQuery.data, developers, tasks]);
+  }, [developers, tasks]);
 
-  const delayedTaskCount = useMemo(() => {
-    return (Array.isArray(tasks) ? tasks.filter(isDelayedTask).length : 0);
-  }, [tasks]);
+  // Filter visible rows (those with assignedTasks > 0)
+  const visibleRows = useMemo(() => {
+    return (Array.isArray(rows) ? rows : []).filter((row) => Number(row.assignedTasks ?? 0) > 0);
+  }, [rows]);
 
-  const hasUsableRows = Array.isArray(rows) && rows.length > 0;
-  const effectiveError = hasUsableRows ? null : (rawError || backendProgressQuery.error || null);
-  const effectiveForbidden = effectiveError?.response?.status === 403;
-  const effectiveErrorText = effectiveError
-    ? effectiveForbidden
-      ? "You don't have permission to view developer progress. Switch to a Manager account or ask an admin to grant Manager access."
-      : getErrorMessage(effectiveError, effectiveError.message || "Failed to load developer progress")
-    : "";
-
-  const visibleRows = useMemo(
-    () => (Array.isArray(rows) ? rows : []).filter((row) => Number(row.assignedTasks ?? 0) > 0),
-    [rows]
-  );
-
+  // Calculate totals from visible rows only
   const totals = useMemo(() => {
     const assignedTasks = visibleRows.reduce((sum, row) => sum + Number(row.assignedTasks || 0), 0);
     const completedPoints = visibleRows.reduce((sum, row) => sum + Number(row.completedStoryPoints || 0), 0);
@@ -315,6 +251,22 @@ export default function ManagerDeveloperProgress({
     return { assignedTasks, completedPoints, totalPoints, completedPointValue, totalPointValue };
   }, [visibleRows]);
 
+  // Count delayed tasks from tasks array
+  const delayedTaskCount = useMemo(() => {
+    return (Array.isArray(tasks) ? tasks.filter(isDelayedTask).length : 0);
+  }, [tasks]);
+
+  // Determine error state - only show error if no usable data
+  const hasUsableData = visibleRows.length > 0;
+  const effectiveError = hasUsableData ? null : rawError;
+  const effectiveForbidden = effectiveError?.response?.status === 403;
+  const effectiveErrorText = effectiveError
+    ? effectiveForbidden
+      ? "You don't have permission to view developer progress. Switch to a Manager account or ask an admin to grant Manager access."
+      : getErrorMessage(effectiveError, effectiveError?.message || "Failed to load developer progress")
+    : "";
+
+  // Track and emit totals changes
   const lastEmittedTotalsRef = useRef(null);
 
   useEffect(() => {
@@ -345,6 +297,7 @@ export default function ManagerDeveloperProgress({
     onTotalsChange(nextTotals);
   }, [onTotalsChange, totals, delayedTaskCount]);
 
+  // Render component
   return (
     <Paper
       sx={{
@@ -386,7 +339,7 @@ export default function ManagerDeveloperProgress({
         </Stack>
       ) : null}
 
-      {effectiveLoading ? <Typography variant="body2" sx={{ color: "#94a3b8" }}>Loading developer progress...</Typography> : null}
+      {loading ? <Typography variant="body2" sx={{ color: "#94a3b8" }}>Loading developer progress...</Typography> : null}
       {effectiveErrorText ? (
         <Box sx={{ mb: 1.2 }}>
           <ErrorNotice message={effectiveErrorText} severity={effectiveForbidden ? "info" : "warning"} sx={{ mb: 1 }} dedupeKey="manager-developer-progress-error" />
@@ -394,18 +347,17 @@ export default function ManagerDeveloperProgress({
             <Button size="small" variant="outlined" onClick={() => {
               if (typeof onRetry === "function") {
                 onRetry();
-              } else if (developersQuery && tasksQuery) {
-                developersQuery.refetch();
-                tasksQuery.refetch();
+              } else {
+                developersQuery.refetch?.();
+                tasksQuery.refetch?.();
               }
-              backendProgressQuery.refetch();
             }}>
               Retry
             </Button>
           ) : null}
         </Box>
       ) : null}
-      {!effectiveLoading ? <DeveloperProgressTable rows={visibleRows} /> : null}
+      {!loading ? <DeveloperProgressTable rows={visibleRows} /> : null}
     </Paper>
   );
 }

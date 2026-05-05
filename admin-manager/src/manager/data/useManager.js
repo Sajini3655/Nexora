@@ -14,6 +14,10 @@ export function getManagerQueryScope(user) {
   return String(user?.id ?? user?.email ?? user?.role ?? "anonymous");
 }
 
+function hasManagerIdentity(user) {
+  return Boolean(user?.id ?? user?.email ?? user?.role);
+}
+
 export const managerKeys = {
   all: (scope) => ["manager", scope],
   projects: (scope) => [...managerKeys.all(scope), "projects"],
@@ -25,11 +29,13 @@ export const managerKeys = {
 export function useManagerProjects(enabled = true) {
   const { user } = useAuth() || {};
   const scope = getManagerQueryScope(user);
+  const canQuery = enabled && hasManagerIdentity(user);
 
   return useQuery({
     queryKey: managerKeys.projects(scope),
     queryFn: fetchProjects,
-    enabled,
+    enabled: canQuery,
+    placeholderData: (previousData) => previousData,
     retry: false,
     // Disable polling - live refresh handles updates, polling adds unnecessary overhead
     refetchInterval: false,
@@ -43,11 +49,13 @@ export function useManagerProjects(enabled = true) {
 export function useManagerTasks(enabled = true) {
   const { user } = useAuth() || {};
   const scope = getManagerQueryScope(user);
+  const canQuery = enabled && hasManagerIdentity(user);
 
   return useQuery({
     queryKey: managerKeys.tasks(scope),
     queryFn: fetchManagerTasks,
-    enabled,
+    enabled: canQuery,
+    placeholderData: (previousData) => previousData,
     retry: false,
     refetchInterval: false,
     staleTime: Infinity,
@@ -60,11 +68,13 @@ export function useManagerTasks(enabled = true) {
 export function useManagerDevelopers(enabled = true) {
   const { user } = useAuth() || {};
   const scope = getManagerQueryScope(user);
+  const canQuery = enabled && hasManagerIdentity(user);
 
   return useQuery({
     queryKey: managerKeys.developers(scope),
     queryFn: fetchManagerDevelopers,
-    enabled,
+    enabled: canQuery,
+    placeholderData: (previousData) => previousData,
     retry: false,
     refetchInterval: false,
     staleTime: Infinity,

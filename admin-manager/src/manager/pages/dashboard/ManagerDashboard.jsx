@@ -354,7 +354,7 @@ function TaskFocusRow({ task, type, getTaskTitle, getTaskDate }) {
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth() || {};
+  const { user, loading: authLoading } = useAuth() || {};
   const [expandProjects, setExpandProjects] = useState(false);
   const [developerProgressTotals, setDeveloperProgressTotals] = useState({
     assignedTasks: 0,
@@ -364,17 +364,64 @@ export default function ManagerDashboard() {
     totalPointValue: 0,
     delayedTaskCount: 0,
   });
-  const projectsQuery = useManagerProjects();
-  const tasksQuery = useManagerTasks();
-  const developersQuery = useManagerDevelopers();
-  const emailTicketsQuery = useRecentEmailTickets();
+  // Wait for auth to load before enabling queries to avoid race conditions
+  const projectsQuery = useManagerProjects(!authLoading);
+  const tasksQuery = useManagerTasks(!authLoading);
+  const developersQuery = useManagerDevelopers(!authLoading);
+  const emailTicketsQuery = useRecentEmailTickets(!authLoading);
   const { refetch: refetchProjects } = projectsQuery;
   const { refetch: refetchTasks } = tasksQuery;
   const { refetch: refetchDevelopers } = developersQuery;
   const { refetch: refetchEmailTickets } = emailTicketsQuery;
 
+  const getCachedDashboardData = React.useCallback(() => {
+    try {
+      const cached = localStorage.getItem("managerDashboardCache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return {
+          projects: Array.isArray(parsed.projects) ? parsed.projects : null,
+          tasks: Array.isArray(parsed.tasks) ? parsed.tasks : null,
+          developers: Array.isArray(parsed.developers) ? parsed.developers : null,
+          tickets: Array.isArray(parsed.tickets) ? parsed.tickets : null,
+        };
+      }
+    } catch (e) {
+      console.warn("Failed to restore dashboard cache from localStorage", e);
+    }
+    return { projects: null, tasks: null, developers: null, tickets: null };
+  }, []);
+
+  const persistCacheToDisk = React.useCallback((data) => {
+    try {
+      localStorage.setItem("managerDashboardCache", JSON.stringify(data));
+    } catch (e) {
+      console.warn("Failed to persist dashboard cache to localStorage", e);
+    }
+  }, []);
+
+  const lastSuccessfulDataRef = React.useRef({
+    projects: null,
+    tasks: null,
+    developers: null,
+    tickets: null,
+  });
+
+  // Restore cache from localStorage on component mount
+  React.useEffect(() => {
+    const cached = getCachedDashboardData();
+    lastSuccessfulDataRef.current = cached;
+  }, [getCachedDashboardData]);
+
   const queryClient = useQueryClient();
   const managerScope = React.useMemo(() => String(user?.id ?? user?.email ?? user?.role ?? "anonymous"), [user?.id, user?.email, user?.role]);
+  const shouldAdoptArray = React.useCallback((incoming, current) => {
+    if (!Array.isArray(incoming)) return false;
+    // Always adopt non-empty arrays
+    if (incoming.length > 0) return true;
+    // Only adopt empty arrays if we've never loaded data before (current is null)
+    return current === null;
+  }, []);
 
   // Trigger lightweight invalidation when live updates arrive
   const loadDashboard = React.useCallback(() => {
@@ -415,10 +462,48 @@ export default function ManagerDashboard() {
     };
   }, [loadDashboard]);
 
-  const projects = Array.isArray(projectsQuery.data) ? projectsQuery.data : [];
-  const managerTasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
-  const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
-  const tickets = normalizeTicketList(emailTicketsQuery.data);
+  React.useEffect(() => {
+    if (!projectsQuery.isError && shouldAdoptArray(projectsQuery.data, lastSuccessfulDataRef.current.projects)) {
+      lastSuccessfulDataRef.current.projects = projectsQuery.data;
+      persistCacheToDisk(lastSuccessfulDataRef.current);
+    }
+  }, [projectsQuery.data, projectsQuery.isError, shouldAdoptArray, persistCacheToDisk]);
+
+  React.useEffect(() => {
+    if (!tasksQuery.isError && shouldAdoptArray(tasksQuery.data, lastSuccessfulDataRef.current.tasks)) {
+      lastSuccessfulDataRef.current.tasks = tasksQuery.data;
+      persistCacheToDisk(lastSuccessfulDataRef.current);
+    }
+  }, [tasksQuery.data, tasksQuery.isError, shouldAdoptArray, persistCacheToDisk]);
+
+  React.useEffect(() => {
+    if (!developersQuery.isError && shouldAdoptArray(developersQuery.data, lastSuccessfulDataRef.current.developers)) {
+      lastSuccessfulDataRef.current.developers = developersQuery.data;
+      persistCacheToDisk(lastSuccessfulDataRef.current);
+    }
+  }, [developersQuery.data, developersQuery.isError, shouldAdoptArray, persistCacheToDisk]);
+
+  React.useEffect(() => {
+    const normalized = normalizeTicketList(emailTicketsQuery.data);
+    if (!emailTicketsQuery.isError && shouldAdoptArray(normalized, lastSuccessfulDataRef.current.tickets)) {
+      lastSuccessfulDataRef.current.tickets = normalized;
+      persistCacheToDisk(lastSuccessfulDataRef.current);
+    }
+  }, [emailTicketsQuery.data, emailTicketsQuery.isError, shouldAdoptArray, persistCacheToDisk]);
+
+  const projects = !projectsQuery.isError && Array.isArray(projectsQuery.data) && projectsQuery.data.length > 0
+    ? projectsQuery.data
+    : (lastSuccessfulDataRef.current.projects || []);
+  const managerTasks = !tasksQuery.isError && Array.isArray(tasksQuery.data) && tasksQuery.data.length > 0
+    ? tasksQuery.data
+    : (lastSuccessfulDataRef.current.tasks || []);
+  const developers = !developersQuery.isError && Array.isArray(developersQuery.data) && developersQuery.data.length > 0
+    ? developersQuery.data
+    : (lastSuccessfulDataRef.current.developers || []);
+  const normalizedTickets = normalizeTicketList(emailTicketsQuery.data);
+  const tickets = !emailTicketsQuery.isError && normalizedTickets.length > 0
+    ? normalizedTickets
+    : (lastSuccessfulDataRef.current.tickets || []);
   const loading = projectsQuery.isLoading && tasksQuery.isLoading && emailTicketsQuery.isLoading;
   const refreshing = projectsQuery.isFetching || tasksQuery.isFetching || developersQuery.isFetching || emailTicketsQuery.isFetching;
   const error =
@@ -465,36 +550,6 @@ export default function ManagerDashboard() {
   const getTaskTitle = (task) => task?.title || task?.taskName || task?.name || "Untitled Task";
 
   const getTaskDate = (task) => task?.dueDate || task?.deadline || task?.targetDate || task?.plannedEndDate || task?.due_on || null;
-  const hasTaskAssignee = (task) => {
-    const assignedId =
-      task?.assignedToId ??
-      task?.assigneeId ??
-      task?.assigned_to_id ??
-      task?.assignedDeveloperId ??
-      task?.developerId ??
-      task?.assignedTo?.id ??
-      task?.assignee?.id ??
-      task?.assignedUser?.id ??
-      task?.developer?.id ??
-      task?.user?.id;
-
-    const assignedName =
-      task?.assignedToName ??
-      task?.assigneeName ??
-      task?.assigned_to_name ??
-      task?.assignedDeveloperName ??
-      task?.developerName ??
-      task?.assignedTo?.name ??
-      task?.assignee?.name ??
-      task?.assignedUser?.name ??
-      task?.developer?.name ??
-      task?.user?.name;
-
-    return (
-      (assignedId !== null && assignedId !== undefined && String(assignedId).trim() !== "") ||
-      (assignedName !== null && assignedName !== undefined && String(assignedName).trim() !== "")
-    );
-  };
 
   const getProjectId = (project) =>
     String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
@@ -505,11 +560,191 @@ export default function ManagerDashboard() {
   const getProjectDescription = (project) =>
     project?.description ?? project?.projectDescription ?? "No description available.";
 
-  const tasks = useMemo(() => {
-    const merged = [];
-    const seen = new Set();
+  // Helper: Extract assignee ID from a task object
+  const getTaskAssigneeId = (task) => {
+    if (!task || typeof task !== "object") return "";
+    return String(
+      task?.assignedToId ??
+      task?.assigneeId ??
+      task?.assigned_to_id ??
+      task?.assignedDeveloperId ??
+      task?.developerId ??
+      task?.assignedUserId ??
+      task?.userId ??
+      task?.assignedTo?.id ??
+      task?.assignee?.id ??
+      task?.assignedUser?.id ??
+      task?.developer?.id ??
+      task?.user?.id ??
+      ""
+    ).trim();
+  };
 
-    const addTask = (task) => {
+  // Helper: Extract assignee name from a task object
+  const getTaskAssigneeName = (task) => {
+    if (!task || typeof task !== "object") return "";
+    return String(
+      task?.assignedToName ??
+      task?.assigneeName ??
+      task?.assigned_to_name ??
+      task?.assignedDeveloperName ??
+      task?.developerName ??
+      task?.assignedUserName ??
+      task?.userName ??
+      task?.assignedTo?.name ??
+      task?.assignee?.name ??
+      task?.assignedUser?.name ??
+      task?.developer?.name ??
+      task?.user?.name ??
+      ""
+    ).trim();
+  };
+
+  // Helper: Check if task has an assignee (by ID or name)
+  const hasTaskAssignee = (task) => {
+    const assigneeId = getTaskAssigneeId(task);
+    const assigneeName = getTaskAssigneeName(task);
+    return assigneeId !== "" || assigneeName !== "";
+  };
+
+  const isFilled = (value) => {
+    if (value == null) return false;
+    if (typeof value === "string") return value.trim() !== "";
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "object") return Object.keys(value).length > 0;
+    return true;
+  };
+
+  const numericFillKeys = new Set([
+    "totalStoryPoints",
+    "completedStoryPoints",
+    "storyPoints",
+    "estimatedPoints",
+    "points",
+    "totalPointValue",
+    "completedPointValue",
+    "weightedPointsTotal",
+    "weightedPointsDone",
+    "totalWeightedPoints",
+    "completedWeightedPoints",
+    "doneWeightedPoints",
+    "weight",
+    "progress",
+  ]);
+
+  const assigneeKeys = new Set([
+    "assignedToId",
+    "assigneeId",
+    "assignedDeveloperId",
+    "developerId",
+    "assigned_to_id",
+    "assignedUserId",
+    "userId",
+    "assignedToName",
+    "assigneeName",
+    "assignedDeveloperName",
+    "developerName",
+    "assignedUserName",
+    "userName",
+    "assignedTo",
+    "assignee",
+    "assignedUser",
+    "developer",
+    "user",
+  ]);
+
+  const shouldUseIncomingValue = (key, existingValue, incomingValue) => {
+    if (!isFilled(incomingValue)) return false;
+
+    if (!isFilled(existingValue)) return true;
+
+    if (numericFillKeys.has(key)) {
+      const existingNumber = Number(existingValue);
+      const incomingNumber = Number(incomingValue);
+
+      if (Number.isFinite(existingNumber) && Number.isFinite(incomingNumber)) {
+        return existingNumber <= 0 && incomingNumber > 0;
+      }
+    }
+
+    return false;
+  };
+
+  // Merge nested objects while preserving non-empty existing values,
+  // but allowing metric fields to be filled when existing numeric values are zero.
+  const mergeObjectsPreferExisting = (existingObj, incomingObj) => {
+    const merged = { ...existingObj };
+
+    Object.entries(incomingObj || {}).forEach(([key, incomingValue]) => {
+      const existingValue = merged[key];
+
+      if (
+        typeof existingValue === "object" &&
+        existingValue !== null &&
+        !Array.isArray(existingValue) &&
+        typeof incomingValue === "object" &&
+        incomingValue !== null &&
+        !Array.isArray(incomingValue)
+      ) {
+        merged[key] = mergeObjectsPreferExisting(existingValue, incomingValue);
+        return;
+      }
+
+      if (shouldUseIncomingValue(key, existingValue, incomingValue)) {
+        merged[key] = incomingValue;
+      }
+    });
+
+    return merged;
+  };
+
+  // Helper: Merge duplicate task objects where manager-task assignee identity wins,
+  // and project-task metrics fill missing/zero values.
+  const mergeTaskObjects = (existingTask, newTask) => {
+    if (!newTask || typeof newTask !== "object") return existingTask;
+    if (!existingTask || typeof existingTask !== "object") return newTask;
+
+    const merged = { ...existingTask };
+    Object.entries(newTask).forEach(([key, incomingValue]) => {
+      const existingValue = merged[key];
+
+      if (
+        typeof existingValue === "object" &&
+        existingValue !== null &&
+        !Array.isArray(existingValue) &&
+        typeof incomingValue === "object" &&
+        incomingValue !== null &&
+        !Array.isArray(incomingValue)
+      ) {
+        merged[key] = mergeObjectsPreferExisting(existingValue, incomingValue);
+        return;
+      }
+
+      if (assigneeKeys.has(key)) {
+        if (!isFilled(existingValue) && isFilled(incomingValue)) {
+          merged[key] = incomingValue;
+        }
+        return;
+      }
+
+      if (shouldUseIncomingValue(key, existingValue, incomingValue)) {
+        merged[key] = incomingValue;
+      }
+    });
+
+    // Never allow project-task merge to clear assignee identity once present.
+    if (hasTaskAssignee(existingTask) && !hasTaskAssignee(merged)) {
+      return existingTask;
+    }
+
+    return merged;
+  };
+
+  const tasks = useMemo(() => {
+    const taskMap = new Map();
+
+    // Add manager tasks first (these have the most complete assignee data)
+    managerTasks.forEach((task) => {
       if (!task || typeof task !== "object") return;
 
       const idKey = String(
@@ -520,24 +755,56 @@ export default function ManagerDashboard() {
         ""
       ).trim();
 
-      if (idKey && seen.has(idKey)) return;
-      if (idKey) seen.add(idKey);
-      merged.push(task);
-    };
-
-    managerTasks.forEach(addTask);
-    projects.forEach((project) => {
-      const projectTasks = Array.isArray(project?.tasks) ? project.tasks : [];
-      projectTasks.forEach(addTask);
+      if (!idKey) {
+        // If no ID, add as-is (edge case)
+        taskMap.set(`_no_id_${taskMap.size}`, task);
+      } else {
+        taskMap.set(idKey, task);
+      }
     });
 
-    return merged;
+    // Add or merge project tasks
+    projects.forEach((project) => {
+      const projectTasks = Array.isArray(project?.tasks) ? project.tasks : [];
+      projectTasks.forEach((task) => {
+        if (!task || typeof task !== "object") return;
+
+        const idKey = String(
+          task?.id ??
+          task?.taskId ??
+          task?.task_id ??
+          task?.uuid ??
+          ""
+        ).trim();
+
+        if (!idKey) {
+          // If no ID, add as-is
+          taskMap.set(`_no_id_${taskMap.size}`, task);
+        } else if (taskMap.has(idKey)) {
+          // Merge with existing, preserving assignee data from manager task
+          const existing = taskMap.get(idKey);
+          taskMap.set(idKey, mergeTaskObjects(existing, task));
+        } else {
+          // New task from project
+          taskMap.set(idKey, task);
+        }
+      });
+    });
+
+    return Array.from(taskMap.values());
   }, [managerTasks, projects]);
+
+  // Use manager tasks as the source of truth for progress metrics.
+  // Fall back to merged tasks only when manager tasks are unavailable.
+  const dashboardTasks = useMemo(
+    () => (Array.isArray(managerTasks) && managerTasks.length > 0 ? managerTasks : tasks),
+    [managerTasks, tasks]
+  );
 
   const tasksByProject = useMemo(() => {
     const grouped = new Map();
 
-    tasks.forEach((task) => {
+    dashboardTasks.forEach((task) => {
       const projectKey = String(
         task?.projectId ??
           task?.project_id ??
@@ -552,14 +819,14 @@ export default function ManagerDashboard() {
     });
 
     return grouped;
-  }, [tasks]);
+  }, [dashboardTasks]);
 
   const projectRows = useMemo(() => {
     return projects.map((project) => {
       const projectId = getProjectId(project);
-      const projectTaskList = Array.isArray(project?.tasks)
-        ? project.tasks
-        : tasksByProject.get(projectId) || [];
+      const projectTaskList = (tasksByProject.get(projectId) || []).length > 0
+        ? tasksByProject.get(projectId)
+        : (Array.isArray(project?.tasks) ? project.tasks : []);
       const totalTasks = projectTaskList.length;
       const doneTasks = projectTaskList.filter((task) => isCompletedTask(task)).length;
       const totalPointValue = projectTaskList.reduce(
@@ -615,33 +882,33 @@ export default function ManagerDashboard() {
   );
 
   const completionRate = useMemo(() => {
-    const totalPointValue = tasks.reduce(
+    const totalPointValue = dashboardTasks.reduce(
       (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0),
       0
     );
-    const completedPointValue = tasks.reduce((sum, task) => {
+    const completedPointValue = dashboardTasks.reduce((sum, task) => {
       const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
       return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0);
 
     if (totalPointValue === 0) return 0;
     return Math.round((completedPointValue / totalPointValue) * 100);
-  }, [tasks]);
+  }, [dashboardTasks]);
 
   const totalWeighted = useMemo(
-    () => tasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0), 0),
-    [tasks]
+    () => dashboardTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0), 0),
+    [dashboardTasks]
   );
 
   const doneWeighted = useMemo(
-    () => tasks.reduce((sum, task) => {
+    () => dashboardTasks.reduce((sum, task) => {
       const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
       return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0),
-    [tasks]
+    [dashboardTasks]
   );
 
-  const openTasks = useMemo(() => tasks.filter((task) => !isCompletedTask(task)), [tasks]);
+  const openTasks = useMemo(() => dashboardTasks.filter((task) => !isCompletedTask(task)), [dashboardTasks]);
 
   const upcomingTasks = useMemo(() => {
     return [...openTasks]
@@ -657,7 +924,7 @@ export default function ManagerDashboard() {
   }, [openTasks]);
 
   const recentCompletedTasks = useMemo(() => {
-    return tasks
+    return dashboardTasks
       .filter((task) => isCompletedTask(task))
       .sort((a, b) => {
         const firstDate = a?.completedAt || a?.updatedAt || a?.createdAt || 0;
@@ -665,7 +932,7 @@ export default function ManagerDashboard() {
         return new Date(secondDate) - new Date(firstDate);
       })
       .slice(0, 3);
-  }, [tasks]);
+  }, [dashboardTasks]);
 
   const visibleTickets = useMemo(() => {
     // Filter tickets to only show those related to current manager's projects
@@ -714,7 +981,7 @@ export default function ManagerDashboard() {
     : 0;
 
   const developerProgressBadgeStats = useMemo(() => {
-    const sourceTasks = Array.isArray(tasks) ? tasks : [];
+    const sourceTasks = Array.isArray(dashboardTasks) ? dashboardTasks : [];
     const assignedTasks = sourceTasks.filter(hasTaskAssignee);
 
     let storyDone = 0;
@@ -780,7 +1047,7 @@ export default function ManagerDashboard() {
       weightedPointsLabel: `${weightedDone}/${weightedTotal}`,
       delayedTaskCount: delayed,
     };
-  }, [tasks]);
+  }, [dashboardTasks]);
 
   const handleDeveloperProgressTotalsChange = (totals) => {
     setDeveloperProgressTotals(totals || {
@@ -1101,8 +1368,8 @@ export default function ManagerDashboard() {
           hideHeader
           projectsData={projects}
           developersData={developers}
-          tasksData={tasks}
-          loadingOverride={developersQuery.isLoading || tasksQuery.isLoading}
+          tasksData={dashboardTasks}
+          loadingOverride={loading || refreshing}
           errorOverride={developersQuery.error || tasksQuery.error || null}
           onRetry={() => Promise.all([developersQuery.refetch(), tasksQuery.refetch()])}
           onTotalsChange={handleDeveloperProgressTotalsChange}

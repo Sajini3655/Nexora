@@ -6,13 +6,66 @@ export const createProject = async (payload) => {
 };
 
 export const normalizeArray = (value) => {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  if (Array.isArray(value?.projects)) return value.projects;
-  if (Array.isArray(value?.tasks)) return value.tasks;
-  if (Array.isArray(value?.content)) return value.content;
-  if (Array.isArray(value?.items)) return value.items;
-  return [];
+  const visited = new Set();
+
+  const tryExtract = (node, depth = 0) => {
+    if (depth > 4) return [];
+    if (Array.isArray(node)) return node;
+    if (!node || typeof node !== "object") return [];
+    if (visited.has(node)) return [];
+    visited.add(node);
+
+    const directKeys = [
+      "data",
+      "projects",
+      "tasks",
+      "developers",
+      "content",
+      "items",
+      "rows",
+      "results",
+      "list",
+      "payload",
+      "result",
+      "value",
+    ];
+
+    for (const key of directKeys) {
+      if (Array.isArray(node?.[key])) {
+        return node[key];
+      }
+    }
+
+    for (const key of directKeys) {
+      const nested = node?.[key];
+      if (nested && typeof nested === "object") {
+        const extracted = tryExtract(nested, depth + 1);
+        if (Array.isArray(extracted) && extracted.length >= 0 && (extracted.length > 0 || key === "content" || key === "items" || key === "tasks" || key === "projects" || key === "developers")) {
+          return extracted;
+        }
+      }
+    }
+
+    const objectValues = Object.values(node);
+    for (const entry of objectValues) {
+      if (Array.isArray(entry)) {
+        return entry;
+      }
+    }
+
+    for (const entry of objectValues) {
+      if (entry && typeof entry === "object") {
+        const extracted = tryExtract(entry, depth + 1);
+        if (Array.isArray(extracted) && extracted.length > 0) {
+          return extracted;
+        }
+      }
+    }
+
+    return [];
+  };
+
+  return tryExtract(value);
 };
 
 export const getErrorMessage = (error, fallback) =>

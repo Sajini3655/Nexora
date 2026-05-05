@@ -28,9 +28,11 @@ export function buildSummariesFromTasks(developers, tasks) {
   const getTaskAssigneeName = (task) =>
     task?.assignedToName ||
     task?.assigneeName ||
+    task?.assigned_to_name ||
     task?.assignedDeveloperName ||
     task?.developerName ||
-    task?.assigned_to_name ||
+    task?.assignedUserName ||
+    task?.userName ||
     task?.assignedTo?.name ||
     task?.assignee?.name ||
     task?.assignedUser?.name ||
@@ -75,6 +77,8 @@ export function buildSummariesFromTasks(developers, tasks) {
       task?.assigned_to_id ??
       task?.assignedDeveloperId ??
       task?.developerId ??
+      task?.assignedUserId ??
+      task?.userId ??
       getNestedAssigneeId(task?.assignedTo) ??
       getNestedAssigneeId(task?.assignee) ??
       getNestedAssigneeId(task?.assignedUser) ??
