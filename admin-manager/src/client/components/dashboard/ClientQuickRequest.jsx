@@ -98,6 +98,7 @@ export default function ClientQuickRequest({ projects = [], onTicketCreated }) {
             select
             label="Project"
             size="small"
+            InputLabelProps={{ shrink: true }}
             value={form.projectId}
             onChange={(e) => updateField("projectId", e.target.value)}
             SelectProps={{ native: true }}
