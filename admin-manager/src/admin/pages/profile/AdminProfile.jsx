@@ -1,21 +1,7 @@
 import React, { useMemo, useState } from "react";
-import {
-  Box,
-  Typography,
-  Grid,
-  Divider,
-  Chip,
-  Alert,
-  Stack,
-} from "@mui/material";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
-import Card from "../../../components/ui/Card";
-import Input from "../../../components/ui/Input";
-import Button from "../../../components/ui/Button";
 import useApi from "../../../hooks/useApi.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
+import { getActiveRole } from "../../../utils/roleRouting";
 
 export default function AdminProfile() {
   const { user } = useAuth();
@@ -25,26 +11,15 @@ export default function AdminProfile() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const initials = useMemo(() => {
-    const name = user?.name?.trim();
-    if (!name) {
-      return "U";
-    }
-    return name
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0].toUpperCase())
-      .join("");
-  }, [user?.name]);
+  const [pwMsg, setPwMsg] = useState("");
+  const [statusMsg, setStatusMsg] = useState("");
 
   const roleLabel = useMemo(() => {
-    const role = user?.role || "USER";
+    const role = String(getActiveRole(user) || user?.role || "USER").toUpperCase();
+    if (role === "ADMIN") return "Admin";
+    if (role === "MANAGER") return "Manager";
     return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-  }, [user?.role]);
+  }, [user]);
 
   const createdAtLabel = useMemo(() => {
     if (!user?.createdAt) {
@@ -61,21 +36,20 @@ export default function AdminProfile() {
 
   async function handleChangePassword(event) {
     event.preventDefault();
-    setError("");
-    setSuccess("");
+    setPwMsg("");
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setError("Fill all password fields.");
+      setPwMsg("Fill all password fields.");
       return;
     }
 
     if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters.");
+      setPwMsg("New password must be at least 6 characters.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("New password and confirmation do not match.");
+      setPwMsg("New password and confirmation do not match.");
       return;
     }
 
@@ -89,9 +63,12 @@ export default function AdminProfile() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setSuccess("Password updated successfully.");
+
+      setPwMsg("Password updated successfully.");
+      setStatusMsg("Security settings updated.");
+      window.setTimeout(() => setStatusMsg(""), 2200);
     } catch (err) {
-      setError(
+      setPwMsg(
         err?.response?.data?.message ||
           "Failed to update password. Please try again."
       );
@@ -101,131 +78,104 @@ export default function AdminProfile() {
   }
 
   return (
-    <Box sx={{ p: { xs: 0, md: 0 } }}>
-      <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
-        My Profile
-      </Typography>
-      <Typography sx={{ opacity: 0.72, mb: 3 }}>
-        Manage your account details and security settings.
-      </Typography>
+    <>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold">{roleLabel} Profile</h2>
+          <p className="text-sm text-slate-300 mt-1">
+            Manage your account details and security settings.
+          </p>
+        </div>
+        {statusMsg && <span className="chip">{statusMsg}</span>}
+      </div>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={7}>
-          <Card sx={{ mb: 3 }}>
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2.5 }}>
-              <Box
-                sx={{
-                  width: 62,
-                  height: 62,
-                  borderRadius: "50%",
-                  display: "grid",
-                  placeItems: "center",
-                  fontWeight: 900,
-                  fontSize: 22,
-                  color: "#e8e8ff",
-                  background: "linear-gradient(135deg, rgba(74,134,255,0.6), rgba(95,52,230,0.6))",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                }}
-              >
-                {initials}
-              </Box>
-              <Box>
-                <Typography sx={{ fontWeight: 900, fontSize: 20 }}>
-                  {user?.name || "-"}
-                </Typography>
-                <Typography sx={{ opacity: 0.75 }}>{user?.email || "-"}</Typography>
-              </Box>
-            </Stack>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 glass-card p-5">
+          <h3 className="text-lg font-bold mb-4">Basic Details</h3>
 
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Chip icon={<PersonOutlineIcon />} label={roleLabel} />
-              <Chip
-                icon={<CheckCircleOutlineIcon />}
-                color={user?.enabled ? "success" : "default"}
-                label={user?.enabled ? "Account Active" : "Account Disabled"}
-              />
-            </Box>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ReadOnlyField label="Full name" value={user?.name} />
+            <ReadOnlyField label="Email" value={user?.email} />
+            <ReadOnlyField label="Role" value={roleLabel} />
+            <ReadOnlyField
+              label="Account status"
+              value={user?.enabled ? "Account Active" : "Account Disabled"}
+            />
+            <ReadOnlyField label="User ID" value={user?.id} />
+            <ReadOnlyField label="Joined" value={createdAtLabel} />
+          </div>
+        </div>
 
-          <Card>
-            <Typography fontWeight={800} sx={{ mb: 2 }}>
-              Account Information
-            </Typography>
+        <div className="glass-card p-5">
+          <h3 className="text-lg font-bold mb-3">Skills</h3>
+          <p className="text-xs text-slate-400">
+            Skills are currently available for Developer accounts.
+          </p>
+          <div className="mt-4">
+            <span className="chip chip-muted">Not applicable</span>
+          </div>
+        </div>
 
-            <Divider sx={{ mb: 2 }} />
+        <form
+          onSubmit={handleChangePassword}
+          className="lg:col-span-3 glass-card p-5"
+        >
+          <h3 className="text-lg font-bold mb-3">Change Password</h3>
+          <p className="text-xs text-slate-400 mb-4">
+            Use a strong password with at least 6 characters.
+          </p>
 
-            <Info label="User ID" value={user?.id} />
-            <Info label="Name" value={user?.name} />
-            <Info label="Email" value={user?.email} />
-            <Info label="Role" value={roleLabel} />
-            <Info label="Joined" value={createdAtLabel} />
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={5}>
-          <Card component="form" onSubmit={handleChangePassword}>
-            <Typography fontWeight={800} sx={{ mb: 2 }}>
-              Security
-            </Typography>
-
-            <Divider sx={{ mb: 2 }} />
-
-            <Typography variant="body2" sx={{ opacity: 0.75, mb: 2 }}>
-              Change your account password. Use a strong password with at least 6 characters.
-            </Typography>
-
-            {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
-            {success ? <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert> : null}
-
-            <Stack spacing={1.5}>
-              <Input
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs text-slate-400">Current password</label>
+              <input
                 type="password"
-                label="Current Password"
+                className="input mt-1"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 autoComplete="current-password"
               />
-              <Input
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">New password</label>
+              <input
                 type="password"
-                label="New Password"
+                className="input mt-1"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 autoComplete="new-password"
               />
-              <Input
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">Confirm new password</label>
+              <input
                 type="password"
-                label="Confirm New Password"
+                className="input mt-1"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
               />
-            </Stack>
+            </div>
+          </div>
 
-            <Button
-              type="submit"
-              loading={loading}
-              sx={{ mt: 2, width: "100%" }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <LockOutlinedIcon fontSize="small" />
-                <span>Update Password</span>
-              </Box>
-            </Button>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
+          <div className="mt-4 flex items-center gap-3">
+            <button type="submit" disabled={loading} className="btn-primary">
+              {loading ? "Updating..." : "Update password"}
+            </button>
+            {pwMsg && <span className="text-sm text-slate-200">{pwMsg}</span>}
+          </div>
+        </form>
+      </div>
+    </>
   );
 }
 
-function Info({ label, value }) {
+function ReadOnlyField({ label, value }) {
   return (
-    <Box sx={{ mb: 1.5 }}>
-      <Typography variant="caption" sx={{ opacity: 0.7 }}>
-        {label}
-      </Typography>
-      <Typography fontWeight={700}>{value || "-"}</Typography>
-    </Box>
+    <div>
+      <label className="text-xs text-slate-400">{label}</label>
+      <input className="input mt-1" value={value || "-"} readOnly />
+    </div>
   );
 }
 

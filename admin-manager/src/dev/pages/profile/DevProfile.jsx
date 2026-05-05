@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { loadProfile, updateProfile, loadProfileFromBackendSafe, syncProfileToBackend } from "../../data/profileStore";
+import useApi from "../../../hooks/useApi.jsx";
 
 function makeSkillId(name) {
   const base = name.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 18);
@@ -7,6 +8,7 @@ function makeSkillId(name) {
 }
 
 export default function DevProfile() {
+  const api = useApi();
   const initial = useMemo(() => loadProfile(), []);
 
   const [profile, setProfile] = useState(initial);
@@ -79,10 +81,6 @@ export default function DevProfile() {
       setPwMsg("Fill all password fields.");
       return;
     }
-    if (oldPw !== profile.password) {
-      setPwMsg("Old password is incorrect.");
-      return;
-    }
     if (newPw.length < 6) {
       setPwMsg("New password must be at least 6 characters.");
       return;
@@ -91,13 +89,25 @@ export default function DevProfile() {
       setPwMsg("New password and confirm password do not match.");
       return;
     }
-    const next = { ...profile, password: newPw };
-    const saved = updateProfile(() => next);
-    setProfile(saved);
-    setOldPw("");
-    setNewPw("");
-    setConfirmPw("");
-    setPwMsg("Password updated (UI demo). ");
+
+    (async () => {
+      try {
+        await api.post("/auth/change-password", {
+          currentPassword: oldPw,
+          newPassword: newPw,
+        });
+
+        setOldPw("");
+        setNewPw("");
+        setConfirmPw("");
+        setPwMsg("Password updated successfully.");
+      } catch (err) {
+        setPwMsg(
+          err?.response?.data?.message ||
+            "Failed to update password. Please try again."
+        );
+      }
+    })();
   };
 
   return (
@@ -295,7 +305,7 @@ export default function DevProfile() {
         <div className="lg:col-span-3 glass-card p-5">
           <h3 className="text-lg font-bold mb-3">Change Password</h3>
           <p className="text-xs text-slate-400 mb-4">
-            UI demo only. In a real app this would be handled securely on the server.
+            Change your account password. Use a strong password with at least 6 characters.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -1,9 +1,20 @@
 // src/components/layout/ProtectedRoute.jsx
 import React from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { hasAnyRole } from "../../utils/permissions";
+import { getActiveRole } from "../../utils/roleRouting";
+
+function roleFromPathname(pathname) {
+  const path = String(pathname || "");
+  if (path.startsWith("/dev")) return "DEVELOPER";
+  if (path.startsWith("/client")) return "CLIENT";
+  if (path.startsWith("/manager")) return "MANAGER";
+  if (path.startsWith("/admin") || path === "/access" || path === "/settings") return "ADMIN";
+  if (path.startsWith("/admin/")) return "ADMIN";
+  return "";
+}
 
 function roleHome(role, moduleAccess = {}) {
   const r = (role || "").toUpperCase();
@@ -29,6 +40,8 @@ function roleHome(role, moduleAccess = {}) {
 
 export default function ProtectedRoute({ allowedRoles, requiredModule }) {
   const { user, loading, moduleAccess, accessLoading } = useAuth();
+  const location = useLocation();
+  const activeRole = roleFromPathname(location.pathname) || getActiveRole(user) || user?.role;
 
   if (loading || accessLoading) {
     return (
@@ -47,10 +60,10 @@ export default function ProtectedRoute({ allowedRoles, requiredModule }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredModule && user.role !== "ADMIN") {
+  if (requiredModule && String(activeRole || "").toUpperCase() !== "ADMIN") {
     const allowed = Boolean(moduleAccess?.[requiredModule]);
     if (!allowed) {
-      return <Navigate to={roleHome(user.role, moduleAccess || {})} replace />;
+      return <Navigate to={roleHome(activeRole, moduleAccess || {})} replace />;
     }
   }
 
