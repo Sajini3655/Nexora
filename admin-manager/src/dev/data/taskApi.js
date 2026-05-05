@@ -64,6 +64,59 @@ function calculateProgress(completedPointValue, totalPointValue, fallbackProgres
   return Math.round((completed * 100) / total);
 }
 
+function inferTicketSource(taskDto, existingUiTask) {
+  const directSource =
+    taskDto.sourceChannel ??
+    taskDto.ticketSource ??
+    taskDto.source ??
+    taskDto.taskSource ??
+    taskDto.origin ??
+    taskDto.createdFrom ??
+    existingUiTask?.ticketSource ??
+    existingUiTask?.source ??
+    existingUiTask?.taskSource ??
+    null;
+
+  if (directSource) {
+    return String(directSource).trim().toUpperCase();
+  }
+
+  const description = String(taskDto.description ?? existingUiTask?.description ?? "").trim();
+  const match = description.match(/converted from\s+([a-z_ ]+)\s+ticket/i);
+
+  if (match?.[1]) {
+    return match[1].trim().toUpperCase().replace(/[\s-]+/g, "_");
+  }
+
+  if (/source:\s*email/i.test(description)) return "EMAIL";
+  if (/source:\s*chat/i.test(description)) return "CHAT";
+  if (/source:\s*client/i.test(description)) return "CLIENT";
+
+  return null;
+}
+
+function pickTaskSourceFields(taskDto) {
+  const ticketSource = inferTicketSource(taskDto);
+
+  return {
+    source: taskDto.source ?? taskDto.taskSource ?? taskDto.origin ?? taskDto.createdFrom ?? ticketSource ?? null,
+    taskSource: taskDto.taskSource ?? taskDto.source ?? taskDto.origin ?? taskDto.createdFrom ?? ticketSource ?? null,
+    origin: taskDto.origin ?? taskDto.source ?? taskDto.taskSource ?? ticketSource ?? null,
+    createdFrom: taskDto.createdFrom ?? taskDto.source ?? taskDto.taskSource ?? ticketSource ?? null,
+    type: taskDto.type ?? taskDto.taskType ?? null,
+    taskType: taskDto.taskType ?? taskDto.type ?? null,
+    category: taskDto.category ?? null,
+    ticketSource,
+    requestSource: taskDto.requestSource ?? null,
+    ticketId: taskDto.ticketId ?? taskDto.ticket_id ?? taskDto.ticket?.id ?? null,
+    ticket_id: taskDto.ticket_id ?? taskDto.ticketId ?? taskDto.ticket?.id ?? null,
+    ticket: taskDto.ticket ?? null,
+    convertedFromTicket: taskDto.convertedFromTicket ?? null,
+    fromTicket: taskDto.fromTicket ?? null,
+    isTicketTask: taskDto.isTicketTask ?? null,
+  };
+}
+
 function mapBackendTaskToUi(taskDto, existingUiTask) {
   const id = String(taskDto.id);
 
@@ -121,6 +174,7 @@ function mapBackendTaskToUi(taskDto, existingUiTask) {
     assignee: taskDto.assignedToName || taskDto.assigneeName || "You",
     assignedToName: taskDto.assignedToName || taskDto.assigneeName || "You",
     assignedToId: taskDto.assignedToId ?? taskDto.assigned_to_id ?? null,
+    ...pickTaskSourceFields(taskDto),
     dueDate: taskDto.dueDate || taskDto.deadline || "-",
     priority: titleCaseEnum(taskDto.priority),
     projectId,

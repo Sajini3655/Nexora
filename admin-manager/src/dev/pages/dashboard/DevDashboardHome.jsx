@@ -17,6 +17,7 @@ import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
+import { isProjectTask, isTicketTask } from "../../utils/taskSource";
 
 function isCompletedTask(task) {
   const status = String(task?.status || "").toLowerCase();
@@ -156,6 +157,13 @@ export default function DevDashboardHome() {
     [tasks]
   );
 
+  const projectTasks = useMemo(() => tasks.filter(isProjectTask), [tasks]);
+  const ticketTasks = useMemo(() => tasks.filter(isTicketTask), [tasks]);
+  const activeProjectTasks = useMemo(
+    () => projectTasks.filter((task) => !isCompletedTask(task)),
+    [projectTasks]
+  );
+
   const completedTasks = useMemo(
     () => tasks.filter((task) => isCompletedTask(task)),
     [tasks]
@@ -256,9 +264,9 @@ export default function DevDashboardHome() {
             }}
           >
             <StatCard
-              title="Assigned Tasks"
-              value={totals.tasks}
-              hint={`${totals.activeTasks} active`}
+              title="Project Tasks"
+              value={projectTasks.length}
+              hint={`${activeProjectTasks.length} active`}
               icon="📋"
             />
 
@@ -278,7 +286,7 @@ export default function DevDashboardHome() {
 
             <StatCard
               title="Ticket Tasks"
-              value={totals.tasks}
+              value={ticketTasks.length}
               hint="Converted to tasks"
               icon="🎫"
             />

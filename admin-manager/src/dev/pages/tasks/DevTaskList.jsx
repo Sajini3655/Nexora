@@ -17,6 +17,12 @@ import { loadTasks } from "../../data/taskStore";
 import { syncAssignedTasksToLocalStoreSafe } from "../../data/taskApi";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+import {
+  getTaskSourceLabel,
+  getTicketTaskCategoryLabel,
+  isProjectTask,
+  isTicketTask,
+} from "../../utils/taskSource";
 
 function isCompleted(task) {
   const status = String(task?.status || "").toLowerCase();
@@ -30,6 +36,16 @@ function isActive(task) {
 function numberOrZero(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
+}
+
+function getTaskSearchText(task) {
+  return `${task.id} ${task.title} ${task.description} ${task.projectName || ""} ${getTaskSourceLabel(task)}`.toLowerCase();
+}
+
+function getProgressBadgeColor(progress) {
+  if (progress >= 80) return "success";
+  if (progress >= 40) return "info";
+  return "default";
 }
 
 function getProgressData(task) {
@@ -84,28 +100,59 @@ export default function DevTaskList() {
     const q = search.trim().toLowerCase();
 
     return tasks.filter((task) => {
-      const text = `${task.id} ${task.title} ${task.description} ${task.projectName || ""}`.toLowerCase();
+      const text = getTaskSearchText(task);
       return q === "" ? true : text.includes(q);
     });
   }, [tasks, search]);
 
+  const projectTasksAll = useMemo(
+    () => tasks.filter(isProjectTask),
+    [tasks]
+  );
+
+  const ticketTasksAll = useMemo(
+    () => tasks.filter(isTicketTask),
+    [tasks]
+  );
+
+  const projectTasks = useMemo(
+    () => filteredTasks.filter(isProjectTask),
+    [filteredTasks]
+  );
+
+  const ticketTasks = useMemo(
+    () => filteredTasks.filter(isTicketTask),
+    [filteredTasks]
+  );
+
+  const ticketCategoryCounts = useMemo(
+    () => ticketTasks.reduce(
+      (acc, task) => {
+        const label = getTicketTaskCategoryLabel(task);
+        acc[label] = (acc[label] || 0) + 1;
+        return acc;
+      },
+      { Chat: 0, Email: 0, "Client Portal": 0, Manager: 0, Ticket: 0 }
+    ),
+    [ticketTasks]
+  );
+
   const stats = useMemo(() => {
     const completed = tasks.filter(isCompleted).length;
-    const active = tasks.filter(isActive).length;
 
     const totalPoints = tasks.reduce((sum, task) => sum + numberOrZero(task.totalPointValue), 0);
     const completedPoints = tasks.reduce((sum, task) => sum + numberOrZero(task.completedPointValue), 0);
     const progress = totalPoints > 0 ? Math.round((completedPoints * 100) / totalPoints) : 0;
 
     return {
-      total: tasks.length,
+      projectTasks: projectTasksAll.length,
+      ticketTasks: ticketTasksAll.length,
       completed,
-      active,
       totalPoints,
       completedPoints,
       progress,
     };
-  }, [tasks]);
+  }, [tasks, projectTasksAll.length, ticketTasksAll.length]);
 
   return (
     <>
@@ -131,10 +178,10 @@ export default function DevTaskList() {
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} md={3}>
-          <StatCard label="Total Tasks" value={stats.total} />
+          <StatCard label="Project Tasks" value={stats.projectTasks} />
         </Grid>
         <Grid item xs={12} md={3}>
-          <StatCard label="Active" value={stats.active} />
+          <StatCard label="Ticket Tasks" value={stats.ticketTasks} hint="Converted from tickets" />
         </Grid>
         <Grid item xs={12} md={3}>
           <StatCard label="Completed" value={stats.completed} />
@@ -170,56 +217,27 @@ export default function DevTaskList() {
           <CircularProgress sx={{ color: "#6b51ff" }} />
         </Box>
       ) : (
-        <Box sx={{ display: "grid", gap: 1.5 }}>
-          {filteredTasks.map((task) => {
-            const progressData = getProgressData(task);
+        <Box sx={{ display: "grid", gap: 2.5 }}>
+          <TaskTableSection
+            title="Project Tasks"
+            subtitle="Normal project work assigned to you"
+            count={projectTasks.length}
+            rows={projectTasks}
+            emptyMessage="No project tasks assigned yet."
+            showSource={false}
+            onOpenTask={(task) => navigate(`/dev/tasks/${task.id}`)}
+          />
 
-            return (
-              <Card
-                key={task.id}
-                sx={{ p: 2.5, cursor: "pointer" }}
-                onClick={() => navigate(`/dev/tasks/${task.id}`)}
-              >
-                <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start" }}>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: -0.3 }} noWrap>
-                      {task.title}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.5 }}>
-                      Task ID: {task.id} • {task.projectName || "Backend Project"}
-                    </Typography>
-
-                    <Box sx={{ mt: 1.25, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                      <Chip size="small" label={task.status || "Todo"} />
-                      <StatusBadge label={task.priority || "Medium"} />
-                      <Chip size="small" label={`${progressData.completedPointValue}/${progressData.totalPointValue} pts`} variant="outlined" />
-                    </Box>
-
-                    <Box sx={{ mt: 1.4 }}>
-                      <LinearProgress
-                        variant="determinate"
-                        value={progressData.progress}
-                        sx={{
-                          height: 7,
-                          borderRadius: 999,
-                          bgcolor: "rgba(255,255,255,0.08)",
-                          "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
-                        }}
-                      />
-                    </Box>
-                  </Box>
-
-                  <Chip label={`${progressData.progress}%`} color={isCompleted(task) ? "success" : "default"} />
-                </Box>
-              </Card>
-            );
-          })}
-
-          {filteredTasks.length === 0 ? (
-            <Card sx={{ p: 3, textAlign: "center" }}>
-              <Typography variant="body1">No assigned tasks found.</Typography>
-            </Card>
-          ) : null}
+          <TaskTableSection
+            title="Ticket Tasks"
+            subtitle="Tasks converted from chat, email, and client portal tickets"
+            count={ticketTasks.length}
+            rows={ticketTasks}
+            emptyMessage="No ticket tasks assigned yet."
+            showSource
+            sourceSummary={ticketCategoryCounts}
+            onOpenTask={(task) => navigate(`/dev/tasks/${task.id}`)}
+          />
         </Box>
       )}
     </>
@@ -241,6 +259,177 @@ function StatCard({ label, value, hint }) {
         </Typography>
       ) : null}
     </Card>
+  );
+}
+
+function TaskTableSection({
+  title,
+  subtitle,
+  count,
+  rows,
+  emptyMessage,
+  showSource = false,
+  sourceSummary = null,
+  onOpenTask,
+}) {
+  return (
+    <Card sx={{ p: 2.5 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", mb: 1.5 }}>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 950, letterSpacing: -0.25 }}>
+            {title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.4 }}>
+            {subtitle}
+          </Typography>
+        </Box>
+
+        <Chip label={count} size="small" sx={{ fontWeight: 900 }} />
+      </Box>
+
+      {showSource && sourceSummary ? (
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1.5 }}>
+          <Chip size="small" variant="outlined" label={`Chat: ${sourceSummary.Chat || 0}`} />
+          <Chip size="small" variant="outlined" label={`Email: ${sourceSummary.Email || 0}`} />
+          <Chip size="small" variant="outlined" label={`Client Portal: ${sourceSummary["Client Portal"] || 0}`} />
+        </Box>
+      ) : null}
+
+      {rows.length === 0 ? (
+        <Card sx={{ p: 3, textAlign: "center", bgcolor: "rgba(15,23,42,0.55)" }}>
+          <Typography variant="body1">{emptyMessage}</Typography>
+        </Card>
+      ) : (
+        <Box sx={{ overflowX: "auto" }}>
+          <Box
+            component="table"
+            sx={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+              minWidth: 760,
+            }}
+          >
+            <Box component="thead">
+              <Box component="tr">
+                <TableHeadCell>Task</TableHeadCell>
+                {showSource ? <TableHeadCell>Source</TableHeadCell> : null}
+                <TableHeadCell>Project</TableHeadCell>
+                <TableHeadCell>Status</TableHeadCell>
+                <TableHeadCell>Progress</TableHeadCell>
+                <TableHeadCell align="right">Points</TableHeadCell>
+              </Box>
+            </Box>
+
+            <Box component="tbody">
+              {rows.map((task) => {
+                const progressData = getProgressData(task);
+
+                return (
+                  <Box
+                    component="tr"
+                    key={task.id}
+                    onClick={() => onOpenTask?.(task)}
+                    sx={{
+                      cursor: "pointer",
+                      transition: "background-color 140ms ease",
+                      "&:hover": { backgroundColor: "rgba(255,255,255,0.03)" },
+                    }}
+                  >
+                    <TableBodyCell>
+                      <Typography sx={{ fontWeight: 850 }} noWrap>
+                        {task.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.62)" }}>
+                        {task.id}
+                      </Typography>
+                    </TableBodyCell>
+
+                    {showSource ? (
+                      <TableBodyCell>
+                        <Chip size="small" label={getTaskSourceLabel(task)} variant="outlined" />
+                      </TableBodyCell>
+                    ) : null}
+
+                    <TableBodyCell>
+                      <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.8)" }} noWrap>
+                        {task.projectName || "Backend Project"}
+                      </Typography>
+                    </TableBodyCell>
+
+                    <TableBodyCell>
+                      <StatusBadge label={task.status || "Todo"} />
+                    </TableBodyCell>
+
+                    <TableBodyCell>
+                      <Box sx={{ minWidth: 150 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={progressData.progress}
+                          sx={{
+                            height: 7,
+                            borderRadius: 999,
+                            bgcolor: "rgba(255,255,255,0.08)",
+                            "& .MuiLinearProgress-bar": {
+                              bgcolor: progressData.progress >= 80 ? "#22c55e" : "#6d5dfc",
+                            },
+                          }}
+                        />
+                        <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.62)", mt: 0.35, display: "block" }}>
+                          {progressData.progress}%
+                        </Typography>
+                      </Box>
+                    </TableBodyCell>
+
+                    <TableBodyCell align="right">
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                        {progressData.completedPointValue}/{progressData.totalPointValue} pts
+                      </Typography>
+                    </TableBodyCell>
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+        </Box>
+      )}
+    </Card>
+  );
+}
+
+function TableHeadCell({ children, align = "left" }) {
+  return (
+    <Box
+      component="th"
+      sx={{
+        textAlign: align,
+        px: 1.5,
+        py: 1.1,
+        color: "rgba(255,255,255,0.7)",
+        fontSize: 12,
+        fontWeight: 800,
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+function TableBodyCell({ children, align = "left" }) {
+  return (
+    <Box
+      component="td"
+      sx={{
+        px: 1.5,
+        py: 1.1,
+        verticalAlign: "middle",
+        textAlign: align,
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+      }}
+    >
+      {children}
+    </Box>
   );
 }
 
