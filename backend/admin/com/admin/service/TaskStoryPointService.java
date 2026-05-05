@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -189,13 +190,13 @@ public class TaskStoryPointService {
             throw new AccessDeniedException("You are not allowed to view this developer progress");
         }
 
+        // Get all tasks assigned to the developer
+        List<TaskItem> allDeveloperTasks = taskRepository.findByAssignedToId(developer.getId());
+
+        // If manager, filter to only their visible projects' tasks
         List<TaskItem> developerTasks = actorIsManager
-            ? taskRepository.findByAssignedToId(developer.getId()).stream()
-                .filter(task -> task.getProject() != null
-                    && task.getProject().getManager() != null
-                    && Objects.equals(task.getProject().getManager().getId(), actor.getId()))
-                .toList()
-            : taskRepository.findByAssignedToId(developer.getId());
+            ? filterTasksByManagerVisibleProjects(actor, allDeveloperTasks)
+            : allDeveloperTasks;
 
         long assignedTasks = developerTasks.size();
         long completedTasks = developerTasks.stream().filter(this::isTaskCompleted).count();
@@ -492,6 +493,19 @@ public class TaskStoryPointService {
 
     private boolean isTaskCompleted(TaskItem task) {
         return task.getStatus() == TaskStatus.DONE || task.getStatus() == TaskStatus.COMPLETED;
+    }
+
+    private List<TaskItem> filterTasksByManagerVisibleProjects(User manager, List<TaskItem> tasks) {
+        // Get all projects managed by this manager
+        List<Project> managerProjects = projectRepository.findByManagerOrderByCreatedAtDesc(manager);
+        Set<Long> managedProjectIds = managerProjects.stream()
+                .map(Project::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        // Filter tasks to only those in the manager's projects
+        return tasks.stream()
+                .filter(task -> task.getProject() != null && managedProjectIds.contains(task.getProject().getId()))
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private record ProgressTotals(

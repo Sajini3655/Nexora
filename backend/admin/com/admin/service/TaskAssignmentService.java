@@ -48,29 +48,14 @@ public class TaskAssignmentService {
         User actor = userRepository.findByEmail(actorEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
-        if (actor.getAllRoles().contains(Role.ADMIN)) {
-            return listDevelopers();
-        }
+        // All actors (admin, manager, developer) get the same list of all developers
+        // Scoping is done at the task/progress level, not at the developer visibility level
+        List<User> devUsers = userRepository.findAll().stream()
+            .filter(user -> Boolean.TRUE.equals(user.getEnabled()))
+            .filter(user -> user.getAllRoles().contains(Role.DEVELOPER))
+            .toList();
 
-        if (!actor.getAllRoles().contains(Role.MANAGER)) {
-            return List.of();
-        }
-
-        Set<Long> visibleDeveloperIds = getManagerVisibleTasks(actor).stream()
-                .map(TaskItem::getAssignedTo)
-                .filter(Objects::nonNull)
-                .map(User::getId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        if (visibleDeveloperIds.isEmpty()) {
-            return List.of();
-        }
-
-        return userRepository.findAll().stream()
-                .filter(user -> Boolean.TRUE.equals(user.getEnabled()))
-                .filter(user -> user.getAllRoles().contains(Role.DEVELOPER))
-                .filter(user -> visibleDeveloperIds.contains(user.getId()))
+        return devUsers.stream()
                 .map(this::toDeveloperSummary)
                 .sorted(Comparator.comparing(DeveloperSummaryDto::getName, String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());

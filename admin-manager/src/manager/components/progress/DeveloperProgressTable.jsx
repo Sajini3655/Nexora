@@ -6,10 +6,12 @@ function rowKey(row, index) {
 }
 
 export default function DeveloperProgressTable({ rows = [] }) {
-  if (!rows.length) {
+  const visibleRows = rows.filter((row) => Number(row.assignedTasks ?? 0) > 0);
+
+  if (!visibleRows.length) {
     return (
       <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-        No developer progress data yet.
+        No developer task progress yet.
       </Typography>
     );
   }
@@ -39,7 +41,7 @@ export default function DeveloperProgressTable({ rows = [] }) {
           ))}
         </Box>
 
-        {rows.map((row, index) => (
+        {visibleRows.map((row, index) => (
           <Box
             key={rowKey(row, index)}
             sx={{
