@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Box, Chip, Paper, Stack, Typography, Button } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useManagerDevelopers, useManagerTasks } from "../../data/useManager";
@@ -45,6 +45,8 @@ function buildSummariesFromTasks(developers, tasks) {
   const getTaskAssigneeName = (task) =>
     task?.assignedToName ||
     task?.assigneeName ||
+    task?.assignedDeveloperName ||
+    task?.developerName ||
     task?.assigned_to_name ||
     task?.assignedTo?.name ||
     task?.assignee?.name ||
@@ -90,6 +92,8 @@ function buildSummariesFromTasks(developers, tasks) {
       task?.assignedToId ??
       task?.assigneeId ??
       task?.assigned_to_id ??
+      task?.assignedDeveloperId ??
+      task?.developerId ??
       getNestedAssigneeId(task?.assignedTo) ??
       getNestedAssigneeId(task?.assignee) ??
       getNestedAssigneeId(task?.assignedUser) ??
@@ -271,14 +275,19 @@ export default function ManagerDeveloperProgress({
   const effectiveLoading = (loading || backendProgressQuery.isLoading || backendProgressQuery.isFetching) && !hasAnyData;
 
   const rows = useMemo(() => {
+    if (hasExternalData) {
+      return buildSummariesFromTasks(developers, tasks);
+    }
+
     if (Array.isArray(backendProgressQuery.data) && backendProgressQuery.data.length > 0) {
       return backendProgressQuery.data;
     }
+
     return buildSummariesFromTasks(developers, tasks);
-  }, [backendProgressQuery.data, developers, tasks]);
+  }, [hasExternalData, backendProgressQuery.data, developers, tasks]);
 
   const delayedTaskCount = useMemo(() => {
-    return tasks.filter(isDelayedTask).length;
+    return (Array.isArray(tasks) ? tasks.filter(isDelayedTask).length : 0);
   }, [tasks]);
 
   const hasUsableRows = Array.isArray(rows) && rows.length > 0;
@@ -300,17 +309,39 @@ export default function ManagerDeveloperProgress({
     return { assignedTasks, completedPoints, totalPoints, completedPointValue, totalPointValue };
   }, [rows]);
 
+  const lastEmittedTotalsRef = useRef(null);
+
+  const visibleRows = useMemo(
+    () => (Array.isArray(rows) ? rows : []).filter((row) => Number(row.assignedTasks ?? 0) > 0),
+    [rows]
+  );
+
   useEffect(() => {
     if (typeof onTotalsChange !== "function") return;
 
-    onTotalsChange({
+    const nextTotals = {
       assignedTasks: totals.assignedTasks,
       completedStoryPoints: totals.completedPoints,
       totalStoryPoints: totals.totalPoints,
       completedPointValue: totals.completedPointValue,
       totalPointValue: totals.totalPointValue,
-      delayedTaskCount,
-    });
+      delayedTasks: delayedTaskCount,
+    };
+
+    const prevTotals = lastEmittedTotalsRef.current;
+    const isSameAsPrevious =
+      prevTotals &&
+      prevTotals.assignedTasks === nextTotals.assignedTasks &&
+      prevTotals.completedStoryPoints === nextTotals.completedStoryPoints &&
+      prevTotals.totalStoryPoints === nextTotals.totalStoryPoints &&
+      prevTotals.completedPointValue === nextTotals.completedPointValue &&
+      prevTotals.totalPointValue === nextTotals.totalPointValue &&
+      prevTotals.delayedTasks === nextTotals.delayedTasks;
+
+    if (isSameAsPrevious) return;
+
+    lastEmittedTotalsRef.current = nextTotals;
+    onTotalsChange(nextTotals);
   }, [onTotalsChange, totals, delayedTaskCount]);
 
   return (
@@ -373,7 +404,7 @@ export default function ManagerDeveloperProgress({
           ) : null}
         </Box>
       ) : null}
-      {!effectiveLoading ? <DeveloperProgressTable rows={rows} /> : null}
+      {!effectiveLoading ? <DeveloperProgressTable rows={visibleRows} /> : null}
     </Paper>
   );
 }

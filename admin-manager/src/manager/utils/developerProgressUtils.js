@@ -1,12 +1,8 @@
-function normalizeStatus(task) {
-  return String(task?.status || task?.taskStatus || task?.state || "")
+export function taskIsCompleted(task) {
+  const status = String(task?.status || task?.taskStatus || task?.state || "")
     .trim()
     .toLowerCase()
     .replace(/[\s_-]+/g, " ");
-}
-
-export function taskIsCompleted(task) {
-  const status = normalizeStatus(task);
 
   if (["done", "completed", "complete", "closed", "resolved", "finished"].includes(status)) {
     return true;
@@ -18,98 +14,93 @@ export function taskIsCompleted(task) {
   return totalPointValue > 0 && completedPointValue >= totalPointValue;
 }
 
-export function isDelayedTask(task) {
-  const due = task?.dueDate || task?.deadline || task?.targetDate || task?.plannedEndDate || task?.due_on;
-  if (!due) return false;
-
-  const dueDate = new Date(due);
-  if (Number.isNaN(dueDate.getTime())) return false;
-
-  return !taskIsCompleted(task) && dueDate.getTime() < Date.now();
-}
-
 function numberOrZero(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
 }
 
-function normalizeName(value) {
-  return String(value || "").trim().toLowerCase();
-}
+export function buildSummariesFromTasks(developers, tasks) {
+  const byId = new Map();
+  const developerNameToId = new Map();
 
-function getNestedId(value) {
-  if (!value || typeof value !== "object") return undefined;
+  const normalizeName = (value) => String(value || "").trim().toLowerCase();
 
-  return (
-    value.id ??
-    value.userId ??
-    value.developerId ??
-    value.assignedToId ??
-    value.assigneeId ??
-    value.assigned_to_id ??
-    value.assignee_id
-  );
-}
-
-function getTaskAssigneeId(task) {
-  const id =
-    task?.assignedToId ??
-    task?.assigneeId ??
-    task?.developerId ??
-    task?.userId ??
-    task?.assigned_to_id ??
-    task?.assignee_id ??
-    getNestedId(task?.assignedTo) ??
-    getNestedId(task?.assignee) ??
-    getNestedId(task?.assignedUser) ??
-    getNestedId(task?.developer) ??
-    getNestedId(task?.user);
-
-  return id == null || id === "" ? "" : String(id);
-}
-
-function getTaskAssigneeName(task) {
-  return (
+  const getTaskAssigneeName = (task) =>
     task?.assignedToName ||
     task?.assigneeName ||
-    task?.developerName ||
     task?.assigned_to_name ||
     task?.assignedTo?.name ||
     task?.assignee?.name ||
     task?.assignedUser?.name ||
-    task?.developer?.name ||
-    task?.user?.name ||
     task?.assignedTo?.fullName ||
     task?.assignee?.fullName ||
     task?.assignedUser?.fullName ||
-    ""
-  );
-}
+    "";
 
-export function buildSummariesFromTasks(developers, tasks) {
-  const byId = new Map();
-  const nameToId = new Map();
+  const getNestedAssigneeId = (value) => {
+    if (!value || typeof value !== "object") return undefined;
+
+    return (
+      value.id ??
+      value.userId ??
+      value.developerId ??
+      value.assignedToId ??
+      value.assigned_to_id ??
+      value.assigneeId ??
+      value.assignee_id ??
+      undefined
+    );
+  };
+
+  const findAssigneeField = (task) => {
+    if (!task || typeof task !== "object") return undefined;
+
+    const assigneeIdKey = Object.keys(task).find((key) =>
+      /(?:assigned|assignee|developer|user).*(?:id|_id)$/i.test(key)
+    );
+
+    return assigneeIdKey ? task[assigneeIdKey] : undefined;
+  };
+
+  const getTaskAssigneeId = (task) => {
+    const candidate =
+      task?.assignedToId ??
+      task?.assigneeId ??
+      task?.assigned_to_id ??
+      getNestedAssigneeId(task?.assignedTo) ??
+      getNestedAssigneeId(task?.assignee) ??
+      getNestedAssigneeId(task?.assignedUser) ??
+      getNestedAssigneeId(task?.assigned) ??
+      getNestedAssigneeId(task?.developer) ??
+      getNestedAssigneeId(task?.user) ??
+      findAssigneeField(task);
+
+    return candidate == null || candidate === "" ? "" : String(candidate);
+  };
 
   (Array.isArray(developers) ? developers : []).forEach((developer) => {
-    const id = String(developer?.id ?? developer?.userId ?? developer?.developerId ?? "");
-    const name = developer?.name || developer?.fullName || developer?.email || "Developer";
+    const key = String(developer?.id ?? "");
+    const devName = developer?.name || "Developer";
+    const normalizedName = normalizeName(devName);
 
-    if (id) {
-      byId.set(id, {
-        developerId: id,
-        developerName: name,
-        assignedTasks: 0,
-        completedTasks: 0,
-        inProgressTasks: 0,
-        totalStoryPoints: 0,
-        completedStoryPoints: 0,
-        totalPointValue: 0,
-        completedPointValue: 0,
-        averageProgress: 0,
-      });
-
-      nameToId.set(normalizeName(name), id);
+    if (normalizedName && key) {
+      developerNameToId.set(normalizedName, key);
     }
+
+    if (!key) return;
+
+    byId.set(key, {
+      developerId: developer.id,
+      developerName: devName,
+      assignedTasks: 0,
+      completedTasks: 0,
+      inProgressTasks: 0,
+      totalStoryPoints: 0,
+      completedStoryPoints: 0,
+      totalPointValue: 0,
+      completedPointValue: 0,
+      averageProgress: 0,
+    });
   });
 
   (Array.isArray(tasks) ? tasks : []).forEach((task) => {
@@ -117,7 +108,9 @@ export function buildSummariesFromTasks(developers, tasks) {
 
     if (!key) {
       const assigneeName = normalizeName(getTaskAssigneeName(task));
-      key = nameToId.get(assigneeName) || "";
+      if (assigneeName && developerNameToId.has(assigneeName)) {
+        key = developerNameToId.get(assigneeName);
+      }
     }
 
     if (!key) return;
@@ -137,53 +130,48 @@ export function buildSummariesFromTasks(developers, tasks) {
       });
     }
 
-    const row = byId.get(key);
+    const summary = byId.get(key);
+
     const totalStoryPoints = numberOrZero(task?.totalStoryPoints ?? task?.totalPointValue ?? task?.estimatedPoints);
     const completedStoryPoints = numberOrZero(
       task?.completedStoryPoints ?? task?.completedPointValue ?? (taskIsCompleted(task) ? totalStoryPoints : 0)
     );
+
     const totalPointValue = numberOrZero(task?.totalPointValue ?? task?.estimatedPoints ?? totalStoryPoints);
     const completedPointValue = numberOrZero(
       task?.completedPointValue ?? completedStoryPoints ?? (taskIsCompleted(task) ? totalPointValue : 0)
     );
 
-    row.assignedTasks += 1;
-    row.completedTasks += taskIsCompleted(task) ? 1 : 0;
-    row.inProgressTasks += taskIsCompleted(task) ? 0 : 1;
-    row.totalStoryPoints += totalStoryPoints;
-    row.completedStoryPoints += completedStoryPoints;
-    row.totalPointValue += totalPointValue;
-    row.completedPointValue += completedPointValue;
+    summary.assignedTasks += 1;
+    summary.completedTasks += taskIsCompleted(task) ? 1 : 0;
+    summary.inProgressTasks += taskIsCompleted(task) ? 0 : 1;
+    summary.totalStoryPoints += totalStoryPoints;
+    summary.completedStoryPoints += completedStoryPoints;
+    summary.totalPointValue += totalPointValue;
+    summary.completedPointValue += completedPointValue;
   });
 
-  return Array.from(byId.values()).map((row) => ({
-    ...row,
-    averageProgress:
-      row.totalPointValue > 0
-        ? Math.round((row.completedPointValue * 100) / row.totalPointValue)
-        : row.assignedTasks > 0
-          ? Math.round((row.completedTasks * 100) / row.assignedTasks)
-          : 0,
-  }));
+  return Array.from(byId.values())
+    .filter((summary) => summary.assignedTasks > 0)
+    .map((summary) => ({
+      ...summary,
+      averageProgress:
+        summary.totalPointValue > 0
+          ? Math.round((summary.completedPointValue * 100) / summary.totalPointValue)
+          : summary.assignedTasks > 0
+            ? Math.round((summary.completedTasks * 100) / summary.assignedTasks)
+            : 0,
+    }));
 }
 
 export function calculateDeveloperProgressTotals(rows) {
   const safeRows = Array.isArray(rows) ? rows : [];
 
-  return safeRows.reduce(
-    (totals, row) => ({
-      assignedTasks: totals.assignedTasks + numberOrZero(row.assignedTasks),
-      completedStoryPoints: totals.completedStoryPoints + numberOrZero(row.completedStoryPoints),
-      totalStoryPoints: totals.totalStoryPoints + numberOrZero(row.totalStoryPoints),
-      completedPointValue: totals.completedPointValue + numberOrZero(row.completedPointValue),
-      totalPointValue: totals.totalPointValue + numberOrZero(row.totalPointValue),
-    }),
-    {
-      assignedTasks: 0,
-      completedStoryPoints: 0,
-      totalStoryPoints: 0,
-      completedPointValue: 0,
-      totalPointValue: 0,
-    }
-  );
+  return {
+    assignedTasks: safeRows.reduce((sum, row) => sum + Number(row.assignedTasks || 0), 0),
+    completedStoryPoints: safeRows.reduce((sum, row) => sum + Number(row.completedStoryPoints || 0), 0),
+    totalStoryPoints: safeRows.reduce((sum, row) => sum + Number(row.totalStoryPoints || 0), 0),
+    completedPointValue: safeRows.reduce((sum, row) => sum + Number(row.completedPointValue || 0), 0),
+    totalPointValue: safeRows.reduce((sum, row) => sum + Number(row.totalPointValue || 0), 0),
+  };
 }

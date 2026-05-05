@@ -31,20 +31,7 @@ import ManagerDeveloperProgress from "../../components/progress/ManagerDeveloper
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
 import ErrorNotice from "../../../components/ui/ErrorNotice.jsx";
-import {
-  buildSummariesFromTasks,
-  calculateDeveloperProgressTotals,
-  isDelayedTask,
-  taskIsCompleted,
-} from "../../utils/developerProgressUtils.js";
-
-
-
-const handleDeveloperProgressTotalsChange = (totals = {}) => {
-  // Safe fallback handler for ManagerDeveloperProgress totals.
-  // This prevents ManagerDashboard from crashing if totals are emitted.
-  console.debug("Developer progress totals:", totals);
-};
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 const sectionCardSx = {
   p: { xs: 1.6, md: 1.9 },
@@ -88,14 +75,6 @@ function normalizeTicketPriority(ticket) {
     .replace(/[\s_-]+/g, " ")
     .trim()
     .toLowerCase();
-
-
-const handleDeveloperProgressTotalsChange = (totals = {}) => {
-  // Safe fallback handler for ManagerDeveloperProgress totals.
-  // This prevents ManagerDashboard from crashing if totals are emitted.
-  console.debug("Developer progress totals:", totals);
-};
-
 }
 
 function getTicketTimestamp(ticket) {
@@ -137,7 +116,6 @@ function isVisibleSnapshotTicket(ticket) {
 }
 
 function SmallBadge({ children, color = "#cbd5e1", glow = "rgba(148,163,184,0.12)" }) {
-
   return (
     <Box
       component="span"
@@ -165,7 +143,6 @@ function SmallBadge({ children, color = "#cbd5e1", glow = "rgba(148,163,184,0.12
 }
 
 function StatCard({ label, value, hint, icon, color, bg }) {
-
   return (
     <Paper
       sx={{
@@ -214,7 +191,6 @@ function StatCard({ label, value, hint, icon, color, bg }) {
 }
 
 function DashboardMetricCard({ label, value, hint, icon }) {
-
   return (
     <Paper
       sx={{
@@ -263,7 +239,6 @@ function DashboardMetricCard({ label, value, hint, icon }) {
 }
 
 function TicketMetricCard({ label, value, hint, icon, color, bg }) {
-
   return (
     <Paper
       sx={{
@@ -312,7 +287,6 @@ function TicketMetricCard({ label, value, hint, icon, color, bg }) {
 }
 
 function EmptyMiniState({ title, text }) {
-
   return (
     <Paper
       sx={{
@@ -333,7 +307,6 @@ function EmptyMiniState({ title, text }) {
 
 function TaskFocusRow({ task, type, getTaskTitle, getTaskDate }) {
   const isDone = type === "done";
-
   return (
     <Box
       sx={{
@@ -381,8 +354,16 @@ function TaskFocusRow({ task, type, getTaskTitle, getTaskDate }) {
 
 export default function ManagerDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth() || {};
   const [expandProjects, setExpandProjects] = useState(false);
-  const [developerProgressTotalsFromTable, setDeveloperProgressTotalsFromTable] = useState(null);
+  const [developerProgressTotals, setDeveloperProgressTotals] = useState({
+    assignedTasks: 0,
+    completedStoryPoints: 0,
+    totalStoryPoints: 0,
+    completedPointValue: 0,
+    totalPointValue: 0,
+    delayedTaskCount: 0,
+  });
   const projectsQuery = useManagerProjects();
   const tasksQuery = useManagerTasks();
   const developersQuery = useManagerDevelopers();
@@ -393,20 +374,21 @@ export default function ManagerDashboard() {
   const { refetch: refetchEmailTickets } = emailTicketsQuery;
 
   const queryClient = useQueryClient();
+  const managerScope = React.useMemo(() => String(user?.id ?? user?.email ?? user?.role ?? "anonymous"), [user?.id, user?.email, user?.role]);
 
   // Trigger lightweight invalidation when live updates arrive
   const loadDashboard = React.useCallback(() => {
     try {
       // Invalidate relevant caches instead of forcing individual refetches.
       // This lets react-query decide whether to refetch based on staleness.
-      queryClient.invalidateQueries({ queryKey: managerKeys.projects() });
-      queryClient.invalidateQueries({ queryKey: managerKeys.tasks() });
-      queryClient.invalidateQueries({ queryKey: managerKeys.developers() });
-      queryClient.invalidateQueries({ queryKey: ["recentEmailTickets"] });
+      queryClient.invalidateQueries({ queryKey: managerKeys.projects(managerScope) });
+      queryClient.invalidateQueries({ queryKey: managerKeys.tasks(managerScope) });
+      queryClient.invalidateQueries({ queryKey: managerKeys.developers(managerScope) });
+      queryClient.invalidateQueries({ queryKey: ["managerTickets", managerScope, "recent"] });
     } catch (e) {
       // swallow — individual queries handle errors
     }
-  }, [queryClient]);
+  }, [managerScope, queryClient]);
 
   const liveTopics = React.useMemo(
     () => [
@@ -427,7 +409,6 @@ export default function ManagerDashboard() {
     };
 
     document.addEventListener("visibilitychange", refreshWhenResumed);
-
 
     return () => {
       document.removeEventListener("visibilitychange", refreshWhenResumed);
@@ -453,6 +434,16 @@ export default function ManagerDashboard() {
       .toLowerCase()
       .replace(/[\s_-]+/g, " ");
 
+  const toNumber = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+  };
+
+  const isDoneStatus = (status) => {
+    const value = String(status || "").toLowerCase();
+    return ["done", "completed", "closed", "finished"].some((word) => value.includes(word));
+  };
+
   const isCompletedTask = (task) => {
     const status = normalizeTaskStatus(task);
     const completedByStatus = (
@@ -474,17 +465,36 @@ export default function ManagerDashboard() {
   const getTaskTitle = (task) => task?.title || task?.taskName || task?.name || "Untitled Task";
 
   const getTaskDate = (task) => task?.dueDate || task?.deadline || task?.targetDate || task?.plannedEndDate || task?.due_on || null;
+  const hasTaskAssignee = (task) => {
+    const assignedId =
+      task?.assignedToId ??
+      task?.assigneeId ??
+      task?.assigned_to_id ??
+      task?.assignedDeveloperId ??
+      task?.developerId ??
+      task?.assignedTo?.id ??
+      task?.assignee?.id ??
+      task?.assignedUser?.id ??
+      task?.developer?.id ??
+      task?.user?.id;
 
-  const hasTaskAssignee = (task) => Boolean(
-    task?.assignedToId ??
-    task?.assigneeId ??
-    task?.assigned_to_id ??
-    task?.assignedTo?.id ??
-    task?.assignee?.id ??
-    task?.assignedUser?.id ??
-    task?.assignedToName ??
-    task?.assigneeName
-  );
+    const assignedName =
+      task?.assignedToName ??
+      task?.assigneeName ??
+      task?.assigned_to_name ??
+      task?.assignedDeveloperName ??
+      task?.developerName ??
+      task?.assignedTo?.name ??
+      task?.assignee?.name ??
+      task?.assignedUser?.name ??
+      task?.developer?.name ??
+      task?.user?.name;
+
+    return (
+      (assignedId !== null && assignedId !== undefined && String(assignedId).trim() !== "") ||
+      (assignedName !== null && assignedName !== undefined && String(assignedName).trim() !== "")
+    );
+  };
 
   const getProjectId = (project) =>
     String(project?.id ?? project?.projectId ?? project?.project_id ?? "");
@@ -604,20 +614,32 @@ export default function ManagerDashboard() {
     [projectRows]
   );
 
-  const developerProgressRows = useMemo(
-    () => buildSummariesFromTasks(developers, tasks),
-    [developers, tasks]
+  const completionRate = useMemo(() => {
+    const totalPointValue = tasks.reduce(
+      (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0),
+      0
+    );
+    const completedPointValue = tasks.reduce((sum, task) => {
+      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+      return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
+    }, 0);
+
+    if (totalPointValue === 0) return 0;
+    return Math.round((completedPointValue / totalPointValue) * 100);
+  }, [tasks]);
+
+  const totalWeighted = useMemo(
+    () => tasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0), 0),
+    [tasks]
   );
 
-  const developerProgressTotals = useMemo(
-    () => calculateDeveloperProgressTotals(developerProgressRows, tasks),
-    [developerProgressRows, tasks]
+  const doneWeighted = useMemo(
+    () => tasks.reduce((sum, task) => {
+      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+      return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
+    }, 0),
+    [tasks]
   );
-  const completionRate = developerProgressTotals.completionRate;
-
-  const totalWeighted = developerProgressTotals.totalPointValue;
-
-  const doneWeighted = developerProgressTotals.completedPointValue;
 
   const openTasks = useMemo(() => tasks.filter((task) => !isCompletedTask(task)), [tasks]);
 
@@ -646,10 +668,32 @@ export default function ManagerDashboard() {
   }, [tasks]);
 
   const visibleTickets = useMemo(() => {
+    // Filter tickets to only show those related to current manager's projects
+    const projectIds = new Set(projects.map((p) => getProjectId(p)).filter(Boolean));
+    
     return [...tickets]
-      .filter(isVisibleSnapshotTicket)
+      .filter((ticket) => {
+        // Only include tickets that belong to current manager's projects
+        // or tickets without projectId (show them as a fallback)
+        const ticketProjectId = String(
+          ticket?.projectId ??
+          ticket?.project_id ??
+          ticket?.project?.id ??
+          ticket?.projectDetails?.id ??
+          ""
+        ).trim();
+        
+        // If ticket has no project ID, include it (fallback)
+        if (!ticketProjectId) return isVisibleSnapshotTicket(ticket);
+        
+        // If ticket belongs to a current manager project, include it
+        if (projectIds.has(ticketProjectId)) return isVisibleSnapshotTicket(ticket);
+        
+        // Otherwise exclude the ticket (belongs to another manager's project)
+        return false;
+      })
       .sort((a, b) => getTicketTimestamp(b) - getTicketTimestamp(a));
-  }, [tickets]);
+  }, [tickets, projects]);
 
   const openTicketCount = useMemo(
     () => visibleTickets.filter((ticket) => {
@@ -669,40 +713,87 @@ export default function ManagerDashboard() {
     ? Math.round(projectRows.reduce((sum, project) => sum + project.progress, 0) / projectRows.length)
     : 0;
 
-  const assignedTaskCount = developerProgressTotals.assignedTasks;
+  const developerProgressBadgeStats = useMemo(() => {
+    const sourceTasks = Array.isArray(tasks) ? tasks : [];
+    const assignedTasks = sourceTasks.filter(hasTaskAssignee);
 
-  const delayedTaskCount = developerProgressTotals.delayedTaskCount;
-const progressTotals = useMemo(() => {
-    return developerProgressRows.reduce(
-      (acc, row) => {
-        acc.assignedTasks += Number(row.assignedTasks || 0);
-        acc.completedStoryPoints += Number(row.completedStoryPoints || 0);
-        acc.totalStoryPoints += Number(row.totalStoryPoints || 0);
-        acc.completedPointValue += Number(row.completedPointValue || 0);
-        acc.totalPointValue += Number(row.totalPointValue || 0);
-        return acc;
-      },
-      {
-        assignedTasks: 0,
-        completedStoryPoints: 0,
-        totalStoryPoints: 0,
-        completedPointValue: 0,
-        totalPointValue: 0,
+    let storyDone = 0;
+    let storyTotal = 0;
+    let weightedDone = 0;
+    let weightedTotal = 0;
+    let delayed = 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    assignedTasks.forEach((task) => {
+      const done = isDoneStatus(task?.status ?? task?.taskStatus ?? task?.state);
+
+      const story =
+        toNumber(task?.totalStoryPoints) ||
+        toNumber(task?.storyPoints) ||
+        toNumber(task?.estimatedPoints) ||
+        toNumber(task?.points) ||
+        toNumber(task?.totalPointValue) ||
+        0;
+
+      const weighted =
+        toNumber(task?.totalPointValue) ||
+        toNumber(task?.weightedPointsTotal) ||
+        toNumber(task?.totalWeightedPoints) ||
+        toNumber(task?.weight) ||
+        story ||
+        0;
+
+      const completedStory =
+        toNumber(task?.completedStoryPoints) ||
+        toNumber(task?.storyPointsDone) ||
+        toNumber(task?.completedPoints) ||
+        toNumber(task?.completedPointValue) ||
+        (done ? story : 0);
+
+      const completedWeighted =
+        toNumber(task?.completedPointValue) ||
+        toNumber(task?.weightedPointsDone) ||
+        toNumber(task?.completedWeightedPoints) ||
+        toNumber(task?.doneWeightedPoints) ||
+        (done ? weighted : 0);
+
+      storyTotal += story;
+      weightedTotal += weighted;
+
+      storyDone += completedStory;
+      weightedDone += completedWeighted;
+
+      if (!done && (task?.dueDate || task?.deadline)) {
+        const due = new Date(task?.dueDate || task?.deadline);
+        due.setHours(0, 0, 0, 0);
+        if (!Number.isNaN(due.getTime()) && due < today) {
+          delayed += 1;
+        }
       }
-    );
-  }, [developerProgressRows]);
+    });
 
-  const displayedWeightedProgress =
-    progressTotals.totalPointValue > 0
-      ? Math.round((progressTotals.completedPointValue * 100) / progressTotals.totalPointValue)
-      : completionRate;
+    return {
+      assignedTaskCount: assignedTasks.length,
+      storyPointsLabel: `${storyDone}/${storyTotal}`,
+      weightedPointsLabel: `${weightedDone}/${weightedTotal}`,
+      delayedTaskCount: delayed,
+    };
+  }, [tasks]);
 
-  const displayedWeightedDone = progressTotals.completedPointValue;
-  const storyPointsLabel = `${progressTotals.completedStoryPoints}/${progressTotals.totalStoryPoints}`;
-  const weightedPointsLabel = `${progressTotals.completedPointValue}/${progressTotals.totalPointValue}`;
+  const handleDeveloperProgressTotalsChange = (totals) => {
+    setDeveloperProgressTotals(totals || {
+      assignedTasks: 0,
+      completedStoryPoints: 0,
+      totalStoryPoints: 0,
+      completedPointValue: 0,
+      totalPointValue: 0,
+      delayedTaskCount: 0,
+    });
+  };
 
   if (loading) {
-
     return (
       <Box sx={{ p: 3, minHeight: "52vh", display: "grid", placeItems: "center" }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -712,7 +803,6 @@ const progressTotals = useMemo(() => {
       </Box>
     );
   }
-
 
   return (
     <Box sx={{ pb: { xs: 2, md: 3 } }}>
@@ -755,15 +845,15 @@ const progressTotals = useMemo(() => {
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             label="Weighted Progress"
-            value={`${displayedWeightedProgress}%`}
-            hint={`${progressTotals.completedPointValue}/${progressTotals.totalPointValue} points completed`}
+            value={`${completionRate}%`}
+            hint={`${doneWeighted}/${totalWeighted} points completed`}
             icon={<TrendingUpRoundedIcon />}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             label="Weighted Done"
-            value={progressTotals.completedPointValue}
+            value={doneWeighted}
             hint="Point value completed"
             icon={<DoneAllRoundedIcon />}
           />
@@ -798,9 +888,8 @@ const progressTotals = useMemo(() => {
                 const statusTone = project.status === "Active" ? "#86efac" : project.status === "Completed" ? "#7dd3fc" : "#fda4af";
                 const statusBg = project.status === "Active" ? "rgba(34,197,94,0.14)" : project.status === "Completed" ? "rgba(56,189,248,0.14)" : "rgba(244,63,94,0.14)";
 
-
                 return (
-                  <Grid item xs={12} md={6} xl={4} key={project.id || project.name}>
+                  <Grid item xs={12} sm={6} md={4} xl={3} key={project.id || project.name}>
                     <Paper
                       role="button"
                       tabIndex={0}
@@ -812,8 +901,8 @@ const progressTotals = useMemo(() => {
                         }
                       }}
                       sx={{
-                        p: 1.5,
-                        height: "100%",
+                        p: 1,
+                        minHeight: 84,
                         borderRadius: 2.4,
                         border: "1px solid rgba(148,163,184,0.14)",
                         background: "rgba(15,23,42,0.58)",
@@ -830,9 +919,9 @@ const progressTotals = useMemo(() => {
                         },
                       }}
                     >
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} sx={{ mb: 0.45 }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} sx={{ mb: 0.3 }}>
                         <Box sx={{ minWidth: 0 }}>
-                          <Typography sx={{ fontWeight: 900, color: "#f8fafc", fontSize: "0.98rem" }} noWrap>
+                          <Typography sx={{ fontWeight: 800, color: "#f8fafc", fontSize: "0.94rem" }} noWrap>
                             {project.name}
                           </Typography>
                           <Typography
@@ -843,7 +932,7 @@ const progressTotals = useMemo(() => {
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               display: "-webkit-box",
-                              WebkitLineClamp: 2,
+                              WebkitLineClamp: 1,
                               WebkitBoxOrient: "vertical",
                               wordBreak: "break-word",
                             }}
@@ -856,7 +945,7 @@ const progressTotals = useMemo(() => {
                         </SmallBadge>
                       </Stack>
 
-                      <Typography variant="caption" sx={{ color: "#cbd5e1", display: "block", mb: 0.2 }}>
+                      <Typography variant="caption" sx={{ color: "#cbd5e1", display: "block", mb: 0.15, fontSize: "0.72rem" }}>
                         {project.doneTasks}/{project.totalTasks} tasks complete · {project.completedPointValue}/{project.totalPointValue} points
                       </Typography>
 
@@ -864,15 +953,15 @@ const progressTotals = useMemo(() => {
                         variant="determinate"
                         value={project.progress}
                         sx={{
-                          height: 7,
+                          height: 6,
                           borderRadius: 999,
                           bgcolor: "rgba(255,255,255,0.08)",
-                          mb: 0.65,
+                          mb: 0.45,
                           "& .MuiLinearProgress-bar": { bgcolor: progressTone },
                         }}
                       />
 
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1} sx={{ mt: 0.3 }}>
                         <SmallBadge color="#bfdbfe" glow="rgba(96,165,250,0.14)">
                           {project.totalTasks} TASKS
                         </SmallBadge>
@@ -984,10 +1073,10 @@ const progressTotals = useMemo(() => {
             </Typography>
           </Box>
           <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
-            <SmallBadge color="#bfdbfe" glow="rgba(96,165,250,0.14)">ASSIGNED: {assignedTaskCount}</SmallBadge>
-            <SmallBadge color="#ddd6fe" glow="rgba(124,92,255,0.14)">STORY: {storyPointsLabel}</SmallBadge>
-            <SmallBadge color="#a7f3d0" glow="rgba(34,197,94,0.14)">WEIGHTED: {weightedPointsLabel}</SmallBadge>
-            <SmallBadge color="#fed7aa" glow="rgba(251,146,60,0.14)">DELAYED: {delayedTaskCount}</SmallBadge>
+            <SmallBadge color="#bfdbfe" glow="rgba(96,165,250,0.14)">ASSIGNED: {developerProgressBadgeStats.assignedTaskCount}</SmallBadge>
+            <SmallBadge color="#ddd6fe" glow="rgba(124,92,255,0.14)">STORY: {developerProgressBadgeStats.storyPointsLabel}</SmallBadge>
+            <SmallBadge color="#a7f3d0" glow="rgba(34,197,94,0.14)">WEIGHTED: {developerProgressBadgeStats.weightedPointsLabel}</SmallBadge>
+            <SmallBadge color="#fed7aa" glow="rgba(251,146,60,0.14)">DELAYED: {developerProgressBadgeStats.delayedTaskCount}</SmallBadge>
             <Button
               size="small"
               variant="outlined"
@@ -1010,6 +1099,7 @@ const progressTotals = useMemo(() => {
         <ManagerDeveloperProgress
           hideSummary
           hideHeader
+          projectsData={projects}
           developersData={developers}
           tasksData={tasks}
           loadingOverride={developersQuery.isLoading || tasksQuery.isLoading}
@@ -1080,13 +1170,4 @@ const progressTotals = useMemo(() => {
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
 
