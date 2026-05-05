@@ -39,6 +39,7 @@ import {
 } from "../../../services/managerService";
 import { useProjectDetails, useManagerDevelopers } from "../../data/useManager";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
 const emptyTaskForm = {
   title: "",
@@ -232,22 +233,14 @@ export default function ProjectManagementDetails() {
   }, [projectId, authLoading]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      if (cancelled) return;
-      await loadProjectSessions();
-    };
-
-    run();
-
-    const intervalId = window.setInterval(run, 12000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
+    loadProjectSessions();
   }, [loadProjectSessions]);
+
+  const liveTopics = useMemo(
+    () => ["/topic/projects", projectId ? `/topic/projects/${projectId}/sessions` : null].filter(Boolean),
+    [projectId]
+  );
+  useLiveRefresh(liveTopics, loadProjectSessions, { debounceMs: 800 });
 
   const activeSessions = useMemo(
     () => sessions.filter((session) => !session.ended),

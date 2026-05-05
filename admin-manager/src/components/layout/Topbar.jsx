@@ -15,18 +15,34 @@ import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { layoutGaps } from "../../theme/layoutGaps.js";
+import { getActiveRole } from "../../utils/roleRouting";
+import { getUserRoles } from "../../utils/roleRouting";
+
+function roleFromPathname(pathname) {
+  const path = String(pathname || "");
+  if (path.startsWith("/dev")) return "DEVELOPER";
+  if (path.startsWith("/client")) return "CLIENT";
+  if (path.startsWith("/manager")) return "MANAGER";
+  if (path.startsWith("/admin") || path === "/access" || path === "/settings") return "ADMIN";
+  if (path.startsWith("/admin/")) return "ADMIN";
+  return "";
+}
 
 export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [anchorEl, setAnchorEl] = useState(null);
 
   const open = Boolean(anchorEl);
   const initials = (user?.name?.[0] || user?.email?.[0] || "N").toUpperCase();
-  const roleLabel = String(user?.role || "USER").toUpperCase();
+  const effectiveRole = roleFromPathname(location.pathname) || getActiveRole(user) || user?.role || "USER";
+  const roleLabel = String(effectiveRole).toUpperCase();
+  const roles = getUserRoles(user);
+  const showRoleSwitch = roles.length > 1;
 
   const profilePath =
     roleLabel === "DEVELOPER"
@@ -227,6 +243,17 @@ export default function Topbar({ onMenuClick }) {
                 <PersonIcon fontSize="small" sx={{ mr: 1.2 }} />
                 My Profile
               </MenuItem>
+
+              {showRoleSwitch ? (
+                <MenuItem
+                  onClick={() => {
+                    setAnchorEl(null);
+                    navigate("/choose-workspace");
+                  }}
+                >
+                  Switch Role
+                </MenuItem>
+              ) : null}
 
               <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
 

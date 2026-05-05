@@ -1,10 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Box, Chip, CircularProgress, Grid, Typography } from "@mui/material";
 import Card from "../../../components/ui/Card.jsx";
-import { loadUserTickets } from "../../data/ticketStore";
-import { loadDeveloperTicketByIdFromBackendSafe } from "../../data/ticketApi";
 import { useDeveloperTicket } from "../../data/useDeveloperTickets";
+import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
 function calcSubtaskPct(list) {
   const total = list.reduce((s, x) => s + Number(x.points || 0), 0);
@@ -25,8 +24,11 @@ export default function DevTicketView() {
   const { id } = useParams();
 
   // React Query hook
-  const { data: ticket, isLoading: loading, error: queryError } = useDeveloperTicket(id, !!id);
+  const { data: ticket, isLoading: loading, error: queryError, refetch } = useDeveloperTicket(id, !!id);
   const error = queryError?.message || "";
+
+  const liveTopics = useMemo(() => ["/topic/tickets"], []);
+  useLiveRefresh(liveTopics, refetch, { debounceMs: 450, enabled: Boolean(id) });
 
   const p = useMemo(() => calcSubtaskPct(ticket?.suggestedSubtasks || []), [ticket]);
 
@@ -45,7 +47,7 @@ export default function DevTicketView() {
         <Card sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 900 }}>Ticket not found</Typography>
           <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.72)" }}>
-            No backend or local ticket matched <strong>{id}</strong>.
+            No backend ticket matched <strong>{id}</strong>.
           </Typography>
           <Box sx={{ mt: 2 }}>
             <Chip component={Link} clickable to="/dev" label="Back to dashboard" />
