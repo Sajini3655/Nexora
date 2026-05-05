@@ -374,54 +374,8 @@ export default function ManagerDashboard() {
   const { refetch: refetchDevelopers } = developersQuery;
   const { refetch: refetchEmailTickets } = emailTicketsQuery;
 
-  const getCachedDashboardData = React.useCallback(() => {
-    try {
-      const cached = localStorage.getItem("managerDashboardCache");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        return {
-          projects: Array.isArray(parsed.projects) ? parsed.projects : null,
-          tasks: Array.isArray(parsed.tasks) ? parsed.tasks : null,
-          developers: Array.isArray(parsed.developers) ? parsed.developers : null,
-          tickets: Array.isArray(parsed.tickets) ? parsed.tickets : null,
-        };
-      }
-    } catch (e) {
-      console.warn("Failed to restore dashboard cache from localStorage", e);
-    }
-    return { projects: null, tasks: null, developers: null, tickets: null };
-  }, []);
-
-  const persistCacheToDisk = React.useCallback((data) => {
-    try {
-      localStorage.setItem("managerDashboardCache", JSON.stringify(data));
-    } catch (e) {
-      console.warn("Failed to persist dashboard cache to localStorage", e);
-    }
-  }, []);
-
-  const lastSuccessfulDataRef = React.useRef({
-    projects: null,
-    tasks: null,
-    developers: null,
-    tickets: null,
-  });
-
-  // Restore cache from localStorage on component mount
-  React.useEffect(() => {
-    const cached = getCachedDashboardData();
-    lastSuccessfulDataRef.current = cached;
-  }, [getCachedDashboardData]);
-
   const queryClient = useQueryClient();
-  const managerScope = React.useMemo(() => String(user?.id ?? user?.email ?? user?.role ?? "anonymous"), [user?.id, user?.email, user?.role]);
-  const shouldAdoptArray = React.useCallback((incoming, current) => {
-    if (!Array.isArray(incoming)) return false;
-    // Always adopt non-empty arrays
-    if (incoming.length > 0) return true;
-    // Only adopt empty arrays if we've never loaded data before (current is null)
-    return current === null;
-  }, []);
+  const managerScope = React.useMemo(() => String(user?.id ?? user?.email ?? ""), [user?.id, user?.email]);
 
   // Trigger lightweight invalidation when live updates arrive
   const loadDashboard = React.useCallback(() => {
@@ -461,50 +415,11 @@ export default function ManagerDashboard() {
       document.removeEventListener("visibilitychange", refreshWhenResumed);
     };
   }, [loadDashboard]);
-
-  React.useEffect(() => {
-    if (!projectsQuery.isError && shouldAdoptArray(projectsQuery.data, lastSuccessfulDataRef.current.projects)) {
-      lastSuccessfulDataRef.current.projects = projectsQuery.data;
-      persistCacheToDisk(lastSuccessfulDataRef.current);
-    }
-  }, [projectsQuery.data, projectsQuery.isError, shouldAdoptArray, persistCacheToDisk]);
-
-  React.useEffect(() => {
-    if (!tasksQuery.isError && shouldAdoptArray(tasksQuery.data, lastSuccessfulDataRef.current.tasks)) {
-      lastSuccessfulDataRef.current.tasks = tasksQuery.data;
-      persistCacheToDisk(lastSuccessfulDataRef.current);
-    }
-  }, [tasksQuery.data, tasksQuery.isError, shouldAdoptArray, persistCacheToDisk]);
-
-  React.useEffect(() => {
-    if (!developersQuery.isError && shouldAdoptArray(developersQuery.data, lastSuccessfulDataRef.current.developers)) {
-      lastSuccessfulDataRef.current.developers = developersQuery.data;
-      persistCacheToDisk(lastSuccessfulDataRef.current);
-    }
-  }, [developersQuery.data, developersQuery.isError, shouldAdoptArray, persistCacheToDisk]);
-
-  React.useEffect(() => {
-    const normalized = normalizeTicketList(emailTicketsQuery.data);
-    if (!emailTicketsQuery.isError && shouldAdoptArray(normalized, lastSuccessfulDataRef.current.tickets)) {
-      lastSuccessfulDataRef.current.tickets = normalized;
-      persistCacheToDisk(lastSuccessfulDataRef.current);
-    }
-  }, [emailTicketsQuery.data, emailTicketsQuery.isError, shouldAdoptArray, persistCacheToDisk]);
-
-  const projects = !projectsQuery.isError && Array.isArray(projectsQuery.data) && projectsQuery.data.length > 0
-    ? projectsQuery.data
-    : (lastSuccessfulDataRef.current.projects || []);
-  const managerTasks = !tasksQuery.isError && Array.isArray(tasksQuery.data) && tasksQuery.data.length > 0
-    ? tasksQuery.data
-    : (lastSuccessfulDataRef.current.tasks || []);
-  const developers = !developersQuery.isError && Array.isArray(developersQuery.data) && developersQuery.data.length > 0
-    ? developersQuery.data
-    : (lastSuccessfulDataRef.current.developers || []);
-  const normalizedTickets = normalizeTicketList(emailTicketsQuery.data);
-  const tickets = !emailTicketsQuery.isError && normalizedTickets.length > 0
-    ? normalizedTickets
-    : (lastSuccessfulDataRef.current.tickets || []);
-  const loading = projectsQuery.isLoading && tasksQuery.isLoading && emailTicketsQuery.isLoading;
+  const projects = Array.isArray(projectsQuery.data) ? projectsQuery.data : [];
+  const managerTasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
+  const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
+  const tickets = normalizeTicketList(emailTicketsQuery.data);
+  const loading = authLoading || projectsQuery.isLoading || tasksQuery.isLoading || developersQuery.isLoading || emailTicketsQuery.isLoading;
   const refreshing = projectsQuery.isFetching || tasksQuery.isFetching || developersQuery.isFetching || emailTicketsQuery.isFetching;
   const error =
     projectsQuery.error?.message ||
@@ -574,6 +489,7 @@ export default function ManagerDashboard() {
       task?.assignedTo?.id ??
       task?.assignee?.id ??
       task?.assignedUser?.id ??
+      task?.assignedDeveloper?.id ??
       task?.developer?.id ??
       task?.user?.id ??
       ""
@@ -594,6 +510,7 @@ export default function ManagerDashboard() {
       task?.assignedTo?.name ??
       task?.assignee?.name ??
       task?.assignedUser?.name ??
+      task?.assignedDeveloper?.name ??
       task?.developer?.name ??
       task?.user?.name ??
       ""
@@ -649,6 +566,7 @@ export default function ManagerDashboard() {
     "assignedTo",
     "assignee",
     "assignedUser",
+    "assignedDeveloper",
     "developer",
     "user",
   ]);
@@ -794,12 +712,8 @@ export default function ManagerDashboard() {
     return Array.from(taskMap.values());
   }, [managerTasks, projects]);
 
-  // Use manager tasks as the source of truth for progress metrics.
-  // Fall back to merged tasks only when manager tasks are unavailable.
-  const dashboardTasks = useMemo(
-    () => (Array.isArray(managerTasks) && managerTasks.length > 0 ? managerTasks : tasks),
-    [managerTasks, tasks]
-  );
+  // Use the merged manager-scoped task list for progress metrics.
+  const dashboardTasks = tasks;
 
   const tasksByProject = useMemo(() => {
     const grouped = new Map();
