@@ -22,8 +22,9 @@ export function useDeveloperTickets(enabled = true) {
     queryKey: devTicketKeys.list(),
     queryFn: fetchDeveloperTicketsFromBackend,
     enabled,
-    refetchInterval: 30000, // 30 seconds
-    staleTime: 0, // Always stale, refetch in background
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

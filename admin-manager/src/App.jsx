@@ -53,6 +53,7 @@ import { layoutGaps } from "./theme/layoutGaps.js";
 
 import { useAuth } from "./context/AuthContext.jsx";
 import { useLayout } from "./context/LayoutContext.jsx";
+import { getActiveRole, getUserRoles, setActiveRole } from "./utils/roleRouting";
 
 /**
  * Unified shell component for all roles (Admin, Manager, Developer, Client)
@@ -61,6 +62,17 @@ import { useLayout } from "./context/LayoutContext.jsx";
 function UnifiedShell({ children, role }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const { openSidebar: adminOpenSidebar } = useLayout();
+  const { user } = useAuth();
+
+  React.useEffect(() => {
+    const nextRole = String(role || "").toUpperCase();
+    if (!nextRole) return;
+
+    const roles = getUserRoles(user);
+    if (roles.includes(nextRole)) {
+      setActiveRole(nextRole);
+    }
+  }, [role, user]);
 
   // Determine which sidebar to render
   const renderSidebar = () => {
@@ -118,7 +130,7 @@ function RoleShell({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  return <UnifiedShell role={user.role}>{children}</UnifiedShell>;
+  return <UnifiedShell role={getActiveRole(user) || user.role}>{children}</UnifiedShell>;
 }
 
 export default function App() {

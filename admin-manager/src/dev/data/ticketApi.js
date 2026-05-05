@@ -1,5 +1,7 @@
 import { API_BASE_URL } from "../../utils/constants";
 
+const API_BASE = `${API_BASE_URL}/api`;
+
 function getToken() {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem("token");
@@ -16,7 +18,7 @@ async function apiFetch(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
   });
