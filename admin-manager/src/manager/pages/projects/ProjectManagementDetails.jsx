@@ -25,6 +25,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ChatBubbleRoundedIcon from "@mui/icons-material/ChatBubbleRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "../../../services/api";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import ChatBox from "../../../dev/pages/chat/src/ChatBox";
@@ -38,7 +39,12 @@ import {
   updateManagerTask,
   fetchManagerClients,
 } from "../../../services/managerService";
-import { useProjectDetails, useManagerDevelopers } from "../../data/useManager";
+import {
+  getManagerQueryScope,
+  managerKeys,
+  useProjectDetails,
+  useManagerDevelopers,
+} from "../../data/useManager";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
@@ -145,6 +151,8 @@ function buildSummaryPreview(session) {
 export default function ProjectManagementDetails() {
   const { projectId } = useParams();
   const { user, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
+  const managerScope = getManagerQueryScope(user);
   const currentUserId = user?.id != null ? String(user.id) : "";
   const currentUserName = user?.name || user?.email || "Manager";
 
@@ -492,13 +500,19 @@ export default function ProjectManagementDetails() {
   const handleAddTask = async () => {
     if (!project || !canAddTask) return;
 
+    const numericProjectId = Number(project?.id ?? project?.projectId ?? projectId);
+    if (!Number.isFinite(numericProjectId) || numericProjectId <= 0) {
+      setActionError("Invalid project id. Reload this page from Project Management and try again.");
+      return;
+    }
+
     setAddingTask(true);
     setActionError("");
     setSuccess("");
 
     try {
-      await createManagerTask({
-        projectId: Number(projectId),
+      const createdTask = await createManagerTask({
+        projectId: numericProjectId,
         title: newTask.title.trim(),
         description: newTask.description.trim() || null,
         priority: newTask.priority,
@@ -510,7 +524,39 @@ export default function ProjectManagementDetails() {
       setNewTask(emptyTaskForm);
       setAddTaskSuggestion(null);
       setSuccess("Task added successfully.");
-      projectDetailsQuery.refetch();
+
+      if (managerScope) {
+        const tasksKey = managerKeys.tasks(managerScope);
+        queryClient.setQueryData(tasksKey, (prev) => {
+          const existing = Array.isArray(prev) ? prev : [];
+
+          if (!createdTask || createdTask?.id == null) {
+            return existing;
+          }
+
+          const createdTaskId = String(createdTask.id);
+          const alreadyExists = existing.some((task) => String(task?.id) === createdTaskId);
+          if (alreadyExists) {
+            return existing;
+          }
+
+          return [
+            {
+              ...createdTask,
+              projectId: createdTask.projectId ?? numericProjectId,
+              projectName: createdTask.projectName ?? getProjectName(project),
+            },
+            ...existing,
+          ];
+        });
+
+        await queryClient.invalidateQueries({ queryKey: tasksKey, exact: true });
+      }
+
+      await Promise.all([
+        projectDetailsQuery.refetch(),
+        developersQuery.refetch(),
+      ]);
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to add task."));
     } finally {

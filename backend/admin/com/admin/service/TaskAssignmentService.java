@@ -125,6 +125,12 @@ public class TaskAssignmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
         }
 
+        Project project = null;
+        if (req.getProjectId() != null) {
+            project = projectRepository.findById(Objects.requireNonNull(req.getProjectId()))
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+        }
+
         TaskItem task = TaskItem.builder()
                 .title(req.getTitle().trim())
                 .description(req.getDescription())
@@ -134,6 +140,7 @@ public class TaskAssignmentService {
                 .estimatedPoints(req.getEstimatedPoints())
                 .createdBy(manager)
                 .assignedTo(assignee)
+                .project(project)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -212,9 +219,28 @@ public class TaskAssignmentService {
     public List<TaskDto> listManagerTasks(String managerEmail) {
         User manager = userRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
-        return taskRepository.findByCreatedById(manager.getId()).stream()
+
+        // Managers should see all tasks under projects they manage,
+        // including tasks created by admins or other users.
+        List<TaskItem> tasks = getManagerVisibleTasks(manager).stream()
                 .sorted(Comparator.comparing(TaskItem::getCreatedAt).reversed())
-                .map(this::toTaskDto)
+            .collect(Collectors.toList());
+
+        List<Long> taskIds = tasks.stream()
+            .map(TaskItem::getId)
+            .filter(Objects::nonNull)
+            .toList();
+
+        Map<Long, TaskStoryPointRepository.TaskStoryPointSummary> summaryByTaskId = taskIds.isEmpty()
+            ? Map.of()
+            : storyPointRepository.summarizeByTaskIds(taskIds).stream()
+            .collect(Collectors.toMap(
+                TaskStoryPointRepository.TaskStoryPointSummary::getTaskId,
+                summary -> summary
+            ));
+
+        return tasks.stream()
+            .map(task -> toTaskDto(task, summaryByTaskId.get(task.getId())))
                 .collect(Collectors.toList());
     }
 
@@ -258,15 +284,14 @@ public class TaskAssignmentService {
     }
 
     private TaskDto toTaskDto(TaskItem t) {
-        long totalStoryPoints = storyPointRepository.countByTaskId(t.getId());
-        long completedStoryPoints = storyPointRepository.countByTaskIdAndStatus(t.getId(), StoryPointStatus.DONE);
-        long totalPointValue = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(t.getId()).stream()
-            .mapToLong(point -> point.getPointValue() == null ? 0 : point.getPointValue())
-            .sum();
-        long completedPointValue = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(t.getId()).stream()
-            .filter(point -> point.getStatus() == StoryPointStatus.DONE)
-            .mapToLong(point -> point.getPointValue() == null ? 0 : point.getPointValue())
-            .sum();
+        return toTaskDto(t, null);
+    }
+
+    private TaskDto toTaskDto(TaskItem t, TaskStoryPointRepository.TaskStoryPointSummary summary) {
+        long totalStoryPoints = summary == null || summary.getTotalStoryPoints() == null ? 0 : summary.getTotalStoryPoints();
+        long completedStoryPoints = summary == null || summary.getCompletedStoryPoints() == null ? 0 : summary.getCompletedStoryPoints();
+        long totalPointValue = summary == null || summary.getTotalPointValue() == null ? 0 : summary.getTotalPointValue();
+        long completedPointValue = summary == null || summary.getCompletedPointValue() == null ? 0 : summary.getCompletedPointValue();
         int progressPercentage = totalPointValue > 0
             ? (int) Math.round((completedPointValue * 100.0) / totalPointValue)
             : (totalStoryPoints == 0 ? 0 : (int) Math.round((completedStoryPoints * 100.0) / totalStoryPoints));
