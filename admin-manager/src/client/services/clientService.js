@@ -126,12 +126,16 @@ function getDateString(value) {
 }
 
 function toUiProject(row, idx) {
-  const progress = Number(row?.progress ?? row?.completion ?? 0);
+  const progress = Number(row?.progressPercentage ?? row?.progress ?? row?.completion ?? 0);
+  const totalTasks = Number(row?.totalTasks ?? row?.total_tasks ?? 0);
+  const completedTasks = Number(row?.completedTasks ?? row?.completed_tasks ?? 0);
   return {
     id: String(row?.id ?? row?.project_id ?? `CP-${idx + 1}`),
     name: row?.name ?? row?.project_name ?? "Client Project",
     manager: row?.manager_name ?? row?.manager ?? "Client Support",
     progress: Number.isFinite(progress) ? Math.max(0, Math.min(100, progress)) : 0,
+    totalTasks: Number.isFinite(totalTasks) ? Math.max(0, totalTasks) : 0,
+    completedTasks: Number.isFinite(completedTasks) ? Math.max(0, completedTasks) : 0,
     status: row?.status ?? row?.stage ?? "In Progress",
     eta: row?.eta ?? row?.due_date ?? "-",
     clientId: row?.clientId ?? row?.client_id ?? null,
@@ -150,6 +154,7 @@ export function enrichProjectsWithTickets(projects, tickets) {
     const total = projectTickets.length;
     const done = projectTickets.filter((ticket) => ticket.status === "Done").length;
     const inProgress = projectTickets.filter((ticket) => ticket.status === "In Progress").length;
+    const projectProgress = Number(project?.progress);
     const latest = projectTickets
       .map((ticket) => ticket.updatedAt || ticket.createdAt)
       .find((date) => date && date !== "-") || project.eta || "-";
@@ -157,8 +162,9 @@ export function enrichProjectsWithTickets(projects, tickets) {
     return {
       ...project,
       tickets: projectTickets,
-      ticketCount: total,
-      progress: total > 0 ? Math.round((done / total) * 100) : Number(project.progress || 0),
+      progress: Number.isFinite(Number(project?.progressPercentage ?? project?.progress))
+        ? Math.max(0, Math.min(100, Number(project?.progressPercentage ?? project?.progress)))
+        : 0,
       status:
         total === 0
           ? project.status || "Open"
@@ -186,6 +192,24 @@ function toUiTicket(row, idx) {
     assignedTo: row?.assignedTo?.name ?? row?.assignedToName ?? null,
     sourceChannel: row?.sourceChannel ?? row?.source_channel ?? row?.createdVia ?? null,
   };
+}
+
+function isChatTicket(ticket) {
+  const source = String(ticket?.sourceChannel ?? ticket?.source_channel ?? ticket?.createdVia ?? "").trim().toUpperCase();
+  const category = String(ticket?.category ?? "").trim().toLowerCase();
+  const title = String(ticket?.title ?? "").trim().toLowerCase();
+
+  return (
+    source === "CHAT" ||
+    source === "CHAT_SUMMARY" ||
+    source === "CHATBOX" ||
+    category === "chat" ||
+    title.includes("chat ticket")
+  );
+}
+
+function filterClientTickets(tickets) {
+  return Array.isArray(tickets) ? tickets.filter((ticket) => !isChatTicket(ticket)) : [];
 }
 
 function toUiProfile(row, user) {
@@ -232,13 +256,13 @@ function writeTicketCache(data) {
 
 export function getCachedClientTickets() {
   if (Array.isArray(ticketMemoryCache.data)) {
-    return ticketMemoryCache.data;
+    return filterClientTickets(ticketMemoryCache.data);
   }
 
   const persisted = safeReadTicketCache();
   if (persisted) {
     ticketMemoryCache = persisted;
-    return persisted.data;
+    return filterClientTickets(persisted.data);
   }
 
   return [];
@@ -253,7 +277,7 @@ export async function fetchClientProjects() {
 export function buildProjectsFromTickets(tickets) {
   const grouped = new Map();
 
-  tickets.forEach((ticket) => {
+  filterClientTickets(tickets).forEach((ticket) => {
     const key = ticket.category || "General Support";
     const existing = grouped.get(key) || {
       id: key.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
@@ -300,7 +324,7 @@ export async function fetchClientTickets(options = {}) {
     now - Number(ticketMemoryCache.timestamp || 0) < CLIENT_TICKET_CACHE_TTL_MS;
 
   if (!forceRefresh && inMemoryFresh) {
-    return ticketMemoryCache.data;
+    return filterClientTickets(ticketMemoryCache.data);
   }
 
   if (!forceRefresh && !Array.isArray(ticketMemoryCache.data)) {
@@ -310,7 +334,7 @@ export async function fetchClientTickets(options = {}) {
       now - Number(persisted?.timestamp || 0) < CLIENT_TICKET_CACHE_TTL_MS;
     if (persistedFresh) {
       ticketMemoryCache = persisted;
-      return persisted.data;
+      return filterClientTickets(persisted.data);
     }
   }
 
@@ -322,7 +346,7 @@ export async function fetchClientTickets(options = {}) {
     try {
       const res = await apiFetch("/client/tickets", { method: "GET" });
       const data = await res.json();
-      const mapped = Array.isArray(data) ? data.map(toUiTicket) : [];
+      const mapped = filterClientTickets(Array.isArray(data) ? data.map(toUiTicket) : []);
       writeTicketCache(mapped);
       return mapped;
     } catch (error) {
@@ -358,17 +382,19 @@ export async function fetchClientSummary() {
       fetchClientTickets(),
     ]);
 
-    const openTickets = tickets.filter((t) => {
+    const visibleTickets = filterClientTickets(tickets);
+
+    const openTickets = visibleTickets.filter((t) => {
       return t.status === "Open" || t.status === "In Progress";
     }).length;
 
-    const completedMilestones = tickets.filter((ticket) => ticket.status === "Done").length;
+    const completedMilestones = visibleTickets.filter((ticket) => ticket.status === "Done").length;
 
     const nextReview =
       projects
         .map((p) => p.eta)
         .find((eta) => eta && eta !== "-") ||
-      tickets.map((ticket) => ticket.updatedAt).find((date) => date && date !== "-") ||
+      visibleTickets.map((ticket) => ticket.updatedAt).find((date) => date && date !== "-") ||
       "-";
 
     return {
