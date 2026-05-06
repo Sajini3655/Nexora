@@ -993,18 +993,11 @@ export default function ProjectManagementDetails() {
                     {recentSummaries.map((session) => (
                       <Paper
                         key={session.id}
-                        onClick={() => handleOpenSession(session.id)}
                         sx={{
                           p: 1.5,
                           borderRadius: 3,
-                          cursor: "pointer",
                           background: "rgba(255,255,255,0.04)",
                           border: "1px solid rgba(255,255,255,0.08)",
-                          transition: "all 180ms ease",
-                          "&:hover": {
-                            background: "rgba(255,255,255,0.07)",
-                            borderColor: "rgba(96,165,250,0.28)",
-                          },
                         }}
                       >
                         <Stack spacing={1}>
@@ -1026,14 +1019,15 @@ export default function ProjectManagementDetails() {
                               </Typography>
                             </Box>
 
-                            <Button
+                            <Chip
                               size="small"
-                              variant="outlined"
-                              startIcon={<OpenInNewRoundedIcon />}
-                              sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
-                            >
-                              View
-                            </Button>
+                              label="Summary"
+                              sx={{
+                                bgcolor: "rgba(59,130,246,0.16)",
+                                color: "#bfdbfe",
+                                fontWeight: 800,
+                              }}
+                            />
                           </Stack>
 
                           <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
