@@ -724,7 +724,7 @@ export default function ProjectManagementDetails() {
   if (!project) {
     return (
       <Box sx={{ maxWidth: 1200, mx: "auto", mt: 4 }}>
-        <ErrorNotice message={error || "Project not found."} severity="error" dedupeKey="project-not-found-error" />
+        <ErrorNotice message={queryError || "Project not found."} severity="error" dedupeKey="project-not-found-error" />
       </Box>
     );
   }
