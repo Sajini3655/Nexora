@@ -163,6 +163,10 @@ export default function DevDashboardHome() {
     () => projectTasks.filter((task) => !isCompletedTask(task)),
     [projectTasks]
   );
+  const activeTicketTasks = useMemo(
+    () => ticketTasks.filter((task) => !isCompletedTask(task)),
+    [ticketTasks]
+  );
 
   const completedTasks = useMemo(
     () => tasks.filter((task) => isCompletedTask(task)),
@@ -265,8 +269,8 @@ export default function DevDashboardHome() {
           >
             <StatCard
               title="Project Tasks"
-              value={projectTasks.length}
-              hint={`${activeProjectTasks.length} active`}
+              value={activeProjectTasks.length}
+              hint={`${activeProjectTasks.length} to do`}
               icon="📋"
             />
 
@@ -286,8 +290,8 @@ export default function DevDashboardHome() {
 
             <StatCard
               title="Ticket Tasks"
-              value={ticketTasks.length}
-              hint="Converted to tasks"
+              value={activeTicketTasks.length}
+              hint={`${activeTicketTasks.length} to do`}
               icon="🎫"
             />
           </Box>
