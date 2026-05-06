@@ -103,6 +103,7 @@ export default function ClientTicketList() {
             <TextField
               select
               label="Project"
+              InputLabelProps={{ shrink: true }}
               size="small"
               value={form.projectId}
               onChange={(e) => setForm((prev) => ({ ...prev, projectId: e.target.value }))}
@@ -128,6 +129,7 @@ export default function ClientTicketList() {
             <TextField
               select
               label="Urgency"
+              InputLabelProps={{ shrink: true }}
               size="small"
               value={form.urgency}
               onChange={(e) => setForm((prev) => ({ ...prev, urgency: e.target.value }))}

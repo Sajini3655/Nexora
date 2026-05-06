@@ -17,7 +17,6 @@ import {
 } from "../../services/clientService";
 import { useClientProjects, useClientTickets } from "../../services/useClient";
 import ClientProjectTimeline from "../../components/dashboard/ClientProjectTimeline.jsx";
-import ClientQuickRequest from "../../components/dashboard/ClientQuickRequest.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
@@ -192,12 +191,7 @@ export default function ClientDashboardHome() {
           {noProjects ? null : (
             <ClientProjectTimeline project={activeProject} tickets={activeProjectTickets} />
           )}
-          <ClientQuickRequest
-            projects={projectSummaries}
-            onTicketCreated={async () => {
-              await Promise.all([refetchTickets(), refetchProjects()]);
-            }}
-          />
+          
 
           <Box
             sx={{
