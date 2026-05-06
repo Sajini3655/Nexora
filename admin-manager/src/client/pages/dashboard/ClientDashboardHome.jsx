@@ -21,6 +21,20 @@ import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
 
+const isChatTicket = (ticket) => {
+  const source = String(ticket?.sourceChannel ?? ticket?.source_channel ?? ticket?.createdVia ?? "").trim().toUpperCase();
+  const category = String(ticket?.category ?? "").trim().toLowerCase();
+  const title = String(ticket?.title ?? "").trim().toLowerCase();
+
+  return (
+    source === "CHAT" ||
+    source === "CHAT_SUMMARY" ||
+    source === "CHATBOX" ||
+    category === "chat" ||
+    title.includes("chat ticket")
+  );
+};
+
 export default function ClientDashboardHome() {
   const { data: projects = [], isLoading: projectsLoading, refetch: refetchProjects } = useClientProjects();
   // React Query hook - auto-refetch every 30s
@@ -60,7 +74,10 @@ export default function ClientDashboardHome() {
     ];
   }, [tickets, projects]);
 
-  const recentTickets = tickets.slice(0, 5);
+  const recentTickets = useMemo(
+    () => tickets.filter((ticket) => !isChatTicket(ticket)).slice(0, 5),
+    [tickets]
+  );
   const activeProject = projectSummaries[0] || null;
   const activeProjectTickets = useMemo(() => {
     if (!activeProject) return [];

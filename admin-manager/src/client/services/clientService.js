@@ -184,6 +184,7 @@ function toUiTicket(row, idx) {
     description: row?.description ?? "",
     createdBy: row?.createdBy?.name ?? row?.createdByName ?? null,
     assignedTo: row?.assignedTo?.name ?? row?.assignedToName ?? null,
+    sourceChannel: row?.sourceChannel ?? row?.source_channel ?? row?.createdVia ?? null,
   };
 }
 
