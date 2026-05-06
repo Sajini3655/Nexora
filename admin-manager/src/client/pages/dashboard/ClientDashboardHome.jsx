@@ -56,11 +56,11 @@ export default function ClientDashboardHome() {
     return [
       {
         title: "Open Tickets",
-        value: tickets.filter((ticket) => ticket.status === "Open" || ticket.status === "In Progress").length,
+        value: tickets.filter((ticket) => (ticket.status === "Open" || ticket.status === "In Progress") && !isChatTicket(ticket)).length,
       },
       {
         title: "In Progress",
-        value: tickets.filter((ticket) => ticket.status === "In Progress")
+        value: tickets.filter((ticket) => ticket.status === "In Progress" && !isChatTicket(ticket))
           .length,
       },
       {
@@ -178,7 +178,7 @@ export default function ClientDashboardHome() {
                       <Box>
                         <Typography sx={{ fontWeight: 900 }}>{project.name}</Typography>
                         <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                          Manager: {project.manager || "Client Support"} • {project.ticketCount || project.tickets?.length || 0} tickets
+                          Manager: {project.manager || "Client Support"} • {project.totalTasks || 0} tasks
                         </Typography>
                       </Box>
                       <StatusBadge label={project.status} />
@@ -196,7 +196,7 @@ export default function ClientDashboardHome() {
                         }}
                       />
                       <Typography variant="caption" sx={{ color: "#94a3b8", mt: 0.8, display: "block" }}>
-                        {project.progress || 0}% complete • Last update {project.eta || "-"}
+                        {project.progress || 0}% complete • {project.completedTasks || 0}/{project.totalTasks || 0} tasks • Last update {project.eta || "-"}
                       </Typography>
                     </Box>
                   </Paper>
