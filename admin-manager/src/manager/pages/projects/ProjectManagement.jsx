@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -7,12 +7,10 @@ import {
   LinearProgress,
   Paper,
   Stack,
-  TextField,
-  MenuItem,
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { getErrorMessage, fetchManagerClients } from "../../../services/managerService";
+import { getErrorMessage } from "../../../services/managerService";
 import api from "../../../services/api";
 import { useManagerProjects, useManagerTasks } from "../../data/useManager";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
@@ -49,25 +47,6 @@ export default function ProjectManagement() {
     "";
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const [clients, setClients] = useState([]);
-  const [selectedClientId, setSelectedClientId] = useState("");
-
-  const [newProjectForm, setNewProjectForm] = useState({ name: "", description: "" });
-  const [creatingProject, setCreatingProject] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchManagerClients();
-        if (mounted) setClients(list);
-      } catch (err) {
-        // ignore
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
 
   const projectRows = useMemo(() => {
     const tasksByProject = new Map();
@@ -111,40 +90,6 @@ export default function ProjectManagement() {
     });
   }, [projects, tasks]);
 
-  const handleCreateNewProject = async () => {
-    if (!newProjectForm.name.trim()) {
-      setError("Project name is required.");
-      return;
-    }
-
-    setCreatingProject(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const created = await api.post("/manager/projects", {
-        name: newProjectForm.name.trim(),
-        description: newProjectForm.description.trim() || null,
-        clientId: selectedClientId ? Number(selectedClientId) : null,
-      });
-
-      setSuccess("New project created successfully!");
-      setNewProjectForm({ name: "", description: "" });
-      setSelectedClientId("");
-
-      projectsQuery.refetch();
-
-      // Navigate to the new project after a short delay
-      setTimeout(() => {
-        navigate(`/manager/project-management/${created.id}`);
-      }, 500);
-    } catch (err) {
-      setError(getErrorMessage(err, "Failed to create project."));
-    } finally {
-      setCreatingProject(false);
-    }
-  };
-
   const getStatusChipStyle = (status) => {
     const normalized = String(status || "").toLowerCase();
     if (normalized === "completed") return { bgcolor: "rgba(34,197,94,0.16)", color: "#86efac" };
@@ -182,7 +127,7 @@ export default function ProjectManagement() {
               Project Management
             </Typography>
             <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
-              Create projects and manage tasks, story points, and developer assignments.
+              Manage tasks, story points, and developer assignments.
             </Typography>
           </Box>
         </Stack>
@@ -190,46 +135,6 @@ export default function ProjectManagement() {
 
       {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="project-management-error" /> : null}
       {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="project-management-success" /> : null}
-
-      <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", mb: 2 }}>
-        <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Create New Project</Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.2fr 1fr auto" }, gap: 1, alignItems: "center" }}>
-          <TextField
-            size="small"
-            label="Project name"
-            value={newProjectForm.name}
-            onChange={(e) => setNewProjectForm((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="e.g., Mobile App Redesign"
-          />
-          <TextField
-            size="small"
-            label="Project description"
-            value={newProjectForm.description}
-            onChange={(e) => setNewProjectForm((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="Optional description"
-          />
-          <TextField
-            select
-            size="small"
-            label="Assign Client (optional)"
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-          >
-            <MenuItem value="">No client</MenuItem>
-            {clients.map((c) => (
-              <MenuItem key={c.id} value={String(c.id)}>{c.name || c.email}</MenuItem>
-            ))}
-          </TextField>
-          <Button
-            variant="contained"
-            disabled={creatingProject || !newProjectForm.name.trim()}
-            onClick={handleCreateNewProject}
-            sx={{ height: "40px" }}
-          >
-            {creatingProject ? "Creating..." : "Create"}
-          </Button>
-        </Box>
-      </Paper>
 
       <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
         <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Your Projects</Typography>

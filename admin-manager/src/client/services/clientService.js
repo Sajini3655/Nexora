@@ -126,9 +126,24 @@ function getDateString(value) {
 }
 
 function toUiProject(row, idx) {
-  const progress = Number(row?.progressPercentage ?? row?.progress ?? row?.completion ?? 0);
-  const totalTasks = Number(row?.totalTasks ?? row?.total_tasks ?? 0);
-  const completedTasks = Number(row?.completedTasks ?? row?.completed_tasks ?? 0);
+  const rawTasks = Array.isArray(row?.tasks) ? row.tasks : [];
+  const derivedTotalTasks = rawTasks.length;
+  const derivedCompletedTasks = rawTasks.filter((task) => {
+    const status = String(task?.status ?? "").trim().toUpperCase();
+    return status === "DONE" || status === "COMPLETED";
+  }).length;
+  const totalTasks = Number(
+    row?.totalTasks ?? row?.total_tasks ?? (derivedTotalTasks > 0 ? derivedTotalTasks : 0)
+  );
+  const completedTasks = Number(
+    row?.completedTasks ?? row?.completed_tasks ?? (derivedTotalTasks > 0 ? derivedCompletedTasks : 0)
+  );
+  const progress = Number(
+    row?.progressPercentage ??
+      row?.progress ??
+      row?.completion ??
+      (totalTasks > 0 ? Math.round((completedTasks * 100) / totalTasks) : 0)
+  );
   return {
     id: String(row?.id ?? row?.project_id ?? `CP-${idx + 1}`),
     name: row?.name ?? row?.project_name ?? "Client Project",

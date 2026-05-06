@@ -22,6 +22,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
 import ChatBubbleRoundedIcon from "@mui/icons-material/ChatBubbleRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { useParams } from "react-router-dom";
@@ -148,6 +149,39 @@ function buildSummaryPreview(session) {
   return summary.length > 160 ? `${summary.substring(0, 160)}...` : summary;
 }
 
+function getProjectFilesStorageKey(projectId) {
+  return `manager/project-files/${String(projectId || "")}`;
+}
+
+function formatFileSize(size) {
+  if (!Number.isFinite(size) || size <= 0) return "0 B";
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = size;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value >= 10 || unitIndex === 0 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function normalizeStoredProjectFiles(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry) => ({
+      id: String(entry?.id || ""),
+      name: String(entry?.name || "Untitled file"),
+      size: Number(entry?.size || 0),
+      type: String(entry?.type || "File"),
+      uploadedAt: String(entry?.uploadedAt || ""),
+    }))
+    .filter((entry) => entry.id && entry.name);
+}
+
 export default function ProjectManagementDetails() {
   const { projectId } = useParams();
   const { user, loading: authLoading } = useAuth();
@@ -192,6 +226,9 @@ export default function ProjectManagementDetails() {
   const [loadingStoryPoints, setLoadingStoryPoints] = useState(false);
   const [savingStoryPoint, setSavingStoryPoint] = useState(false);
   const [savingAllChanges, setSavingAllChanges] = useState(false);
+  const [projectFiles, setProjectFiles] = useState([]);
+  const [selectedProjectFiles, setSelectedProjectFiles] = useState([]);
+  const [projectFilesInputKey, setProjectFilesInputKey] = useState(0);
 
   const [originalTaskDraft, setOriginalTaskDraft] = useState(null);
   const [originalDeveloperId, setOriginalDeveloperId] = useState("");
@@ -235,6 +272,30 @@ export default function ProjectManagementDetails() {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    if (!projectId) {
+      setProjectFiles([]);
+      setSelectedProjectFiles([]);
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(getProjectFilesStorageKey(projectId));
+      setProjectFiles(normalizeStoredProjectFiles(raw ? JSON.parse(raw) : []));
+    } catch (err) {
+      setProjectFiles([]);
+    }
+
+    setSelectedProjectFiles([]);
+    setProjectFilesInputKey((value) => value + 1);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    window.localStorage.setItem(getProjectFilesStorageKey(projectId), JSON.stringify(projectFiles));
+  }, [projectFiles, projectId]);
+
   const loadProjectSessions = useCallback(async () => {
     if (!projectId || authLoading) return;
 
@@ -256,6 +317,38 @@ export default function ProjectManagementDetails() {
       setChatListLoading(false);
     }
   }, [projectId, authLoading]);
+
+  const handleProjectFilesSelection = useCallback((event) => {
+    const files = Array.from(event.target.files || []);
+    setSelectedProjectFiles(files);
+  }, []);
+
+  const handleAddProjectFiles = useCallback(() => {
+    if (selectedProjectFiles.length === 0) {
+      setActionError("Select one or more files first.");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const newEntries = selectedProjectFiles.map((file) => ({
+      id: `${Date.now()}-${file.name}-${file.size}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      size: file.size,
+      type: file.type || "File",
+      uploadedAt: now,
+    }));
+
+    setProjectFiles((current) => [...newEntries, ...current]);
+    setSelectedProjectFiles([]);
+    setProjectFilesInputKey((value) => value + 1);
+    setActionError("");
+    setSuccess(`Added ${newEntries.length} file${newEntries.length === 1 ? "" : "s"} to this project.`);
+  }, [selectedProjectFiles]);
+
+  const handleRemoveProjectFile = useCallback((fileId) => {
+    setProjectFiles((current) => current.filter((file) => file.id !== fileId));
+    setSuccess("Project file removed.");
+  }, []);
 
   useEffect(() => {
     loadProjectSessions();
@@ -850,6 +943,85 @@ export default function ProjectManagementDetails() {
               {addingTask ? "Adding..." : "Add Task"}
             </Button>
           </Box>
+        </Paper>
+
+        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
+          <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Project Files</Typography>
+
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <input
+                key={projectFilesInputKey}
+                type="file"
+                multiple
+                onChange={handleProjectFilesSelection}
+                style={{ display: "none" }}
+                id="project-files-input"
+              />
+              <label htmlFor="project-files-input">
+                <Button
+                  component="span"
+                  variant="outlined"
+                  startIcon={<AttachFileRoundedIcon />}
+                  sx={{ textTransform: "none", fontWeight: 700 }}
+                >
+                  Choose Files
+                </Button>
+              </label>
+              {selectedProjectFiles.length > 0 && (
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                  {selectedProjectFiles.length} file{selectedProjectFiles.length === 1 ? "" : "s"} selected
+                </Typography>
+              )}
+            </Box>
+            <Button
+              variant="contained"
+              disabled={selectedProjectFiles.length === 0}
+              onClick={handleAddProjectFiles}
+              sx={{ fontWeight: 900, textTransform: "none" }}
+            >
+              Add Files
+            </Button>
+          </Box>
+
+          {projectFiles.length === 0 ? (
+            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              No files attached to this project yet.
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {projectFiles.map((file) => (
+                <Box
+                  key={file.id}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    p: 1,
+                    borderRadius: 1,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: 14 }} noWrap>
+                      {file.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                      {formatFileSize(file.size)} • {file.type}
+                    </Typography>
+                  </Box>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleRemoveProjectFile(file.id)}
+                    sx={{ color: "#ef4444", "&:hover": { backgroundColor: "rgba(239,68,68,0.1)" } }}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ))}
+            </Stack>
+          )}
         </Paper>
 
         <Paper
