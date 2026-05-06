@@ -300,21 +300,47 @@ export default function DevDashboardHome() {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+              gridTemplateColumns: { xs: "1fr", lg: "repeat(3, 1fr)" },
               gap: 3,
             }}
           >
-            {/* Active Task List */}
+            {/* Active Project Tasks */}
             <ScrollPanel
-              title="Active Task List"
-              count={activeTasks.length}
-              subtitle="Your current work in progress"
+              title="Project Tasks"
+              count={activeProjectTasks.length}
+              subtitle="Active project work"
             >
-              {activeTasks.length === 0 ? (
-                <EmptyState icon="📭" message="No active tasks assigned yet." />
+              {activeProjectTasks.length === 0 ? (
+                <EmptyState icon="📭" message="No active project tasks." />
               ) : (
                 <Stack spacing={0}>
-                  {activeTasks.map((task) => {
+                  {activeProjectTasks.map((task) => {
+                    const pointTotals = getPointTotals(task);
+                    return (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        totalPoints={pointTotals.total}
+                        completedPoints={pointTotals.completed}
+                        progress={pointTotals.progress}
+                      />
+                    );
+                  })}
+                </Stack>
+              )}
+            </ScrollPanel>
+
+            {/* Active Ticket Tasks */}
+            <ScrollPanel
+              title="Ticket Tasks"
+              count={activeTicketTasks.length}
+              subtitle="Active ticket work"
+            >
+              {activeTicketTasks.length === 0 ? (
+                <EmptyState icon="📭" message="No active ticket tasks." />
+              ) : (
+                <Stack spacing={0}>
+                  {activeTicketTasks.map((task) => {
                     const pointTotals = getPointTotals(task);
                     return (
                       <TaskRow
