@@ -11,7 +11,7 @@ import {
   MenuItem,
   Typography,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { getErrorMessage, fetchManagerClients } from "../../../services/managerService";
 import api from "../../../services/api";
 import { useManagerProjects, useManagerTasks } from "../../data/useManager";
@@ -37,6 +37,7 @@ function getProjectDescription(project) {
 
 export default function ProjectManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
   const projectsQuery = useManagerProjects();
   const tasksQuery = useManagerTasks();
 
@@ -55,6 +56,11 @@ export default function ProjectManagement() {
 
   const [newProjectForm, setNewProjectForm] = useState({ name: "", description: "" });
   const [creatingProject, setCreatingProject] = useState(false);
+
+  const q = useMemo(() => {
+    const params = new URLSearchParams(location.search || "");
+    return String(params.get("q") || "").trim().toLowerCase();
+  }, [location.search]);
 
   useEffect(() => {
     let mounted = true;
@@ -110,6 +116,14 @@ export default function ProjectManagement() {
       };
     });
   }, [projects, tasks]);
+
+  const visibleProjectRows = useMemo(() => {
+    if (!q) return projectRows;
+    return projectRows.filter((project) => {
+      const text = `${project?.name || ""} ${project?.description || ""} ${project?.clientName || ""}`.toLowerCase();
+      return text.includes(q);
+    });
+  }, [projectRows, q]);
 
   const handleCreateNewProject = async () => {
     if (!newProjectForm.name.trim()) {
@@ -233,9 +247,9 @@ export default function ProjectManagement() {
 
       <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
         <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Your Projects</Typography>
-        {projectRows.length === 0 ? (
+        {visibleProjectRows.length === 0 ? (
           <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-            No projects found for this manager.
+            {q ? `No projects match “${q}”.` : "No projects found for this manager."}
           </Typography>
         ) : (
           <Box sx={{ overflowX: "auto" }}>
@@ -248,7 +262,7 @@ export default function ProjectManagement() {
                 ))}
               </Box>
 
-              {projectRows.map((project) => (
+              {visibleProjectRows.map((project) => (
                 <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid rgba(148,163,184,0.12)" }}>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 800, fontSize: 14 }} noWrap>

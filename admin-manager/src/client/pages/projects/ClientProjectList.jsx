@@ -10,13 +10,27 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import { useClientProjects } from "../../services/useClient";
 
 export default function ClientProjectList() {
   const { data: projects = [], isLoading: loading, error: queryError } = useClientProjects();
   const error = queryError?.message || "";
+  const location = useLocation();
+
+  const q = React.useMemo(() => {
+    const params = new URLSearchParams(location.search || "");
+    return String(params.get("q") || "").trim().toLowerCase();
+  }, [location.search]);
+
+  const visibleProjects = React.useMemo(() => {
+    if (!q) return projects;
+    return projects.filter((project) => {
+      const text = `${project?.name || ""} ${project?.manager || ""}`.toLowerCase();
+      return text.includes(q);
+    });
+  }, [projects, q]);
 
   return (
     <>
@@ -51,7 +65,7 @@ export default function ClientProjectList() {
             </Typography>
           ) : (
             <Stack spacing={1.5}>
-              {projects.map((project) => (
+              {visibleProjects.map((project) => (
                 <Box
                   key={project.id}
                   sx={{
@@ -122,6 +136,12 @@ export default function ClientProjectList() {
                   </Box>
                 </Box>
               ))}
+
+              {q && visibleProjects.length === 0 ? (
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                  No projects match “{q}”.
+                </Typography>
+              ) : null}
             </Stack>
           )}
         </Paper>

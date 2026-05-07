@@ -17,6 +17,7 @@ import {
 import { useClientProjects, useClientTickets, useCreateClientTicket } from "../../services/useClient";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+import { useLocation } from "react-router-dom";
 
 const emptyForm = {
   category: "",
@@ -27,6 +28,7 @@ const emptyForm = {
 };
 
 export default function ClientTicketList() {
+  const location = useLocation();
   const [creating, setCreating] = useState(false);
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState(emptyForm);
@@ -37,6 +39,19 @@ export default function ClientTicketList() {
   const createMutation = useCreateClientTicket();
 
   const error = queryError?.message || createMutation.error?.message || "";
+
+  const q = useMemo(() => {
+    const params = new URLSearchParams(location.search || "");
+    return String(params.get("q") || "").trim().toLowerCase();
+  }, [location.search]);
+
+  const visibleTickets = useMemo(() => {
+    if (!q) return tickets;
+    return tickets.filter((ticket) => {
+      const text = `${ticket?.title || ""} ${ticket?.category || ""} ${ticket?.status || ""} ${ticket?.priority || ""} ${ticket?.id || ""}`.toLowerCase();
+      return text.includes(q);
+    });
+  }, [tickets, q]);
 
   const canCreate = useMemo(() => {
     return Boolean(projects.length > 0 && form.projectId && form.category && form.title.trim() && form.description.trim());
@@ -197,9 +212,9 @@ export default function ClientTicketList() {
             <Box sx={{ display: "grid", placeItems: "center", minHeight: 140 }}>
               <CircularProgress sx={{ color: "#6d5dfc" }} />
             </Box>
-          ) : tickets.length === 0 ? (
+          ) : visibleTickets.length === 0 ? (
             <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-              No tickets found.
+              {q ? `No tickets match “${q}”.` : "No tickets found."}
             </Typography>
           ) : (
             <Box sx={{ overflowX: "auto" }}>
@@ -228,7 +243,7 @@ export default function ClientTicketList() {
                   ))}
                 </Box>
 
-                {tickets.map((ticket) => (
+                {visibleTickets.map((ticket) => (
                   <Box
                     key={ticket.id}
                     sx={{
