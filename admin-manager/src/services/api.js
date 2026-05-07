@@ -127,4 +127,9 @@ export const saveAccessUserOverrides = async (payload) => {
   return response.data;
 };
 
+export const resolveNlqNavigation = async (payload) => {
+  const response = await api.post("/nlq/resolve", payload);
+  return response.data;
+};
+
 export default api;
