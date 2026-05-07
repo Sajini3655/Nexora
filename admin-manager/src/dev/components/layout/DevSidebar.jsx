@@ -7,23 +7,29 @@ import {
   AccessTimeRounded,
 } from "@mui/icons-material";
 import UnifiedSidebar from "../../../components/layout/UnifiedSidebar.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 export default function DevSidebar({ open, onClose }) {
+  const { moduleAccess, accessLoading } = useAuth();
+
   const menuItems = [
     {
       label: "Dashboard",
       path: "/dev",
       icon: <DashboardRounded />,
+      module: "DASHBOARD",
     },
     {
       label: "Projects",
       path: "/dev/projects",
       icon: <FolderRounded />,
+      module: "FILES",
     },
     {
       label: "Tasks",
       path: "/dev/tasks",
       icon: <TaskAltRounded />,
+      module: "TASKS",
     },
     {
       label: "Timesheets",
@@ -37,6 +43,12 @@ export default function DevSidebar({ open, onClose }) {
     },
   ];
 
+  const visibleItems = menuItems.filter((item) => {
+    if (!item.module) return true;
+    if (accessLoading || !moduleAccess) return false;
+    return Boolean(moduleAccess[item.module]);
+  });
+
   return (
     <UnifiedSidebar
       open={open}
@@ -45,7 +57,7 @@ export default function DevSidebar({ open, onClose }) {
       sections={[
         {
           label: "Navigation",
-          items: menuItems.map((item) => ({
+          items: visibleItems.map((item) => ({
             to: item.path,
             label: item.label,
             icon: item.icon,

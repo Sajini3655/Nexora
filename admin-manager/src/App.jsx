@@ -188,7 +188,7 @@ export default function App() {
         />
       </Route>
 
-       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="TICKETS" />}>
          <Route
          path="/manager/tickets"
          element={
@@ -322,10 +322,13 @@ export default function App() {
         <Route path="/client" element={<UnifiedShell role="CLIENT"><ClientDashboardHome /></UnifiedShell>} />
         <Route path="/client/projects" element={<UnifiedShell role="CLIENT"><ClientProjectList /></UnifiedShell>} />
         <Route path="/client/projects/:projectId" element={<UnifiedShell role="CLIENT"><ClientProjectDetails /></UnifiedShell>} />
-        <Route path="/client/tickets" element={<UnifiedShell role="CLIENT"><ClientTicketList /></UnifiedShell>} />
         <Route path="/client/history" element={<UnifiedShell role="CLIENT"><ClientHistory /></UnifiedShell>} />
         <Route path="/client/profile" element={<UnifiedShell role="CLIENT"><ClientProfile /></UnifiedShell>} />
         <Route path="/client/settings" element={<UnifiedShell role="CLIENT"><ClientSettings /></UnifiedShell>} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} requiredModule="TICKETS" />}>
+        <Route path="/client/tickets" element={<UnifiedShell role="CLIENT"><ClientTicketList /></UnifiedShell>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
