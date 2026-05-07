@@ -158,7 +158,6 @@ export default function ProjectManagement() {
       setCreatingProject(false);
     }
   };
-
   const getStatusChipStyle = (status) => {
     const normalized = String(status || "").toLowerCase();
     if (normalized === "completed") return { bgcolor: "rgba(34,197,94,0.16)", color: "#86efac" };

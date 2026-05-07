@@ -13,6 +13,11 @@ export default function DevProfile() {
 
   const [profile, setProfile] = useState(initial);
   const [statusMsg, setStatusMsg] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null);
+  const [showToast, setShowToast] = useState(false);
+  const [showSkillToast, setShowSkillToast] = useState(false);
+  const [showPasswordToast, setShowPasswordToast] = useState(false);
 
   // Try to hydrate from backend (if developer logged in via shared login)
   useEffect(() => {
@@ -33,6 +38,8 @@ export default function DevProfile() {
   const [pwMsg, setPwMsg] = useState("");
 
   const saveBasic = () => {
+    setIsSaving(true);
+    setSaveStatus(null);
     const next = updateProfile(() => ({ ...profile }));
     setProfile(next);
     setStatusMsg("Saving...");
@@ -40,11 +47,21 @@ export default function DevProfile() {
       try {
         const synced = await syncProfileToBackend(next);
         setProfile(synced);
-        setStatusMsg("Profile saved.");
+        setStatusMsg("✓ Profile saved successfully!");
+        setSaveStatus('success');
+        setShowToast(true);
       } catch {
-        setStatusMsg("Saved locally (backend sync failed).");
+        setStatusMsg("⚠ Saved locally (backend sync failed).");
+        setSaveStatus('error');
       } finally {
-        setTimeout(() => setStatusMsg(""), 2200);
+        setIsSaving(false);
+        setTimeout(() => {
+          setStatusMsg("");
+          setSaveStatus(null);
+        }, 3500);
+        setTimeout(() => {
+          setShowToast(false);
+        }, 3000);
       }
     })();
   };
@@ -62,9 +79,14 @@ export default function DevProfile() {
     setProfile(saved);
     setNewSkill("");
     setNewSkillLevel(3);
+    setShowSkillToast(true);
 
     // fire-and-forget sync
     syncProfileToBackend(saved).catch(() => {});
+    
+    setTimeout(() => {
+      setShowSkillToast(false);
+    }, 3000);
   };
 
   const removeSkill = (id) => {
@@ -101,6 +123,10 @@ export default function DevProfile() {
         setNewPw("");
         setConfirmPw("");
         setPwMsg("Password updated successfully.");
+        setShowPasswordToast(true);
+        setTimeout(() => {
+          setShowPasswordToast(false);
+        }, 3000);
       } catch (err) {
         setPwMsg(
           err?.response?.data?.message ||
@@ -119,7 +145,19 @@ export default function DevProfile() {
             Full profile details used for developer matching, workload tracking, and AI assignment.
           </p>
         </div>
-        {statusMsg && <span className="chip">{statusMsg}</span>}
+        {statusMsg && (
+          <span
+            className={`chip font-semibold ${
+              saveStatus === 'success'
+                ? 'bg-green-500/20 border border-green-500/50 text-green-300'
+                : saveStatus === 'error'
+                ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300'
+                : 'bg-blue-500/20 border border-blue-500/50 text-blue-300'
+            }`}
+          >
+            {statusMsg}
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -240,8 +278,27 @@ export default function DevProfile() {
             </div>
           </div>
 
-          <button type="button" onClick={saveBasic} className="mt-4 btn-primary">
-            Save profile
+          <button 
+            type="button" 
+            onClick={saveBasic} 
+            disabled={isSaving}
+            className={`mt-4 btn-primary flex items-center gap-2 ${
+              isSaving ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
+          >
+            {isSaving ? (
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                Saving...
+              </>
+            ) : saveStatus === 'success' ? (
+              <>
+                <span>✓</span>
+                Saved
+              </>
+            ) : (
+              'Save profile'
+            )}
           </button>
         </div>
 
@@ -346,6 +403,51 @@ export default function DevProfile() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 border border-green-400/30">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold">Profile Updated Successfully!</p>
+              <p className="text-xs text-green-100">Your changes have been saved.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Skill Added Toast */}
+      {showSkillToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 border border-blue-400/30">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold">Skill Added Successfully!</p>
+              <p className="text-xs text-blue-100">Your skill has been added to your profile.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Changed Toast */}
+      {showPasswordToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 border border-purple-400/30">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold">Password Changed Successfully!</p>
+              <p className="text-xs text-purple-100">Your password has been updated securely.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

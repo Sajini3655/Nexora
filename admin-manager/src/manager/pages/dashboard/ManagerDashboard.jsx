@@ -380,12 +380,11 @@ export default function ManagerDashboard() {
   // Trigger lightweight invalidation when live updates arrive
   const loadDashboard = React.useCallback(() => {
     try {
-      // Invalidate relevant caches instead of forcing individual refetches.
-      // This lets react-query decide whether to refetch based on staleness.
+      // Invalidate relevant project/task/developer caches only.
+      // Ticket snapshot updates on its own schedule and should not be refreshed by task websocket events.
       queryClient.invalidateQueries({ queryKey: managerKeys.projects(managerScope) });
       queryClient.invalidateQueries({ queryKey: managerKeys.tasks(managerScope) });
       queryClient.invalidateQueries({ queryKey: managerKeys.developers(managerScope) });
-      queryClient.invalidateQueries({ queryKey: ["managerTickets", managerScope, "recent"] });
     } catch (e) {
       // swallow — individual queries handle errors
     }
@@ -399,7 +398,7 @@ export default function ManagerDashboard() {
     ],
     []
   );
-  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 1000 });
+  useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 2500 });
 
   React.useEffect(() => {
     // Only refresh if tab becomes visible after being hidden (page resume)
@@ -419,7 +418,12 @@ export default function ManagerDashboard() {
   const managerTasks = Array.isArray(tasksQuery.data) ? tasksQuery.data : [];
   const developers = Array.isArray(developersQuery.data) ? developersQuery.data : [];
   const tickets = normalizeTicketList(emailTicketsQuery.data);
-  const loading = authLoading || projectsQuery.isLoading || tasksQuery.isLoading || developersQuery.isLoading || emailTicketsQuery.isLoading;
+  const initialLoading =
+    authLoading ||
+    (projectsQuery.isLoading && !projectsQuery.data) ||
+    (tasksQuery.isLoading && !tasksQuery.data);
+  const progressLoading = developersQuery.isLoading || tasksQuery.isLoading;
+  const ticketLoading = emailTicketsQuery.isLoading && !emailTicketsQuery.data;
   const refreshing = projectsQuery.isFetching || tasksQuery.isFetching || developersQuery.isFetching || emailTicketsQuery.isFetching;
   const error =
     projectsQuery.error?.message ||
@@ -974,7 +978,7 @@ export default function ManagerDashboard() {
     });
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <Box sx={{ p: 3, minHeight: "52vh", display: "grid", placeItems: "center" }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -1213,6 +1217,11 @@ export default function ManagerDashboard() {
                 >
                   Compact inbound ticket overview. Full ticket details stay in the Tickets page.
                 </Typography>
+                {ticketLoading ? (
+                  <Typography variant="caption" sx={{ color: "#94a3b8", mt: 0.75 }}>
+                    Loading ticket snapshot...
+                  </Typography>
+                ) : null}
 
                 {emailTicketsQuery.error ? (
                   <ErrorNotice message={emailTicketsQuery.error.message || String(emailTicketsQuery.error)} severity="error" sx={{ mt: 1, mb: 1.2 }} dedupeKey="manager-email-tickets-error" />
@@ -1283,7 +1292,7 @@ export default function ManagerDashboard() {
           projectsData={projects}
           developersData={developers}
           tasksData={dashboardTasks}
-          loadingOverride={loading || refreshing}
+          loadingOverride={progressLoading}
           errorOverride={developersQuery.error || tasksQuery.error || null}
           onRetry={() => Promise.all([developersQuery.refetch(), tasksQuery.refetch()])}
           onTotalsChange={handleDeveloperProgressTotalsChange}

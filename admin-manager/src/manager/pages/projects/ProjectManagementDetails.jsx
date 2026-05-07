@@ -22,9 +22,11 @@ import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
 import ChatBubbleRoundedIcon from "@mui/icons-material/ChatBubbleRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "../../../services/api";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import ChatBox from "../../../dev/pages/chat/src/ChatBox";
@@ -38,7 +40,12 @@ import {
   updateManagerTask,
   fetchManagerClients,
 } from "../../../services/managerService";
-import { useProjectDetails, useManagerDevelopers } from "../../data/useManager";
+import {
+  getManagerQueryScope,
+  managerKeys,
+  useProjectDetails,
+  useManagerDevelopers,
+} from "../../data/useManager";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 
@@ -48,6 +55,7 @@ const emptyTaskForm = {
   priority: "MEDIUM",
   dueDate: "",
   assignedToId: "",
+  estimatedPoints: 0,
 };
 
 const emptyStoryPointForm = {
@@ -113,7 +121,7 @@ function getProjectDescription(project) {
 }
 
 function getStoryPointLabel(storyPoint) {
-  return `${storyPoint?.title || "Untitled"} - ${Number(storyPoint?.pointValue || 0)} pt`;
+  return `${Number(storyPoint?.pointValue || 0)} pt`;
 }
 
 function formatChatTime(value) {
@@ -142,9 +150,44 @@ function buildSummaryPreview(session) {
   return summary.length > 160 ? `${summary.substring(0, 160)}...` : summary;
 }
 
+function getProjectFilesStorageKey(projectId) {
+  return `manager/project-files/${String(projectId || "")}`;
+}
+
+function formatFileSize(size) {
+  if (!Number.isFinite(size) || size <= 0) return "0 B";
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = size;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value >= 10 || unitIndex === 0 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function normalizeStoredProjectFiles(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry) => ({
+      id: String(entry?.id || ""),
+      name: String(entry?.name || "Untitled file"),
+      size: Number(entry?.size || 0),
+      type: String(entry?.type || "File"),
+      uploadedAt: String(entry?.uploadedAt || ""),
+    }))
+    .filter((entry) => entry.id && entry.name);
+}
+
 export default function ProjectManagementDetails() {
   const { projectId } = useParams();
   const { user, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
+  const managerScope = getManagerQueryScope(user);
   const currentUserId = user?.id != null ? String(user.id) : "";
   const currentUserName = user?.name || user?.email || "Manager";
 
@@ -184,6 +227,9 @@ export default function ProjectManagementDetails() {
   const [loadingStoryPoints, setLoadingStoryPoints] = useState(false);
   const [savingStoryPoint, setSavingStoryPoint] = useState(false);
   const [savingAllChanges, setSavingAllChanges] = useState(false);
+  const [projectFiles, setProjectFiles] = useState([]);
+  const [selectedProjectFiles, setSelectedProjectFiles] = useState([]);
+  const [projectFilesInputKey, setProjectFilesInputKey] = useState(0);
 
   const [originalTaskDraft, setOriginalTaskDraft] = useState(null);
   const [originalDeveloperId, setOriginalDeveloperId] = useState("");
@@ -227,6 +273,30 @@ export default function ProjectManagementDetails() {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    if (!projectId) {
+      setProjectFiles([]);
+      setSelectedProjectFiles([]);
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(getProjectFilesStorageKey(projectId));
+      setProjectFiles(normalizeStoredProjectFiles(raw ? JSON.parse(raw) : []));
+    } catch (err) {
+      setProjectFiles([]);
+    }
+
+    setSelectedProjectFiles([]);
+    setProjectFilesInputKey((value) => value + 1);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    window.localStorage.setItem(getProjectFilesStorageKey(projectId), JSON.stringify(projectFiles));
+  }, [projectFiles, projectId]);
+
   const loadProjectSessions = useCallback(async () => {
     if (!projectId || authLoading) return;
 
@@ -248,6 +318,38 @@ export default function ProjectManagementDetails() {
       setChatListLoading(false);
     }
   }, [projectId, authLoading]);
+
+  const handleProjectFilesSelection = useCallback((event) => {
+    const files = Array.from(event.target.files || []);
+    setSelectedProjectFiles(files);
+  }, []);
+
+  const handleAddProjectFiles = useCallback(() => {
+    if (selectedProjectFiles.length === 0) {
+      setActionError("Select one or more files first.");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const newEntries = selectedProjectFiles.map((file) => ({
+      id: `${Date.now()}-${file.name}-${file.size}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      size: file.size,
+      type: file.type || "File",
+      uploadedAt: now,
+    }));
+
+    setProjectFiles((current) => [...newEntries, ...current]);
+    setSelectedProjectFiles([]);
+    setProjectFilesInputKey((value) => value + 1);
+    setActionError("");
+    setSuccess(`Added ${newEntries.length} file${newEntries.length === 1 ? "" : "s"} to this project.`);
+  }, [selectedProjectFiles]);
+
+  const handleRemoveProjectFile = useCallback((fileId) => {
+    setProjectFiles((current) => current.filter((file) => file.id !== fileId));
+    setSuccess("Project file removed.");
+  }, []);
 
   useEffect(() => {
     loadProjectSessions();
@@ -333,9 +435,7 @@ export default function ProjectManagementDetails() {
   const canAddTask = Boolean(newTask.title.trim() && newTask.priority);
 
   const canSaveStoryPoint = Boolean(
-    selectedTask?.id &&
-      storyPointForm.title.trim() &&
-      Number(storyPointForm.pointValue) > 0
+    selectedTask?.id && Number(storyPointForm.pointValue) > 0
   );
 
   const openTaskModal = async (task) => {
@@ -347,6 +447,7 @@ export default function ProjectManagementDetails() {
       priority: getTaskPriority(task),
       dueDate: task?.dueDate || "",
       status: getTaskStatus(task),
+      estimatedPoints: Number(task?.estimatedPoints ?? task?.totalPointValue ?? task?.totalStoryPoints ?? 0),
     };
     setTaskDraft(newTaskDraft);
     setOriginalTaskDraft(JSON.parse(JSON.stringify(newTaskDraft)));
@@ -384,7 +485,8 @@ export default function ProjectManagementDetails() {
       taskDraft?.description !== originalTaskDraft.description ||
       taskDraft?.priority !== originalTaskDraft.priority ||
       taskDraft?.dueDate !== originalTaskDraft.dueDate ||
-      taskDraft?.status !== originalTaskDraft.status;
+      taskDraft?.status !== originalTaskDraft.status ||
+      Number(taskDraft?.estimatedPoints || 0) !== Number(originalTaskDraft.estimatedPoints || 0);
     
     const developerChanged = selectedDeveloperId !== originalDeveloperId;
     
@@ -407,7 +509,8 @@ export default function ProjectManagementDetails() {
         taskDraft?.description !== originalTaskDraft?.description ||
         taskDraft?.priority !== originalTaskDraft?.priority ||
         taskDraft?.dueDate !== originalTaskDraft?.dueDate ||
-        taskDraft?.status !== originalTaskDraft?.status;
+        taskDraft?.status !== originalTaskDraft?.status ||
+        Number(taskDraft?.estimatedPoints || 0) !== Number(originalTaskDraft?.estimatedPoints || 0);
 
       if (taskDetailsChanged) {
         savePromises.push(
@@ -417,6 +520,7 @@ export default function ProjectManagementDetails() {
             priority: (taskDraft?.priority || "MEDIUM").toUpperCase(),
             dueDate: taskDraft?.dueDate || null,
             status: (taskDraft?.status || "TODO").toUpperCase(),
+            estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
           })
         );
       }
@@ -492,25 +596,64 @@ export default function ProjectManagementDetails() {
   const handleAddTask = async () => {
     if (!project || !canAddTask) return;
 
+    const numericProjectId = Number(project?.id ?? project?.projectId ?? projectId);
+    if (!Number.isFinite(numericProjectId) || numericProjectId <= 0) {
+      setActionError("Invalid project id. Reload this page from Project Management and try again.");
+      return;
+    }
+
     setAddingTask(true);
     setActionError("");
     setSuccess("");
 
     try {
-      await createManagerTask({
-        projectId: Number(projectId),
+      const createdTask = await createManagerTask({
+        projectId: numericProjectId,
         title: newTask.title.trim(),
         description: newTask.description.trim() || null,
         priority: newTask.priority,
         dueDate: newTask.dueDate || null,
         assignedToId: newTask.assignedToId ? Number(newTask.assignedToId) : null,
         status: "TODO",
+        estimatedPoints: Number(newTask.estimatedPoints || 0),
       });
 
       setNewTask(emptyTaskForm);
       setAddTaskSuggestion(null);
       setSuccess("Task added successfully.");
-      projectDetailsQuery.refetch();
+
+      if (managerScope) {
+        const tasksKey = managerKeys.tasks(managerScope);
+        queryClient.setQueryData(tasksKey, (prev) => {
+          const existing = Array.isArray(prev) ? prev : [];
+
+          if (!createdTask || createdTask?.id == null) {
+            return existing;
+          }
+
+          const createdTaskId = String(createdTask.id);
+          const alreadyExists = existing.some((task) => String(task?.id) === createdTaskId);
+          if (alreadyExists) {
+            return existing;
+          }
+
+          return [
+            {
+              ...createdTask,
+              projectId: createdTask.projectId ?? numericProjectId,
+              projectName: createdTask.projectName ?? getProjectName(project),
+            },
+            ...existing,
+          ];
+        });
+
+        await queryClient.invalidateQueries({ queryKey: tasksKey, exact: true });
+      }
+
+      await Promise.all([
+        projectDetailsQuery.refetch(),
+        developersQuery.refetch(),
+      ]);
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to add task."));
     } finally {
@@ -619,6 +762,7 @@ export default function ProjectManagementDetails() {
         priority: taskPriority,
         dueDate: taskDueDate,
         status: taskStatus,
+        estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
       });
 
       setTaskDraft({});
@@ -639,17 +783,26 @@ export default function ProjectManagementDetails() {
     setSuccess("");
 
     try {
-      await api.post(`/tasks/${selectedTask.id}/story-points`, {
-        title: storyPointForm.title.trim(),
-        description: storyPointForm.description.trim() || null,
-        pointValue: Number(storyPointForm.pointValue),
-      });
+      const pv = Number(storyPointForm.pointValue);
+      if (!pv || pv < 1) {
+        setActionError("Point value must be at least 1.");
+        return;
+      }
+
+      const payload = {
+        title: storyPointForm.title ? storyPointForm.title.trim() : null,
+        description: storyPointForm.description ? storyPointForm.description.trim() : null,
+        pointValue: pv,
+      };
+      console.debug('Creating story point payload', payload, 'taskId', selectedTask.id);
+      await api.post(`/tasks/${selectedTask.id}/story-points`, payload);
 
       setStoryPointForm(emptyStoryPointForm);
       setSuccess("Story point added.");
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
+      console.error('Create story point error', err.response?.status, err.response?.data || err.message);
       setActionError(getErrorMessage(err, "Failed to add story point."));
     } finally {
       setSavingStoryPoint(false);
@@ -673,11 +826,19 @@ export default function ProjectManagementDetails() {
     setSuccess("");
 
     try {
-      await api.put(`/story-points/${editingStoryPointId}`, {
-        title: storyPointForm.title.trim(),
-        description: storyPointForm.description.trim() || null,
-        pointValue: Number(storyPointForm.pointValue),
-      });
+      const pv = Number(storyPointForm.pointValue);
+      if (!pv || pv < 1) {
+        setActionError("Point value must be at least 1.");
+        return;
+      }
+
+      const payload = {
+        title: storyPointForm.title ? storyPointForm.title.trim() : null,
+        description: storyPointForm.description ? storyPointForm.description.trim() : null,
+        pointValue: pv,
+      };
+      console.debug('Updating story point payload', payload, 'storyPointId', editingStoryPointId);
+      await api.put(`/story-points/${editingStoryPointId}`, payload);
 
       setEditingStoryPointId(null);
       setStoryPointForm(emptyStoryPointForm);
@@ -685,6 +846,7 @@ export default function ProjectManagementDetails() {
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
+      console.error('Update story point error', err.response?.status, err.response?.data || err.message);
       setActionError(getErrorMessage(err, "Failed to update story point."));
     } finally {
       setSavingStoryPoint(false);
@@ -724,7 +886,7 @@ export default function ProjectManagementDetails() {
   if (!project) {
     return (
       <Box sx={{ maxWidth: 1200, mx: "auto", mt: 4 }}>
-        <ErrorNotice message={error || "Project not found."} severity="error" dedupeKey="project-not-found-error" />
+        <ErrorNotice message={queryError || "Project not found."} severity="error" dedupeKey="project-not-found-error" />
       </Box>
     );
   }
@@ -783,7 +945,7 @@ export default function ProjectManagementDetails() {
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Add New Task</Typography>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr 0.7fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
             <TextField size="small" label="Task title" value={newTask.title} onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))} />
             <TextField size="small" label="Task description" value={newTask.description} onChange={(e) => setNewTask((prev) => ({ ...prev, description: e.target.value }))} />
             <TextField select size="small" label="Priority" value={newTask.priority} onChange={(e) => setNewTask((prev) => ({ ...prev, priority: e.target.value }))}>
@@ -800,10 +962,99 @@ export default function ProjectManagementDetails() {
               InputLabelProps={{ shrink: true }}
             />
 
-            <Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
+            
+
+            <TextField
+              size="small"
+              label="Story points estimate"
+              type="number"
+              inputProps={{ min: 0 }}
+              value={newTask.estimatedPoints}
+              onChange={(e) => setNewTask((prev) => ({ ...prev, estimatedPoints: Math.max(0, Number(e.target.value) || 0) }))}
+            />
+<Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
               {addingTask ? "Adding..." : "Add Task"}
             </Button>
           </Box>
+        </Paper>
+
+        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
+          <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Project Files</Typography>
+
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <input
+                key={projectFilesInputKey}
+                type="file"
+                multiple
+                onChange={handleProjectFilesSelection}
+                style={{ display: "none" }}
+                id="project-files-input"
+              />
+              <label htmlFor="project-files-input">
+                <Button
+                  component="span"
+                  variant="outlined"
+                  startIcon={<AttachFileRoundedIcon />}
+                  sx={{ textTransform: "none", fontWeight: 700 }}
+                >
+                  Choose Files
+                </Button>
+              </label>
+              {selectedProjectFiles.length > 0 && (
+                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                  {selectedProjectFiles.length} file{selectedProjectFiles.length === 1 ? "" : "s"} selected
+                </Typography>
+              )}
+            </Box>
+            <Button
+              variant="contained"
+              disabled={selectedProjectFiles.length === 0}
+              onClick={handleAddProjectFiles}
+              sx={{ fontWeight: 900, textTransform: "none" }}
+            >
+              Add Files
+            </Button>
+          </Box>
+
+          {projectFiles.length === 0 ? (
+            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              No files attached to this project yet.
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {projectFiles.map((file) => (
+                <Box
+                  key={file.id}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    p: 1,
+                    borderRadius: 1,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: 14 }} noWrap>
+                      {file.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                      {formatFileSize(file.size)} • {file.type}
+                    </Typography>
+                  </Box>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleRemoveProjectFile(file.id)}
+                    sx={{ color: "#ef4444", "&:hover": { backgroundColor: "rgba(239,68,68,0.1)" } }}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ))}
+            </Stack>
+          )}
         </Paper>
 
         <Paper
@@ -947,18 +1198,11 @@ export default function ProjectManagementDetails() {
                     {recentSummaries.map((session) => (
                       <Paper
                         key={session.id}
-                        onClick={() => handleOpenSession(session.id)}
                         sx={{
                           p: 1.5,
                           borderRadius: 3,
-                          cursor: "pointer",
                           background: "rgba(255,255,255,0.04)",
                           border: "1px solid rgba(255,255,255,0.08)",
-                          transition: "all 180ms ease",
-                          "&:hover": {
-                            background: "rgba(255,255,255,0.07)",
-                            borderColor: "rgba(96,165,250,0.28)",
-                          },
                         }}
                       >
                         <Stack spacing={1}>
@@ -980,14 +1224,15 @@ export default function ProjectManagementDetails() {
                               </Typography>
                             </Box>
 
-                            <Button
+                            <Chip
                               size="small"
-                              variant="outlined"
-                              startIcon={<OpenInNewRoundedIcon />}
-                              sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
-                            >
-                              View
-                            </Button>
+                              label="Summary"
+                              sx={{
+                                bgcolor: "rgba(59,130,246,0.16)",
+                                color: "#bfdbfe",
+                                fontWeight: 800,
+                              }}
+                            />
                           </Stack>
 
                           <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
@@ -1181,7 +1426,16 @@ export default function ProjectManagementDetails() {
                   <MenuItem value="IN_PROGRESS">IN_PROGRESS</MenuItem>
                   <MenuItem value="COMPLETED">COMPLETED</MenuItem>
                 </TextField>
-                <TextField size="small" label="Description" value={taskDraft?.description || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: "1", md: "1 / -1" } }} />
+                
+                <TextField
+                  size="small"
+                  label="Story points estimate"
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  value={taskDraft?.estimatedPoints || 0}
+                  onChange={(e) => setTaskDraft((prev) => ({ ...prev, estimatedPoints: Math.max(0, Number(e.target.value) || 0) }))}
+                />
+<TextField size="small" label="Description" value={taskDraft?.description || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: "1", md: "1 / -1" } }} />
               </Box>
 
               <Box sx={{ mt: 1, display: "flex", justifyContent: "flex-end" }}>
@@ -1226,60 +1480,13 @@ export default function ProjectManagementDetails() {
               ) : null}
             </Paper>
 
-            <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
+                        <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
               <Typography sx={{ fontWeight: 900, mb: 1 }}>Story Points</Typography>
 
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.2fr 0.4fr auto" }, gap: 1, alignItems: "center", mb: 1 }}>
-                <TextField size="small" label="Title" value={storyPointForm.title} onChange={(e) => setStoryPointForm((prev) => ({ ...prev, title: e.target.value }))} />
-                <TextField size="small" label="Description" value={storyPointForm.description} onChange={(e) => setStoryPointForm((prev) => ({ ...prev, description: e.target.value }))} />
-                <TextField
-                  size="small"
-                  type="number"
-                  inputProps={{ min: 1 }}
-                  label="Point"
-                  value={storyPointForm.pointValue}
-                  onChange={(e) => setStoryPointForm((prev) => ({ ...prev, pointValue: Math.max(1, Number(e.target.value) || 1) }))}
-                />
-
-                {editingStoryPointId ? (
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="contained" onClick={handleSaveEditedStoryPoint} disabled={!canSaveStoryPoint || savingStoryPoint}>Save</Button>
-                    <Button variant="outlined" onClick={handleCancelStoryPointEdit}>Cancel</Button>
-                  </Stack>
-                ) : (
-                  <Button variant="contained" onClick={handleCreateStoryPoint} disabled={!canSaveStoryPoint || savingStoryPoint}>Add Story Point</Button>
-                )}
-              </Box>
-
-              <Divider sx={{ my: 1 }} />
-
-              {loadingStoryPoints ? (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>Loading story points...</Typography>
-              ) : storyPoints.length === 0 ? (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>No story points yet.</Typography>
-              ) : (
-                <Stack spacing={0.8}>
-                  {storyPoints.map((row) => (
-                    <Box key={row.id} sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-                      <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{getStoryPointLabel(row)}</Typography>
-                        <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                          {row.description || "No description"} - {String(row.status || "TODO").toUpperCase()}
-                        </Typography>
-                      </Box>
-
-                      <Stack direction="row" spacing={0.5}>
-                        <IconButton size="small" onClick={() => handleStartEditStoryPoint(row)}>
-                          <EditOutlinedIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => handleDeleteStoryPoint(row.id)}>
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
+              <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                Manager should only set the task story point estimate in Task Details above.
+                The assigned developer will split that estimate into subtasks from the developer dashboard.
+              </Typography>
             </Paper>
           </Stack>
         </DialogContent>
@@ -1443,3 +1650,4 @@ function ManagerChatRow({ label, value }) {
     </Stack>
   );
 }
+

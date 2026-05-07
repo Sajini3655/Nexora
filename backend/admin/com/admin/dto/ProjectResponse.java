@@ -20,5 +20,8 @@ public class ProjectResponse {
     private String clientName;
     private String clientEmail;
     private Instant createdAt;
+    private Integer totalTasks;
+    private Integer completedTasks;
+    private Integer progressPercentage;
     private List<ProjectTaskResponse> tasks;
 }

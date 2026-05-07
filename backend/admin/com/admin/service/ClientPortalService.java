@@ -2,10 +2,12 @@ package com.admin.service;
 
 import com.admin.dto.CreateClientTicketRequest;
 import com.admin.dto.ProjectResponse;
+import com.admin.dto.ProjectTaskResponse;
 import com.admin.dto.TicketDto;
 import com.admin.entity.Project;
 import com.admin.entity.Role;
 import com.admin.entity.Ticket;
+import com.admin.entity.TaskStatus;
 import com.admin.entity.User;
 import com.admin.exception.ResourceNotFoundException;
 import com.admin.repository.ProjectRepository;
@@ -155,6 +157,23 @@ public class ClientPortalService {
     }
 
     private ProjectResponse toProjectResponse(Project project) {
+        List<ProjectTaskResponse> tasks = project.getTasks() == null
+            ? List.of()
+            : project.getTasks().stream()
+            .map(task -> ProjectTaskResponse.builder()
+                .id(task.getId())
+                .title(task.getTitle())
+                .priority(task.getPriority())
+                .status(task.getStatus())
+                .build())
+            .toList();
+
+        long totalTasks = tasks.size();
+        long completedTasks = tasks.stream()
+            .filter(task -> task.getStatus() == TaskStatus.DONE || task.getStatus() == TaskStatus.COMPLETED)
+            .count();
+        int progressPercentage = totalTasks > 0 ? (int) Math.round((completedTasks * 100.0) / totalTasks) : 0;
+
         return ProjectResponse.builder()
                 .id(project.getId())
                 .name(project.getName())
@@ -164,7 +183,10 @@ public class ClientPortalService {
                 .clientId(project.getClient() == null ? null : project.getClient().getId())
                 .clientName(project.getClient() == null ? null : project.getClient().getName())
                 .createdAt(project.getCreatedAt())
-                .tasks(List.of())
+            .tasks(tasks)
+            .totalTasks((int) totalTasks)
+            .completedTasks((int) completedTasks)
+            .progressPercentage(progressPercentage)
                 .build();
     }
 
