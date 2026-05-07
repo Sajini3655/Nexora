@@ -18,6 +18,7 @@ import {
 import {
   startSession,
   createProjectSession,
+  getMessages,
 } from "./api";
 
 interface Message {
@@ -522,14 +523,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       setErrorMessage("");
 
       let result: ChatEndResult;
-
       try {
-        const aiData = await endChatAI(buildAiMessages(chat), projectId, false);
-        result = normalizeAiResult(aiData, chat);
-       } catch {
-         result = normalizeAiResult(null, chat);
-       }
-     try {
        const aiData = await endChatAIMutation.mutateAsync({
          messages: buildAiMessages(chat),
          projectId,
@@ -539,8 +533,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
      } catch {
        result = normalizeAiResult(null, chat);
      }
- 
-     await saveSummaryMutation.mutateAsync({
+
+      await saveSummaryMutation.mutateAsync({
          sessionId,
          summary: result.summary,
        });
