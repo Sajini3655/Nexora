@@ -48,8 +48,9 @@ public class TaskAssignmentService {
         User actor = userRepository.findByEmail(actorEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
-        // Query only enabled developers instead of fetching all users
-        List<User> devUsers = userRepository.findAllByEnabledAndRolesContaining(true, Role.DEVELOPER);
+        // All actors (admin, manager, developer) get the same list of all developers
+        // Query only enabled developers to reduce dataset size
+        List<User> devUsers = userRepository.findByRoleAndEnabled(Role.DEVELOPER, true);
 
         return devUsers.stream()
                 .map(this::toDeveloperSummary)
