@@ -25,7 +25,7 @@ function taskIsCompleted(task) {
     return true;
   }
 
-  const totalPointValue = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+  const totalPointValue = Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0);
   const completedPointValue = Number(task?.completedPointValue ?? task?.completedStoryPoints ?? 0);
   return totalPointValue > 0 && completedPointValue >= totalPointValue;
 }
@@ -168,15 +168,15 @@ function buildSummariesFromTasks(developers, tasks) {
 
     const summary = byId.get(key);
     // Keep story point math aligned with weighted point math when story-point fields are absent.
-    const totalStoryPoints = numberOrZero(task?.totalStoryPoints ?? task?.totalPointValue ?? task?.estimatedPoints);
+    const totalStoryPoints = numberOrZero(task?.totalStoryPoints ?? task?.totalPointValue);
     const completedStoryPoints = numberOrZero(
-      task?.completedStoryPoints ?? task?.completedPointValue ?? (taskIsCompleted(task) ? totalStoryPoints : 0)
+      task?.completedStoryPoints ?? task?.completedPointValue
     );
     const totalPointValue = numberOrZero(
-      task?.totalPointValue ?? task?.estimatedPoints ?? totalStoryPoints
+      task?.totalPointValue ?? totalStoryPoints
     );
     const completedPointValue = numberOrZero(
-      task?.completedPointValue ?? completedStoryPoints ?? (taskIsCompleted(task) ? totalPointValue : 0)
+      task?.completedPointValue ?? completedStoryPoints
     );
 
     summary.assignedTasks += 1;

@@ -94,7 +94,7 @@ function getTaskAssignee(task) {
 }
 
 function getTaskPointTotals(task) {
-  const totalPointValue = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+  const totalPointValue = Number(task?.totalPointValue ?? 0);
   const completedPointValue = Number(task?.completedPointValue ?? 0);
   const totalStoryPoints = Number(task?.totalStoryPoints ?? 0);
   const completedStoryPoints = Number(task?.completedStoryPoints ?? 0);
@@ -110,6 +110,22 @@ function getTaskPointTotals(task) {
     completedStoryPoints,
     progressPercentage,
   };
+}
+
+function getTaskEstimatePoints(task) {
+  const rawValue = Number(
+    task?.estimatedPoints ??
+    task?.estimatePoints ??
+    task?.storyPointEstimate ??
+    task?.storyPointsEstimate ??
+    0
+  );
+
+  if (!Number.isFinite(rawValue)) {
+    return 0;
+  }
+
+  return Math.max(0, rawValue);
 }
 
 function getProjectName(project) {
@@ -447,7 +463,7 @@ export default function ProjectManagementDetails() {
       priority: getTaskPriority(task),
       dueDate: task?.dueDate || "",
       status: getTaskStatus(task),
-      estimatedPoints: Number(task?.estimatedPoints ?? task?.totalPointValue ?? task?.totalStoryPoints ?? 0),
+      estimatedPoints: getTaskEstimatePoints(task),
     };
     setTaskDraft(newTaskDraft);
     setOriginalTaskDraft(JSON.parse(JSON.stringify(newTaskDraft)));
@@ -512,17 +528,17 @@ export default function ProjectManagementDetails() {
         taskDraft?.status !== originalTaskDraft?.status ||
         Number(taskDraft?.estimatedPoints || 0) !== Number(originalTaskDraft?.estimatedPoints || 0);
 
+      let taskUpdatePromise = null;
       if (taskDetailsChanged) {
-        savePromises.push(
-          updateManagerTask(Number(selectedTask.id), {
-            title: (taskDraft?.title || "").trim(),
-            description: taskDraft?.description || "",
-            priority: (taskDraft?.priority || "MEDIUM").toUpperCase(),
-            dueDate: taskDraft?.dueDate || null,
-            status: (taskDraft?.status || "TODO").toUpperCase(),
-            estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
-          })
-        );
+        taskUpdatePromise = updateManagerTask(Number(selectedTask.id), {
+          title: (taskDraft?.title || "").trim(),
+          description: taskDraft?.description || "",
+          priority: (taskDraft?.priority || "MEDIUM").toUpperCase(),
+          dueDate: taskDraft?.dueDate || null,
+          status: (taskDraft?.status || "TODO").toUpperCase(),
+          estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
+        });
+        savePromises.push(taskUpdatePromise);
       }
 
       // Save developer assignment if changed
@@ -538,13 +554,48 @@ export default function ProjectManagementDetails() {
         await Promise.all(savePromises);
       }
 
+      if (taskUpdatePromise) {
+        const updatedTask = await taskUpdatePromise;
+        if (updatedTask) {
+          const refreshedTaskDraft = {
+            ...taskDraft,
+            title: updatedTask.title ?? taskDraft?.title,
+            description: updatedTask.description ?? taskDraft?.description,
+            priority: updatedTask.priority ?? taskDraft?.priority,
+            dueDate: updatedTask.dueDate ?? taskDraft?.dueDate,
+            status: updatedTask.status ?? taskDraft?.status,
+            estimatedPoints: Number(updatedTask.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0),
+          };
+          setTaskDraft(refreshedTaskDraft);
+          setSelectedTask((prev) => (prev ? { ...prev, ...updatedTask } : updatedTask));
+          setOriginalTaskDraft(JSON.parse(JSON.stringify(refreshedTaskDraft)));
+        }
+      }
+
       setSuccess("All changes saved successfully.");
-      setOriginalTaskDraft(JSON.parse(JSON.stringify(taskDraft)));
       setOriginalDeveloperId(selectedDeveloperId);
       
       // Single reload after all saves are done
-      projectDetailsQuery.refetch();
-      developersQuery.refetch();
+      await projectDetailsQuery.refetch();
+      await developersQuery.refetch();
+
+      const refreshedTask = (Array.isArray(project?.tasks) ? project.tasks : []).find((task) => String(task.id) === String(selectedTask.id));
+      const savedTask = refreshedTask || (taskUpdatePromise ? await taskUpdatePromise : selectedTask);
+      if (savedTask) {
+        const refreshedTaskDraft = {
+          ...taskDraft,
+          title: savedTask.title ?? taskDraft?.title,
+          description: savedTask.description ?? taskDraft?.description,
+          priority: savedTask.priority ?? taskDraft?.priority,
+          dueDate: savedTask.dueDate ?? taskDraft?.dueDate,
+          status: savedTask.status ?? taskDraft?.status,
+          estimatedPoints: Number(savedTask.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0),
+        };
+        setSelectedTask(savedTask);
+        setTaskDraft(refreshedTaskDraft);
+        setOriginalTaskDraft(JSON.parse(JSON.stringify(refreshedTaskDraft)));
+      }
+      await loadStoryPoints(savedTask?.id);
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to save changes."));
     } finally {
@@ -735,6 +786,7 @@ export default function ProjectManagementDetails() {
       if (refreshedTask) {
         setSelectedTask(refreshedTask);
       }
+      await loadStoryPoints(selectedTask.id);
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to save assignment."));
     } finally {
@@ -765,9 +817,26 @@ export default function ProjectManagementDetails() {
         estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
       });
 
-      setTaskDraft({});
+      const savedEstimate = Number(updated?.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0);
+      const savedTask = selectedTask
+        ? { ...selectedTask, ...updated, estimatedPoints: savedEstimate }
+        : { ...updated, estimatedPoints: savedEstimate };
+      const updatedTaskDraft = {
+        ...taskDraft,
+        title: savedTask.title ?? taskTitle,
+        description: savedTask.description ?? taskDescription,
+        priority: savedTask.priority ?? taskPriority,
+        dueDate: savedTask.dueDate ?? taskDueDate,
+        status: savedTask.status ?? taskStatus,
+        estimatedPoints: Number(savedTask.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0),
+      };
+      setTaskDraft(updatedTaskDraft);
+      setSelectedTask(savedTask);
+      setOriginalTaskDraft(JSON.parse(JSON.stringify(updatedTaskDraft)));
       setSuccess("Task details updated successfully.");
-      projectDetailsQuery.refetch();
+
+      await projectDetailsQuery.refetch();
+      await loadStoryPoints(savedTask.id);
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to save task details."));
     } finally {
@@ -794,7 +863,6 @@ export default function ProjectManagementDetails() {
         description: storyPointForm.description ? storyPointForm.description.trim() : null,
         pointValue: pv,
       };
-      console.debug('Creating story point payload', payload, 'taskId', selectedTask.id);
       await api.post(`/tasks/${selectedTask.id}/story-points`, payload);
 
       setStoryPointForm(emptyStoryPointForm);
@@ -837,7 +905,6 @@ export default function ProjectManagementDetails() {
         description: storyPointForm.description ? storyPointForm.description.trim() : null,
         pointValue: pv,
       };
-      console.debug('Updating story point payload', payload, 'storyPointId', editingStoryPointId);
       await api.put(`/story-points/${editingStoryPointId}`, payload);
 
       setEditingStoryPointId(null);
@@ -1293,7 +1360,7 @@ export default function ProjectManagementDetails() {
             <Box sx={{ overflowX: "auto" }}>
               <Box sx={{ minWidth: 960 }}>
                 <Box sx={{ display: "grid", gridTemplateColumns: "1.2fr 1.15fr 0.55fr 0.55fr 0.85fr 0.7fr 0.85fr 0.65fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)" }}>
-                  {["Task", "Description", "Priority", "Status", "Assigned", "Story Points", "Weighted", "Progress", "Action"].map((header) => (
+                  {["Task", "Description", "Priority", "Status", "Assigned", "Estimate", "Weighted", "Progress", "Action"].map((header) => (
                     <Typography key={header} variant="caption" sx={{ color: "#64748b", textTransform: "uppercase", fontWeight: 800 }}>
                       {header}
                     </Typography>
@@ -1309,7 +1376,7 @@ export default function ProjectManagementDetails() {
                       <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskPriority(task)}</Typography>
                       <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskStatus(task)}</Typography>
                       <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskAssignee(task) || "Unassigned"}</Typography>
-                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{totals.completedStoryPoints}/{totals.totalStoryPoints}</Typography>
+                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskEstimatePoints(task)} pts</Typography>
                       <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{totals.completedPointValue}/{totals.totalPointValue}</Typography>
                       <Box>
                         <Typography variant="caption" sx={{ color: "#cbd5e1" }}>{totals.progressPercentage}%</Typography>
@@ -1339,6 +1406,7 @@ export default function ProjectManagementDetails() {
         onClose={() => setChatDrawerOpen(false)}
         maxWidth="sm"
         fullWidth
+        container={() => document.body}
         PaperProps={{
           sx: {
             width: { xs: "94vw", sm: "94vw", md: "760px", lg: "820px" },
@@ -1394,7 +1462,7 @@ export default function ProjectManagementDetails() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={taskModalOpen} onClose={closeTaskModal} fullWidth maxWidth="lg">
+      <Dialog open={taskModalOpen} onClose={closeTaskModal} fullWidth maxWidth="lg" container={() => document.body}>
         <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box>
             <Typography sx={{ fontWeight: 900, fontSize: 18 }}>

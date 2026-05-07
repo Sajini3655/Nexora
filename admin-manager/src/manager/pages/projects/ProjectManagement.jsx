@@ -63,9 +63,9 @@ export default function ProjectManagement() {
       const projectTasks = Array.isArray(project?.tasks) ? project.tasks : tasksByProject.get(projectId) || [];
       const taskCount = projectTasks.length;
       const completedTaskCount = projectTasks.filter((task) => isCompletedTask(task)).length;
-      const totalPointValue = projectTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0), 0);
+      const totalPointValue = projectTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? 0), 0);
       const completedPointValue = projectTasks.reduce((sum, task) => {
-        const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+        const taskTotal = Number(task?.totalPointValue ?? 0);
         return sum + Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
       }, 0);
       const weightedProgress = totalPointValue > 0

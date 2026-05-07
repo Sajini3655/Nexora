@@ -150,7 +150,6 @@ function mapBackendTaskToUi(taskDto, existingUiTask) {
   const totalPointValue = numberOrZero(
     taskDto.totalPointValue ??
       taskDto.totalPoints ??
-      taskDto.estimatedPoints ??
       existingUiTask?.totalPointValue
   );
 

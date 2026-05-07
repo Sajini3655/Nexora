@@ -461,7 +461,7 @@ export default function ManagerDashboard() {
 
     if (completedByStatus) return true;
 
-    const totalPointValue = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+    const totalPointValue = Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0);
     const completedPointValue = Number(task?.completedPointValue ?? task?.completedStoryPoints ?? 0);
     return totalPointValue > 0 && completedPointValue >= totalPointValue;
   };
@@ -748,12 +748,12 @@ export default function ManagerDashboard() {
       const totalTasks = projectTaskList.length;
       const doneTasks = projectTaskList.filter((task) => isCompletedTask(task)).length;
       const totalPointValue = projectTaskList.reduce(
-        (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0),
+        (sum, task) => sum + Number(task?.totalPointValue ?? 0),
         0
       );
       const completedPointValue = projectTaskList.reduce(
         (sum, task) => {
-          const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+          const taskTotal = Number(task?.totalPointValue ?? 0);
           const taskCompleted = Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
           return sum + taskCompleted;
         },
@@ -801,11 +801,11 @@ export default function ManagerDashboard() {
 
   const completionRate = useMemo(() => {
     const totalPointValue = dashboardTasks.reduce(
-      (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0),
+      (sum, task) => sum + Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0),
       0
     );
     const completedPointValue = dashboardTasks.reduce((sum, task) => {
-      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+      const taskTotal = Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0);
       return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0);
 
@@ -814,13 +814,13 @@ export default function ManagerDashboard() {
   }, [dashboardTasks]);
 
   const totalWeighted = useMemo(
-    () => dashboardTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0), 0),
+    () => dashboardTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? 0), 0),
     [dashboardTasks]
   );
 
   const doneWeighted = useMemo(
     () => dashboardTasks.reduce((sum, task) => {
-      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+      const taskTotal = Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0);
       return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0),
     [dashboardTasks]

@@ -195,17 +195,21 @@ public class TaskAssignmentService {
         TaskItem task = taskRepository.findById(Objects.requireNonNull(taskId))
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (task.getCreatedBy() == null || task.getCreatedBy().getId() == null
-                || !task.getCreatedBy().getId().equals(manager.getId())) {
-            throw new AccessDeniedException("You can only update your own tasks");
+        if (task.getProject() == null || task.getProject().getManager() == null
+                || !task.getProject().getManager().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only update tasks for projects you manage");
         }
 
         task.setTitle(req.getTitle().trim());
         task.setDescription(req.getDescription());
         task.setPriority(req.getPriority() == null ? TaskPriority.MEDIUM : req.getPriority());
         task.setDueDate(req.getDueDate());
+
         if (req.getStatus() != null) {
             task.setStatus(req.getStatus());
+        }
+        if (req.getEstimatedPoints() != null) {
+            task.setEstimatedPoints(Math.max(0, req.getEstimatedPoints()));
         }
         task.setUpdatedAt(LocalDateTime.now());
 

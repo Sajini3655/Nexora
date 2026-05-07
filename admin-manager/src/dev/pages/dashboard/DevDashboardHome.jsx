@@ -36,7 +36,7 @@ function isActiveTask(task) {
 
 function getPointTotals(task) {
   const totalPointValue = Number(
-    task?.totalPointValue ?? task?.estimatedPoints ?? task?.pointValue ?? 0
+    task?.totalPointValue ?? task?.pointValue ?? 0
   );
 
   const completedPointValue = Number(

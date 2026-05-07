@@ -38,6 +38,7 @@ export default function UnifiedSidebar({
       variant="temporary"
       ModalProps={{
         keepMounted: true,
+        container: () => document.body,
         sx: {
           top: `${topbarClearance }px`,
           "& .MuiBackdrop-root": {

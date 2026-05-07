@@ -24,4 +24,6 @@ public class UpdateTaskRequest {
     private LocalDate dueDate;
 
     private TaskStatus status;
+
+    private Integer estimatedPoints;
 }

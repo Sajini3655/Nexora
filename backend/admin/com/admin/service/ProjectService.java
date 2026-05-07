@@ -193,6 +193,7 @@ public class ProjectService {
                                 .title(task.getTitle())
                                 .priority(task.getPriority())
                                 .status(task.getStatus())
+                        .estimatedPoints(task.getEstimatedPoints())
                                 .build())
                         .toList())
                 .build();
