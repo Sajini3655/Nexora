@@ -109,9 +109,7 @@ export default function ManagerTimesheets() {
           <Typography variant="h4" sx={{ fontWeight: 900, lineHeight: 1.15 }}>
             Team Timesheets
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.75 }}>
-            Review submitted developer work hours.
-          </Typography>
+            {/* Subtitle removed per request */}
         </Box>
 
         <Stack direction="row" spacing={1.5} sx={{ alignSelf: { xs: "stretch", md: "auto" } }} justifyContent="flex-end" flexWrap="wrap" useFlexGap>

@@ -202,9 +202,7 @@ export default function AddProject() {
         <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
           Add Project
         </Typography>
-        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
-          Create a project with tasks and optional story points. Developer assignment happens in Manage Project.
-        </Typography>
+            {/* Subtitle removed per request */}
       </Paper>
 
       {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="add-project-error" /> : null}

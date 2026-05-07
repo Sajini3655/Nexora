@@ -193,9 +193,7 @@ export default function ProjectManagement() {
             <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
               Project Management
             </Typography>
-            <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
-              Manage projects, tasks, and developer assignments.
-            </Typography>
+            {/* Subtitle removed per request */}
           </Box>
         </Stack>
       </Paper>
