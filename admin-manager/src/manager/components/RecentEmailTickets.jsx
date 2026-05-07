@@ -65,6 +65,57 @@ function isOpenTicket(ticket) {
   return String(ticket?.status || "OPEN").toUpperCase() === "OPEN";
 }
 
+function cleanTicketTitle(ticket) {
+  const rawTitle = String(ticket?.title || "").trim();
+
+  if (!rawTitle) {
+    return "Untitled ticket";
+  }
+
+  return rawTitle
+    .replace(/^Chat Blocker Detected\s*-\s*/i, "Chat blocker: ")
+    .replace(/^Chat blocker:\s*Chat blocker:\s*/i, "Chat blocker: ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getTicketSourceLabel(ticket) {
+  const source = String(ticket?.sourceChannel || "").trim().toUpperCase();
+
+  if (source === "EMAIL") {
+    return "Email ticket";
+  }
+
+  if (source === "CHAT" || source === "CHAT_SUMMARY") {
+    return "Chatbox ticket";
+  }
+
+  if (source === "CLIENT") {
+    return "Client portal ticket";
+  }
+
+  return source ? `${source} ticket` : "Inbound ticket";
+}
+
+function getTicketSenderLabel(ticket) {
+  const source = String(ticket?.sourceChannel || "").trim().toUpperCase();
+  const email = String(ticket?.sourceEmail || "").trim();
+
+  if (source === "EMAIL") {
+    return email ? `From ${email}` : "From unknown email sender";
+  }
+
+  if (source === "CHAT" || source === "CHAT_SUMMARY") {
+    return "From project chat summary";
+  }
+
+  return email ? `From ${email}` : "Sender not available";
+}
+
+function getTicketProjectLabel(ticket) {
+  return String(ticket?.projectName || "").trim() || "No project linked";
+}
+
 export default function RecentEmailTickets() {
   const ticketsQuery = useRecentEmailTickets();
   const projectsQuery = useManagerProjects();
@@ -288,13 +339,13 @@ export default function RecentEmailTickets() {
         </Typography>
       )}
 
-      {!loading && !error && tickets.length === 0 && (
+      {!loading && !fetchError && !actionError && tickets.length === 0 && (
         <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
           No open inbound tickets.
         </Typography>
       )}
 
-      {!loading && !error && tickets.length > 0 && (
+      {!loading && !fetchError && !actionError && tickets.length > 0 && (
         <Stack spacing={1.2}>
           {tickets.map((ticket) => (
             <Box
@@ -311,19 +362,51 @@ export default function RecentEmailTickets() {
                 justifyContent="space-between"
                 spacing={1.2}
               >
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 800, color: "#f8fafc" }} noWrap>
-                    {ticket.title || "Untitled ticket"}
-                  </Typography>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+  <Typography
+    sx={{
+      fontWeight: 900,
+      color: "#f8fafc",
+      fontSize: 16,
+      lineHeight: 1.25,
+      mb: 0.7,
+    }}
+    noWrap
+  >
+    {cleanTicketTitle(ticket)}
+  </Typography>
 
-                  <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1", mt: 0.35 }}>
-                    {ticket.projectName || "No project"} • {ticket.sourceChannel || "EMAIL"}
-                  </Typography>
+  <Stack
+    direction="row"
+    spacing={1}
+    alignItems="center"
+    flexWrap="wrap"
+    useFlexGap
+  >
+    <Chip
+      label={getTicketSourceLabel(ticket)}
+      size="small"
+      sx={{
+        bgcolor: "rgba(124,92,255,0.18)",
+        color: "#ddd6fe",
+        border: "1px solid rgba(124,92,255,0.34)",
+        fontWeight: 900,
+      }}
+    />
 
-                  <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
-                    {ticket.sourceEmail || "Unknown sender"}
-                  </Typography>
-                </Box>
+    <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
+      {getTicketProjectLabel(ticket)}
+    </Typography>
+
+    <Typography variant="body2" sx={{ color: "#64748b" }}>
+      •
+    </Typography>
+
+    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+      {getTicketSenderLabel(ticket)}
+    </Typography>
+  </Stack>
+</Box>
 
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
                   <StatusBadge label={ticket.priority || "MEDIUM"} />
