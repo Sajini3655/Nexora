@@ -203,45 +203,7 @@ export default function ProjectManagement() {
       {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="project-management-error" /> : null}
       {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="project-management-success" /> : null}
 
-      <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", mb: 2 }}>
-        <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Create New Project</Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.2fr 1fr auto" }, gap: 1, alignItems: "center" }}>
-          <TextField
-            size="small"
-            label="Project name"
-            value={newProjectForm.name}
-            onChange={(e) => setNewProjectForm((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="e.g., Mobile App Redesign"
-          />
-          <TextField
-            size="small"
-            label="Project description"
-            value={newProjectForm.description}
-            onChange={(e) => setNewProjectForm((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="Optional description"
-          />
-          <TextField
-            select
-            size="small"
-            label="Assign Client (optional)"
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-          >
-            <MenuItem value="">No client</MenuItem>
-            {clients.map((c) => (
-              <MenuItem key={c.id} value={String(c.id)}>{c.name || c.email}</MenuItem>
-            ))}
-          </TextField>
-          <Button
-            variant="contained"
-            disabled={creatingProject || !newProjectForm.name.trim()}
-            onClick={handleCreateNewProject}
-            sx={{ height: "40px" }}
-          >
-            {creatingProject ? "Creating..." : "Create"}
-          </Button>
-        </Box>
-      </Paper>
+      {/* Create New Project widget removed per request */}
 
       <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 340px)" }}>
         <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Your Projects</Typography>
