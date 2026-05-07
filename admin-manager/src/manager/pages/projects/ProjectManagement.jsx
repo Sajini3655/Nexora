@@ -243,16 +243,16 @@ export default function ProjectManagement() {
         </Box>
       </Paper>
 
-      <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
+      <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 340px)" }}>
         <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Your Projects</Typography>
         {visibleProjectRows.length === 0 ? (
           <Typography variant="body2" sx={{ color: "#94a3b8" }}>
             {q ? `No projects match “${q}”.` : "No projects found for this manager."}
           </Typography>
         ) : (
-          <Box sx={{ overflowX: "auto" }}>
+          <Box sx={{ overflow: "auto", flex: 1, minHeight: 0 }}>
             <Box sx={{ minWidth: 860 }}>
-              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)" }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)", position: "sticky", top: 0, zIndex: 1, background: "rgba(15,23,42,0.96)" }}>
                 {["Project", "Status", "Tasks", "Completed", "Weighted", "Progress"].map((header) => (
                   <Typography key={header} variant="caption" sx={{ color: "#64748b", textTransform: "uppercase", fontWeight: 800 }}>
                     {header}
