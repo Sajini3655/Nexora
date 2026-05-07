@@ -368,7 +368,10 @@ export default function ManagerDashboard() {
   const projectsQuery = useManagerProjects(!authLoading);
   const tasksQuery = useManagerTasks(!authLoading);
   const developersQuery = useManagerDevelopers(!authLoading);
-  const emailTicketsQuery = useRecentEmailTickets(!authLoading);
+  const shouldLoadTickets =
+    !authLoading &&
+    (projectsQuery.isSuccess || tasksQuery.isSuccess);
+  const emailTicketsQuery = useRecentEmailTickets(shouldLoadTickets);
   const { refetch: refetchProjects } = projectsQuery;
   const { refetch: refetchTasks } = tasksQuery;
   const { refetch: refetchDevelopers } = developersQuery;

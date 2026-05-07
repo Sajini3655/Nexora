@@ -11,7 +11,7 @@ import AdminSettingsPage from "./admin/pages/settings/AdminSettingsPage.jsx";
 import UserList from "./admin/pages/users/UserList.jsx";
 import AdminTimesheets from "./admin/pages/timesheets/AdminTimesheets.jsx";
 
-import ManagerDashboard from "./manager/pages/dashboard/ManagerDashboard.jsx";
+const ManagerDashboard = React.lazy(() => import("./manager/pages/dashboard/ManagerDashboard.jsx"));
 import AddProject from "./manager/pages/projects/AddProject.jsx";
 import ProjectManagement from "./manager/pages/projects/ProjectManagement.jsx";
 import ProjectDetailsPage from "./manager/pages/projects/ProjectDetailsPage.jsx";
@@ -135,6 +135,22 @@ function RoleShell({ children }) {
 
 export default function App() {
   return (
+    <React.Suspense
+      fallback={
+        <div
+          style={{
+            minHeight: "100vh",
+            display: "grid",
+            placeItems: "center",
+            color: "#94a3b8",
+            background:
+              "radial-gradient(circle at top left, rgba(104,81,255,0.12), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.06), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
+          }}
+        >
+          Loading...
+        </div>
+      }
+    >
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
@@ -330,6 +346,7 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </React.Suspense>
   );
 }
 
