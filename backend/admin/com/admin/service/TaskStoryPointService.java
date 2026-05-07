@@ -48,9 +48,11 @@ public class TaskStoryPointService {
             }
         }
 
+        String normalizedTitle = normalizeTitleOrDefault(request.getTitle(), request.getPointValue());
+
         TaskStoryPoint storyPoint = TaskStoryPoint.builder()
                 .task(task)
-                .title(request.getTitle() == null ? null : request.getTitle().trim())
+            .title(normalizedTitle)
                 .description(request.getDescription())
                 .pointValue(request.getPointValue())
                 .status(StoryPointStatus.TODO)
@@ -103,7 +105,7 @@ public class TaskStoryPointService {
             }
         }
 
-        storyPoint.setTitle(request.getTitle() == null ? null : request.getTitle().trim());
+        storyPoint.setTitle(normalizeTitleOrDefault(request.getTitle(), request.getPointValue()));
         storyPoint.setDescription(request.getDescription());
         storyPoint.setPointValue(request.getPointValue());
 
@@ -305,6 +307,15 @@ public class TaskStoryPointService {
             return 0;
         }
         return (int) Math.round((completedPointValue * 100.0) / totalPointValue);
+    }
+
+    private String normalizeTitleOrDefault(String rawTitle, Integer pointValue) {
+        String trimmed = rawTitle == null ? "" : rawTitle.trim();
+        if (!trimmed.isEmpty()) {
+            return trimmed;
+        }
+        int safePoints = pointValue == null ? 0 : pointValue;
+        return "Story Point " + safePoints;
     }
 
     private ProgressTotals calculateTaskTotals(TaskItem task) {

@@ -1,7 +1,7 @@
 package com.admin.dto;
 
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
+// title is optional now; no NotBlank validation
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -12,7 +12,6 @@ import lombok.*;
 @Builder
 public class CreateTaskStoryPointRequest {
 
-    @NotBlank
     private String title;
 
     private String description;

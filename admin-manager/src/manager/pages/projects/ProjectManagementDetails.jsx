@@ -55,6 +55,7 @@ const emptyTaskForm = {
   priority: "MEDIUM",
   dueDate: "",
   assignedToId: "",
+  estimatedPoints: 0,
 };
 
 const emptyStoryPointForm = {
@@ -434,9 +435,7 @@ export default function ProjectManagementDetails() {
   const canAddTask = Boolean(newTask.title.trim() && newTask.priority);
 
   const canSaveStoryPoint = Boolean(
-    selectedTask?.id &&
-      storyPointForm.title.trim() &&
-      Number(storyPointForm.pointValue) > 0
+    selectedTask?.id && Number(storyPointForm.pointValue) > 0
   );
 
   const openTaskModal = async (task) => {
@@ -448,6 +447,7 @@ export default function ProjectManagementDetails() {
       priority: getTaskPriority(task),
       dueDate: task?.dueDate || "",
       status: getTaskStatus(task),
+      estimatedPoints: Number(task?.estimatedPoints ?? task?.totalPointValue ?? task?.totalStoryPoints ?? 0),
     };
     setTaskDraft(newTaskDraft);
     setOriginalTaskDraft(JSON.parse(JSON.stringify(newTaskDraft)));
@@ -485,7 +485,8 @@ export default function ProjectManagementDetails() {
       taskDraft?.description !== originalTaskDraft.description ||
       taskDraft?.priority !== originalTaskDraft.priority ||
       taskDraft?.dueDate !== originalTaskDraft.dueDate ||
-      taskDraft?.status !== originalTaskDraft.status;
+      taskDraft?.status !== originalTaskDraft.status ||
+      Number(taskDraft?.estimatedPoints || 0) !== Number(originalTaskDraft.estimatedPoints || 0);
     
     const developerChanged = selectedDeveloperId !== originalDeveloperId;
     
@@ -508,7 +509,8 @@ export default function ProjectManagementDetails() {
         taskDraft?.description !== originalTaskDraft?.description ||
         taskDraft?.priority !== originalTaskDraft?.priority ||
         taskDraft?.dueDate !== originalTaskDraft?.dueDate ||
-        taskDraft?.status !== originalTaskDraft?.status;
+        taskDraft?.status !== originalTaskDraft?.status ||
+        Number(taskDraft?.estimatedPoints || 0) !== Number(originalTaskDraft?.estimatedPoints || 0);
 
       if (taskDetailsChanged) {
         savePromises.push(
@@ -518,6 +520,7 @@ export default function ProjectManagementDetails() {
             priority: (taskDraft?.priority || "MEDIUM").toUpperCase(),
             dueDate: taskDraft?.dueDate || null,
             status: (taskDraft?.status || "TODO").toUpperCase(),
+            estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
           })
         );
       }
@@ -612,6 +615,7 @@ export default function ProjectManagementDetails() {
         dueDate: newTask.dueDate || null,
         assignedToId: newTask.assignedToId ? Number(newTask.assignedToId) : null,
         status: "TODO",
+        estimatedPoints: Number(newTask.estimatedPoints || 0),
       });
 
       setNewTask(emptyTaskForm);
@@ -758,6 +762,7 @@ export default function ProjectManagementDetails() {
         priority: taskPriority,
         dueDate: taskDueDate,
         status: taskStatus,
+        estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
       });
 
       setTaskDraft({});
@@ -778,17 +783,26 @@ export default function ProjectManagementDetails() {
     setSuccess("");
 
     try {
-      await api.post(`/tasks/${selectedTask.id}/story-points`, {
+      const pv = Number(storyPointForm.pointValue);
+      if (!pv || pv < 1) {
+        setActionError("Point value must be at least 1.");
+        return;
+      }
+
+      const payload = {
         title: storyPointForm.title ? storyPointForm.title.trim() : null,
         description: storyPointForm.description ? storyPointForm.description.trim() : null,
-        pointValue: Number(storyPointForm.pointValue),
-      });
+        pointValue: pv,
+      };
+      console.debug('Creating story point payload', payload, 'taskId', selectedTask.id);
+      await api.post(`/tasks/${selectedTask.id}/story-points`, payload);
 
       setStoryPointForm(emptyStoryPointForm);
       setSuccess("Story point added.");
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
+      console.error('Create story point error', err.response?.status, err.response?.data || err.message);
       setActionError(getErrorMessage(err, "Failed to add story point."));
     } finally {
       setSavingStoryPoint(false);
@@ -812,11 +826,19 @@ export default function ProjectManagementDetails() {
     setSuccess("");
 
     try {
-      await api.put(`/story-points/${editingStoryPointId}`, {
+      const pv = Number(storyPointForm.pointValue);
+      if (!pv || pv < 1) {
+        setActionError("Point value must be at least 1.");
+        return;
+      }
+
+      const payload = {
         title: storyPointForm.title ? storyPointForm.title.trim() : null,
         description: storyPointForm.description ? storyPointForm.description.trim() : null,
-        pointValue: Number(storyPointForm.pointValue),
-      });
+        pointValue: pv,
+      };
+      console.debug('Updating story point payload', payload, 'storyPointId', editingStoryPointId);
+      await api.put(`/story-points/${editingStoryPointId}`, payload);
 
       setEditingStoryPointId(null);
       setStoryPointForm(emptyStoryPointForm);
@@ -824,6 +846,7 @@ export default function ProjectManagementDetails() {
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
+      console.error('Update story point error', err.response?.status, err.response?.data || err.message);
       setActionError(getErrorMessage(err, "Failed to update story point."));
     } finally {
       setSavingStoryPoint(false);
@@ -922,7 +945,7 @@ export default function ProjectManagementDetails() {
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Add New Task</Typography>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr 0.7fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
             <TextField size="small" label="Task title" value={newTask.title} onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))} />
             <TextField size="small" label="Task description" value={newTask.description} onChange={(e) => setNewTask((prev) => ({ ...prev, description: e.target.value }))} />
             <TextField select size="small" label="Priority" value={newTask.priority} onChange={(e) => setNewTask((prev) => ({ ...prev, priority: e.target.value }))}>
@@ -939,7 +962,17 @@ export default function ProjectManagementDetails() {
               InputLabelProps={{ shrink: true }}
             />
 
-            <Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
+            
+
+            <TextField
+              size="small"
+              label="Story points estimate"
+              type="number"
+              inputProps={{ min: 0 }}
+              value={newTask.estimatedPoints}
+              onChange={(e) => setNewTask((prev) => ({ ...prev, estimatedPoints: Math.max(0, Number(e.target.value) || 0) }))}
+            />
+<Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
               {addingTask ? "Adding..." : "Add Task"}
             </Button>
           </Box>
@@ -1393,7 +1426,16 @@ export default function ProjectManagementDetails() {
                   <MenuItem value="IN_PROGRESS">IN_PROGRESS</MenuItem>
                   <MenuItem value="COMPLETED">COMPLETED</MenuItem>
                 </TextField>
-                <TextField size="small" label="Description" value={taskDraft?.description || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: "1", md: "1 / -1" } }} />
+                
+                <TextField
+                  size="small"
+                  label="Story points estimate"
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  value={taskDraft?.estimatedPoints || 0}
+                  onChange={(e) => setTaskDraft((prev) => ({ ...prev, estimatedPoints: Math.max(0, Number(e.target.value) || 0) }))}
+                />
+<TextField size="small" label="Description" value={taskDraft?.description || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: "1", md: "1 / -1" } }} />
               </Box>
 
               <Box sx={{ mt: 1, display: "flex", justifyContent: "flex-end" }}>
@@ -1438,58 +1480,13 @@ export default function ProjectManagementDetails() {
               ) : null}
             </Paper>
 
-            <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
+                        <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
               <Typography sx={{ fontWeight: 900, mb: 1 }}>Story Points</Typography>
 
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "0.4fr auto" }, gap: 1, alignItems: "center", mb: 1 }}>
-                <TextField
-                  size="small"
-                  type="number"
-                  inputProps={{ min: 1 }}
-                  label="Point"
-                  value={storyPointForm.pointValue}
-                  onChange={(e) => setStoryPointForm((prev) => ({ ...prev, pointValue: Math.max(1, Number(e.target.value) || 1) }))}
-                />
-
-                {editingStoryPointId ? (
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="contained" onClick={handleSaveEditedStoryPoint} disabled={!canSaveStoryPoint || savingStoryPoint}>Save</Button>
-                    <Button variant="outlined" onClick={handleCancelStoryPointEdit}>Cancel</Button>
-                  </Stack>
-                ) : (
-                  <Button variant="contained" onClick={handleCreateStoryPoint} disabled={!canSaveStoryPoint || savingStoryPoint}>Add Story Point</Button>
-                )}
-              </Box>
-
-              <Divider sx={{ my: 1 }} />
-
-              {loadingStoryPoints ? (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>Loading story points...</Typography>
-              ) : storyPoints.length === 0 ? (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>No story points yet.</Typography>
-              ) : (
-                <Stack spacing={0.8}>
-                  {storyPoints.map((row) => (
-                    <Box key={row.id} sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-                      <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{getStoryPointLabel(row)}</Typography>
-                        <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                          {String(row.status || "TODO").toUpperCase()}
-                        </Typography>
-                      </Box>
-
-                      <Stack direction="row" spacing={0.5}>
-                        <IconButton size="small" onClick={() => handleStartEditStoryPoint(row)}>
-                          <EditOutlinedIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => handleDeleteStoryPoint(row.id)}>
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
+              <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                Manager should only set the task story point estimate in Task Details above.
+                The assigned developer will split that estimate into subtasks from the developer dashboard.
+              </Typography>
             </Paper>
           </Stack>
         </DialogContent>
@@ -1653,3 +1650,4 @@ function ManagerChatRow({ label, value }) {
     </Stack>
   );
 }
+
