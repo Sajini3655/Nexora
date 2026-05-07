@@ -1,6 +1,7 @@
 package com.admin.service;
 
 import com.admin.dto.ProjectResponse;
+import com.admin.dto.TaskDto;
 import com.admin.dto.TicketDto;
 import com.admin.dto.nlq.AiNlqDestination;
 import com.admin.dto.nlq.AiNlqResolveRequest;
@@ -49,6 +50,8 @@ public class NlqNavigationService {
     private final ProjectService projectService;
     private final ClientPortalService clientPortalService;
     private final TicketService ticketService;
+    private final TaskAssignmentService taskAssignmentService;
+    private final DeveloperTaskService developerTaskService;
 
     private record Destination(
             String id,
@@ -409,43 +412,60 @@ public class NlqNavigationService {
             String searchQuery,
             String rawQuery
     ) {
+        // Manager: navigate to specific project by name
         if (activeRole == Role.MANAGER && "MANAGER_PROJECT".equals(entityType)) {
             if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
                 return null;
             }
-
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<ProjectResponse> projects = projectService.getMyProjects(authentication);
-                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.63);
+                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.58);
                 if (match.isPresent()) {
                     return "/manager/project-management/" + url(String.valueOf(match.get().getId()));
                 }
-            } catch (Exception ignored) {
-                // Fall back to list filtering
-            }
+            } catch (Exception ignored) {}
             return "/manager/project-management?q=" + url(name);
         }
 
+        // Manager: navigate to tickets list (email inbox)
+        if (activeRole == Role.MANAGER && "MANAGER_TICKET".equals(entityType)) {
+            String name = entityName.isBlank() ? rawQuery : entityName;
+            return "/manager/tickets?q=" + url(name);
+        }
+
+        // Manager: navigate to specific task by name
+        if (activeRole == Role.MANAGER && "MANAGER_TASK".equals(entityType)) {
+            String name = entityName.isBlank() ? rawQuery : entityName;
+            try {
+                List<TaskDto> tasks = taskAssignmentService.listManagerTasks(email);
+                Optional<TaskDto> match = bestMatch(name, tasks, TaskDto::getTitle, 0.58);
+                if (match.isPresent()) {
+                    return "/manager/tasks/" + url(String.valueOf(match.get().getId()));
+                }
+            } catch (Exception ignored) {}
+            return "/manager/tasks?q=" + url(name);
+        }
+
+        // Client: navigate to specific project by name
         if (activeRole == Role.CLIENT && "CLIENT_PROJECT".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<ProjectResponse> projects = clientPortalService.getMyProjects(authentication);
-                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.62);
+                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.58);
                 if (match.isPresent()) {
                     return "/client/projects/" + url(String.valueOf(match.get().getId()));
                 }
-            } catch (Exception ignored) {
-                // Fall back to list filtering
-            }
+            } catch (Exception ignored) {}
             return "/client/projects?q=" + url(name);
         }
 
+        // Client: navigate to specific ticket by name or filter tickets
         if (activeRole == Role.CLIENT && "CLIENT_TICKET".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<TicketDto> tickets = clientPortalService.getMyTickets(authentication);
-                Optional<TicketDto> match = bestMatch(name, tickets, TicketDto::getTitle, 0.62);
+                Optional<TicketDto> match = bestMatch(name, tickets, TicketDto::getTitle, 0.58);
                 String q = match.map(TicketDto::getTitle).filter(v -> !safe(v).isBlank()).orElse(name);
                 return "/client/tickets?q=" + url(q);
             } catch (Exception ignored) {
@@ -453,11 +473,25 @@ public class NlqNavigationService {
             }
         }
 
+        // Developer: navigate to specific task by name
+        if (activeRole == Role.DEVELOPER && "DEVELOPER_TASK".equals(entityType)) {
+            String name = entityName.isBlank() ? rawQuery : entityName;
+            try {
+                List<TaskDto> tasks = developerTaskService.listAssignedToMe(email);
+                Optional<TaskDto> match = bestMatch(name, tasks, TaskDto::getTitle, 0.58);
+                if (match.isPresent()) {
+                    return "/dev/tasks/" + url(String.valueOf(match.get().getId()));
+                }
+            } catch (Exception ignored) {}
+            return "/dev/tasks?q=" + url(name);
+        }
+
+        // Developer: navigate to specific ticket by name or ID
         if (activeRole == Role.DEVELOPER && "TICKET".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<TicketDto> tickets = ticketService.getTicketsForUser(email);
-                Optional<TicketDto> match = bestMatch(name, tickets, t -> safe(t.getTitle()) + " " + safe(String.valueOf(t.getId())), 0.64);
+                Optional<TicketDto> match = bestMatch(name, tickets, t -> safe(t.getTitle()) + " " + safe(String.valueOf(t.getId())), 0.58);
                 if (match.isPresent()) {
                     return "/dev/tickets/" + url(String.valueOf(match.get().getId()));
                 }
