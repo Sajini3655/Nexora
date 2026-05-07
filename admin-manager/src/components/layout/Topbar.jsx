@@ -215,12 +215,6 @@ export default function Topbar({ onMenuClick }) {
               onClose={() => setAnchorEl(null)}
               disableAutoFocusItem
               MenuListProps={{ autoFocusItem: false }}
-              ModalProps={{
-                disableEnforceFocus: true,
-                disableAutoFocus: true,
-                disableRestoreFocus: true,
-                hideBackdrop: true,
-              }}
               PaperProps={{
                 sx: {
                   mt: 1.2,
@@ -233,6 +227,10 @@ export default function Topbar({ onMenuClick }) {
                   backdropFilter: "blur(18px)",
                 },
               }}
+              disableEnforceFocus
+              disableAutoFocus
+              disableRestoreFocus
+              hideBackdrop
             >
               <Box sx={{ px: 2, py: 1.5 }}>
                 <Typography sx={{ fontWeight: 950 }}>
