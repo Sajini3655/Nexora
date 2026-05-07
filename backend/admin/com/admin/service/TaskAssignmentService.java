@@ -216,6 +216,29 @@ public class TaskAssignmentService {
         return dto;
     }
 
+    @Transactional
+    public TaskDto updateTaskEstimate(String managerEmail, Long taskId, Integer estimatedPoints) {
+        User manager = userRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
+        TaskItem task = taskRepository.findById(Objects.requireNonNull(taskId))
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (task.getProject() == null || task.getProject().getManager() == null
+                || !task.getProject().getManager().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only update tasks for projects you manage");
+        }
+
+        int safeEstimate = estimatedPoints == null ? 0 : Math.max(0, estimatedPoints);
+        task.setEstimatedPoints(safeEstimate);
+        task.setUpdatedAt(LocalDateTime.now());
+
+        TaskItem saved = taskRepository.save(task);
+        TaskDto dto = toTaskDto(saved);
+        liveUpdatePublisher.publishTasksChanged("estimate-updated");
+        return dto;
+    }
+
     @Transactional(readOnly = true)
     public List<TaskDto> listManagerTasks(String managerEmail) {
         User manager = userRepository.findByEmail(managerEmail)

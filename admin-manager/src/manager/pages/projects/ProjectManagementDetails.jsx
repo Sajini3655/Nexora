@@ -530,14 +530,20 @@ export default function ProjectManagementDetails() {
 
       let taskUpdatePromise = null;
       if (taskDetailsChanged) {
-        taskUpdatePromise = updateManagerTask(Number(selectedTask.id), {
-          title: (taskDraft?.title || "").trim(),
-          description: taskDraft?.description || "",
-          priority: (taskDraft?.priority || "MEDIUM").toUpperCase(),
-          dueDate: taskDraft?.dueDate || null,
-          status: (taskDraft?.status || "TODO").toUpperCase(),
-          estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
-        });
+        const estimateValue = Math.max(0, Number(taskDraft?.estimatedPoints || 0));
+        taskUpdatePromise = (async () => {
+          const updatedTask = await updateManagerTask(Number(selectedTask.id), {
+            title: (taskDraft?.title || "").trim(),
+            description: taskDraft?.description || "",
+            priority: (taskDraft?.priority || "MEDIUM").toUpperCase(),
+            dueDate: taskDraft?.dueDate || null,
+            status: (taskDraft?.status || "TODO").toUpperCase(),
+            estimatedPoints: estimateValue,
+          });
+
+          const updatedEstimateTask = await updateManagerTaskEstimate(Number(selectedTask.id), estimateValue);
+          return { ...updatedTask, ...updatedEstimateTask, estimatedPoints: estimateValue };
+        })();
         savePromises.push(taskUpdatePromise);
       }
 
@@ -807,6 +813,7 @@ export default function ProjectManagementDetails() {
       const taskPriority = (taskDraft?.priority || getTaskPriority(selectedTask) || "MEDIUM").toUpperCase();
       const taskDueDate = taskDraft?.dueDate || selectedTask?.dueDate || null;
       const taskStatus = (taskDraft?.status || getTaskStatus(selectedTask) || "TODO").toUpperCase();
+      const estimateValue = Math.max(0, Number(taskDraft?.estimatedPoints || 0));
 
       const updated = await updateManagerTask(Number(selectedTask.id), {
         title: taskTitle,
@@ -814,13 +821,16 @@ export default function ProjectManagementDetails() {
         priority: taskPriority,
         dueDate: taskDueDate,
         status: taskStatus,
-        estimatedPoints: Number(taskDraft?.estimatedPoints || 0),
+        estimatedPoints: estimateValue,
       });
 
-      const savedEstimate = Number(updated?.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0);
+      const updatedEstimateTask = await updateManagerTaskEstimate(Number(selectedTask.id), estimateValue);
+      const mergedUpdated = { ...updated, ...updatedEstimateTask, estimatedPoints: estimateValue };
+
+      const savedEstimate = Number(mergedUpdated?.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0);
       const savedTask = selectedTask
-        ? { ...selectedTask, ...updated, estimatedPoints: savedEstimate }
-        : { ...updated, estimatedPoints: savedEstimate };
+        ? { ...selectedTask, ...mergedUpdated, estimatedPoints: savedEstimate }
+        : { ...mergedUpdated, estimatedPoints: savedEstimate };
       const updatedTaskDraft = {
         ...taskDraft,
         title: savedTask.title ?? taskTitle,
