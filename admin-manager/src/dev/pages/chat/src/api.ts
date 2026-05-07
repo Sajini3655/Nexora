@@ -116,15 +116,10 @@ export async function getProjectSessions(projectId: string) {
 
   if (!res.ok) {
     const text = await res.text();
-    const duration = (performance.now() - startTime).toFixed(2);
-    console.warn(`[chat:getProjectSessions] Failed after ${duration}ms`);
     throw new Error(text || "Failed to fetch project sessions");
   }
 
   const data = await res.json();
-  const sessionCount = Array.isArray(data) ? data.length : 0;
-  const duration = (performance.now() - startTime).toFixed(2);
-  console.log(`[chat:getProjectSessions] ${sessionCount} sessions loaded in ${duration}ms`);
   
   return data;
 }
@@ -151,14 +146,10 @@ export async function endChatAI(
 
   if (!res.ok) {
     const text = await res.text();
-    const duration = (performance.now() - startTime).toFixed(2);
-    console.warn(`[chat:endChatAI] Failed after ${duration}ms`);
     throw new Error(text || "AI failed");
   }
 
   const data = await res.json();
-  const duration = (performance.now() - startTime).toFixed(2);
-  console.log(`[chat:endChatAI] Response received in ${duration}ms`);
   
   return data;
 }

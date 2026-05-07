@@ -100,7 +100,6 @@ export default function ProjectManagement() {
         : (taskCount > 0 ? Math.round((completedTaskCount * 100) / taskCount) : 0);
       const status = taskCount === 0 ? "Planning" : completedTaskCount === taskCount ? "Completed" : "Active";
 
-      console.log("[ProjectManagement] Project ID extracted:", projectId, "from project:", project);
       return {
         id: projectId,
         name: getProjectName(project),
@@ -279,7 +278,6 @@ export default function ProjectManagement() {
                         variant="outlined" 
                         disabled={!project.id}
                         onClick={() => {
-                          console.log("[ProjectManagement] Navigating to project:", project.id);
                           if (project.id) navigate(`/manager/project-management/${project.id}`);
                         }} 
                         sx={{ textTransform: "none", fontWeight: 700 }}

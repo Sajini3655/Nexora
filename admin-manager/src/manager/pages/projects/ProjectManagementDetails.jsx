@@ -880,7 +880,6 @@ export default function ProjectManagementDetails() {
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
-      console.error('Create story point error', err.response?.status, err.response?.data || err.message);
       setActionError(getErrorMessage(err, "Failed to add story point."));
     } finally {
       setSavingStoryPoint(false);
@@ -923,7 +922,6 @@ export default function ProjectManagementDetails() {
       await loadStoryPoints(selectedTask.id);
       // Don't reload project here - let user save all changes at once
     } catch (err) {
-      console.error('Update story point error', err.response?.status, err.response?.data || err.message);
       setActionError(getErrorMessage(err, "Failed to update story point."));
     } finally {
       setSavingStoryPoint(false);

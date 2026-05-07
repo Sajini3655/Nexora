@@ -369,12 +369,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         setWsConnecting(false);
         setErrorMessage("");
 
-        console.debug("ChatBox:WebSocket connected. Subscribing to", subscriptionTopic);
-
         client.subscribe(subscriptionTopic, (message) => {
           try {
             const payload = JSON.parse(message.body);
-            console.debug("ChatBox:Received message via WebSocket:", payload);
 
             const incomingSenderName = payload.senderName ?? "Unknown";
             const incomingIsAi = String(incomingSenderName).toLowerCase().includes("ai") || incomingSenderName === "AI Shadow";
@@ -391,10 +388,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             setChat((prev) => {
               const exists = prev.some((m) => isRecentDuplicate(m, incoming));
               if (exists) {
-                console.debug("ChatBox:Duplicate message detected, skipping");
                 return prev;
               }
-              console.debug("ChatBox:Adding message to chat");
               return [...prev, incoming];
             });
           } catch (e) {
