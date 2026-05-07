@@ -194,7 +194,7 @@ export default function ProjectManagement() {
               Project Management
             </Typography>
             <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
-              Create projects and manage tasks, story points, and developer assignments.
+              Manage projects, tasks, and developer assignments.
             </Typography>
           </Box>
         </Stack>
