@@ -9,6 +9,9 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import { getManagerQueryScope, managerKeys } from "../../data/useManager";
 import { createProject, getErrorMessage, fetchManagerClients } from "../../../services/managerService";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import { useEffect } from "react";
@@ -38,6 +41,9 @@ export default function AddProject() {
   const [success, setSuccess] = useState("");
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const queryClient = useQueryClient();
+  const { user } = useAuth() || {};
+  const scope = getManagerQueryScope(user);
 
   const canCreate = useMemo(() => {
     if (!projectName.trim()) return false;
@@ -150,6 +156,12 @@ export default function AddProject() {
       setSuccess("Project created successfully.");
 
       if (createdProjectId) {
+        try {
+          await queryClient.invalidateQueries({ queryKey: managerKeys.projects(scope) });
+          await queryClient.refetchQueries({ queryKey: managerKeys.projects(scope) });
+        } catch (e) {
+          // ignore cache operations, navigate anyway
+        }
         navigate(`/manager/project-management/${createdProjectId}`);
       }
     } catch (err) {

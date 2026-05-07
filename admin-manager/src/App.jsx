@@ -199,7 +199,7 @@ export default function App() {
        />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="FILES" />}>
+      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
         <Route
           path="/manager/projects"
           element={

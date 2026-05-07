@@ -120,7 +120,7 @@ function getProjectDescription(project) {
 }
 
 function getStoryPointLabel(storyPoint) {
-  return `${storyPoint?.title || "Untitled"} - ${Number(storyPoint?.pointValue || 0)} pt`;
+  return `${Number(storyPoint?.pointValue || 0)} pt`;
 }
 
 function formatChatTime(value) {
@@ -779,8 +779,8 @@ export default function ProjectManagementDetails() {
 
     try {
       await api.post(`/tasks/${selectedTask.id}/story-points`, {
-        title: storyPointForm.title.trim(),
-        description: storyPointForm.description.trim() || null,
+        title: storyPointForm.title ? storyPointForm.title.trim() : null,
+        description: storyPointForm.description ? storyPointForm.description.trim() : null,
         pointValue: Number(storyPointForm.pointValue),
       });
 
@@ -813,8 +813,8 @@ export default function ProjectManagementDetails() {
 
     try {
       await api.put(`/story-points/${editingStoryPointId}`, {
-        title: storyPointForm.title.trim(),
-        description: storyPointForm.description.trim() || null,
+        title: storyPointForm.title ? storyPointForm.title.trim() : null,
+        description: storyPointForm.description ? storyPointForm.description.trim() : null,
         pointValue: Number(storyPointForm.pointValue),
       });
 
@@ -1441,9 +1441,7 @@ export default function ProjectManagementDetails() {
             <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
               <Typography sx={{ fontWeight: 900, mb: 1 }}>Story Points</Typography>
 
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.2fr 0.4fr auto" }, gap: 1, alignItems: "center", mb: 1 }}>
-                <TextField size="small" label="Title" value={storyPointForm.title} onChange={(e) => setStoryPointForm((prev) => ({ ...prev, title: e.target.value }))} />
-                <TextField size="small" label="Description" value={storyPointForm.description} onChange={(e) => setStoryPointForm((prev) => ({ ...prev, description: e.target.value }))} />
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "0.4fr auto" }, gap: 1, alignItems: "center", mb: 1 }}>
                 <TextField
                   size="small"
                   type="number"
@@ -1476,7 +1474,7 @@ export default function ProjectManagementDetails() {
                       <Box>
                         <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{getStoryPointLabel(row)}</Typography>
                         <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                          {row.description || "No description"} - {String(row.status || "TODO").toUpperCase()}
+                          {String(row.status || "TODO").toUpperCase()}
                         </Typography>
                       </Box>
 
