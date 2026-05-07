@@ -89,15 +89,23 @@ export function parseNlqQuery(raw) {
       ? "project"
       : /\bticket(s)?\b/i.test(stripped)
         ? "ticket"
-        : /\btime\s*sheet(s)?\b|\btimesheet(s)?\b/i.test(stripped)
-          ? "timesheet"
-          : "";
+        : /\btask(s)?\b/i.test(stripped)
+          ? "task"
+          : /\btime\s*sheet(s)?\b|\btimesheet(s)?\b/i.test(stripped)
+            ? "timesheet"
+            : "";
 
-  // Remove leading entity words to improve fuzzy matching.
-  const text = stripped
-    .replace(/^project(s)?\b\s*/i, "")
-    .replace(/^ticket(s)?\b\s*/i, "")
+  // Extract entity name: remove leading navigation words and entity type keywords
+  let text = stripped
+    .replace(/^(the\s+)?project(s)?\b\s*/i, "")
+    .replace(/^(the\s+)?ticket(s)?\b\s*/i, "")
+    .replace(/^(the\s+)?task(s)?\b\s*/i, "")
     .trim();
+
+  // If text is still empty after removing entity keywords, use the full stripped version
+  if (!text && stripped) {
+    text = stripped;
+  }
 
   return {
     original,

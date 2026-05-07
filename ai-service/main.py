@@ -264,12 +264,15 @@ def _detect_entity(current_role: str, query: str) -> Optional[Dict[str, str]]:
     role = (current_role or "").strip().upper()
 
     # Strip common navigation verbs.
-    stripped = re.sub(r"^(go to|goto|open|show|take me to)\s+", "", q).strip()
+    stripped = re.sub(r"^(go to|goto|open|show|take me to|navigate|navigate to)\s+", "", q).strip()
 
     if role == "MANAGER":
         if "ticket" in stripped or "tickets" in stripped:
             name = stripped.replace("tickets", "").replace("ticket", "").strip()
-            return {"entityType": "TICKET", "entityName": name}
+            return {"entityType": "MANAGER_TICKET", "entityName": name}
+        if "task" in stripped or "tasks" in stripped:
+            name = stripped.replace("tasks", "").replace("task", "").strip()
+            return {"entityType": "MANAGER_TASK", "entityName": name}
         if "project" in stripped or "projects" in stripped or "workstream" in stripped or "workstreams" in stripped:
             name = stripped
             for w in ["projects", "project", "workstreams", "workstream"]:
@@ -289,6 +292,9 @@ def _detect_entity(current_role: str, query: str) -> Optional[Dict[str, str]]:
             return {"entityType": "CLIENT_PROJECT", "entityName": name}
 
     if role == "DEVELOPER":
+        if "task" in stripped or "tasks" in stripped:
+            name = stripped.replace("tasks", "").replace("task", "").strip()
+            return {"entityType": "DEVELOPER_TASK", "entityName": name}
         if "ticket" in stripped or "tickets" in stripped:
             name = stripped.replace("tickets", "").replace("ticket", "").strip()
             return {"entityType": "TICKET", "entityName": name}
