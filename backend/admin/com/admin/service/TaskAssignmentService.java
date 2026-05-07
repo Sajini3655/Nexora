@@ -48,12 +48,8 @@ public class TaskAssignmentService {
         User actor = userRepository.findByEmail(actorEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
-        // All actors (admin, manager, developer) get the same list of all developers
-        // Scoping is done at the task/progress level, not at the developer visibility level
-        List<User> devUsers = userRepository.findAll().stream()
-            .filter(user -> Boolean.TRUE.equals(user.getEnabled()))
-            .filter(user -> user.getAllRoles().contains(Role.DEVELOPER))
-            .toList();
+        // Query only enabled developers instead of fetching all users
+        List<User> devUsers = userRepository.findAllByEnabledAndRolesContaining(true, Role.DEVELOPER);
 
         return devUsers.stream()
                 .map(this::toDeveloperSummary)
@@ -62,8 +58,9 @@ public class TaskAssignmentService {
     }
 
     private List<TaskItem> getManagerVisibleTasks(User manager) {
-        return projectRepository.findByManagerOrderByCreatedAtDesc(manager).stream()
-                .flatMap(project -> taskRepository.findByProject_Id(project.getId()).stream())
+        List<Project> projects = projectRepository.findByManagerOrderByCreatedAtDesc(manager);
+        return projects.stream()
+                .flatMap(project -> project.getTasks().stream())
                 .collect(Collectors.toList());
     }
 

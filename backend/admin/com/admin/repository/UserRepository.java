@@ -26,6 +26,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByRoleOrderByNameAsc(Role role);
 
+    @Query("SELECT u FROM User u WHERE u.enabled = :enabled AND :role MEMBER OF u.roles ORDER BY u.name ASC")
+    List<User> findAllByEnabledAndRolesContaining(@Param("enabled") Boolean enabled, @Param("role") Role role);
+
     long countByEnabled(Boolean enabled);
 
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
