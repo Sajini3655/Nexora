@@ -343,7 +343,7 @@ export default function App() {
         <Route path="/client/settings" element={<UnifiedShell role="CLIENT"><ClientSettings /></UnifiedShell>} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} requiredModule="TICKETS" />}>
+      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
         <Route path="/client/tickets" element={<UnifiedShell role="CLIENT"><ClientTicketList /></UnifiedShell>} />
       </Route>
 
