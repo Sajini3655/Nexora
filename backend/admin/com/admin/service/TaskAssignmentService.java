@@ -26,6 +26,8 @@ public class TaskAssignmentService {
     private final TaskRepository taskRepository;
     private final TaskStoryPointRepository storyPointRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
+    private final AiSkillExtractionService aiSkillExtractionService;
+    private final AiAssigneeService aiAssigneeService;
 
     /**
      * Manager view: list developers with skills + workload.
@@ -66,13 +68,15 @@ public class TaskAssignmentService {
     }
 
     /**
-     * Suggest best developer for a task.
+     * Suggest best developer for a task using Groq AI-powered skill extraction.
      */
     @Transactional(readOnly = true)
     public SuggestAssigneeResponse suggest(SuggestAssigneeRequest req) {
         String text = (req.getTitle() + "\n" + (req.getDescription() == null ? "" : req.getDescription())).toLowerCase();
 
-        SkillExtraction extraction = extractRequiredSkills(text);
+        // Use Groq AI for intelligent skill extraction
+        AiSkillExtractionService.SkillExtractionResult aiResult = aiSkillExtractionService.extract(req.getTitle(), req.getDescription());
+        SkillExtraction extraction = convertAiResultToSkillExtraction(aiResult);
         List<String> requiredSkills = extraction.requiredSkills;
 
         List<DeveloperSummaryDto> candidates = listDevelopers();
@@ -86,6 +90,50 @@ public class TaskAssignmentService {
                     .missingSkills(requiredSkills)
                     .breakdown(ScoreBreakdownDto.builder().skillScore(0).workloadScore(0).experienceScore(0).build())
                     .build();
+        }
+
+        // Ask AI for final recommendation using candidate summaries
+        try {
+            List<Map<String, Object>> candPayload = new ArrayList<>();
+            for (DeveloperSummaryDto d : candidates) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", d.getId());
+                m.put("name", d.getName());
+                m.put("email", d.getEmail());
+                List<Map<String, Object>> skills = new ArrayList<>();
+                for (SkillDto s : d.getSkills() == null ? Collections.<SkillDto>emptyList() : d.getSkills()) {
+                    Map<String, Object> sm = new HashMap<>();
+                    sm.put("name", s.getName());
+                    sm.put("level", s.getLevel());
+                    skills.add(sm);
+                }
+                m.put("skills", skills);
+                m.put("years", d.getYearsOfExperience());
+                m.put("availability", d.getAvailabilityStatus() == null ? null : d.getAvailabilityStatus().name());
+                m.put("activeWorkloadPoints", d.getActiveWorkloadPoints());
+                m.put("capacityPoints", d.getCapacityPoints());
+                m.put("specialization", d.getSpecialization());
+                candPayload.add(m);
+            }
+
+            AiAssigneeService.RecommendResult aiRec = aiAssigneeService.recommend(req.getTitle(), req.getDescription(), candPayload);
+            if (aiRec != null && aiRec.isUsedAi() && aiRec.getRecommendedEmail() != null) {
+                // map email back to DeveloperSummaryDto
+                DeveloperSummaryDto chosen = candidates.stream().filter(c -> aiRec.getRecommendedEmail().equalsIgnoreCase(c.getEmail())).findFirst().orElse(null);
+                if (chosen != null) {
+                    return SuggestAssigneeResponse.builder()
+                            .recommendedDeveloper(chosen)
+                            .confidence((int) Math.round(aiRec.getConfidence() * 100))
+                            .explanation(aiRec.getExplanation())
+                            .requiredSkills(requiredSkills)
+                            .matchedSkills(aiRec.getMatchedSkills())
+                            .missingSkills(requiredSkills.stream().filter(s -> !aiRec.getMatchedSkills().contains(s)).toList())
+                            .breakdown(ScoreBreakdownDto.builder().skillScore(0).workloadScore(0).experienceScore(0).build())
+                            .build();
+                }
+            }
+        } catch (Exception ex) {
+            // ignore AI failure and fallback to local scoring below
         }
 
         SuggestAssigneeResponse best = null;
@@ -110,6 +158,26 @@ public class TaskAssignmentService {
             }
         }
         return best;
+    }
+
+    /**
+     * Convert AI skill extraction result to internal SkillExtraction format.
+     */
+    private SkillExtraction convertAiResultToSkillExtraction(AiSkillExtractionService.SkillExtractionResult aiResult) {
+        List<String> skillNames = new ArrayList<>();
+        Map<String, Double> weights = new LinkedHashMap<>();
+
+        for (AiSkillExtractionService.SkillWeight skill : aiResult.getSkills()) {
+            skillNames.add(skill.getName());
+            weights.put(skill.getName(), skill.getWeight());
+        }
+
+        if (skillNames.isEmpty()) {
+            skillNames.add("General");
+            weights.put("General", 1.0);
+        }
+
+        return new SkillExtraction(skillNames, weights);
     }
 
     @Transactional

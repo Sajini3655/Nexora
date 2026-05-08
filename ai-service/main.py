@@ -423,3 +423,101 @@ async def nlq_resolve(req: Request):
             "confidence": 0.55 if destination_id else 0.0,
             "reason": f"LLM failed; heuristic fallback: {str(e)}",
         }, status_code=200)
+
+
+@app.post("/skill/extract")
+async def skill_extract(req: Request):
+    """Extract required skills from task description using Groq AI.
+    
+    Input shape:
+      {"title": str, "description": str}
+    
+    Output shape:
+      {"skills": [{"name": str, "weight": float}], "explanation": str}
+    """
+    body = await req.json()
+    title = (body.get("title") or "").strip()
+    description = (body.get("description") or "").strip()
+    
+    if not title:
+        return JSONResponse({
+            "skills": [{"name": "General", "weight": 1.0}],
+            "explanation": "No task title provided."
+        }, status_code=400)
+    
+    task_text = f"Title: {title}\nDescription: {description or '(No description)'}"
+    
+    prompt = (
+        "You are a technical skill analyzer. Extract the primary technical skills required for this task.\n"
+        "Return ONLY valid JSON with this shape: "
+        "{\"skills\": [{\"name\": string, \"weight\": float (0.0-1.0)}], \"explanation\": string}.\n"
+        "- skills: List of required technologies/skills (max 5)\n"
+        "- weight: How critical each skill is (1.0 = critical, 0.5 = moderate, 0.3 = helpful)\n"
+        "- explanation: Brief reasoning for the skill choices\n"
+        "Include skills like: React, Node.js, Database, UI Design, Spring Boot, Testing, DevOps, Docker, Python, Java, etc.\n\n"
+        f"Task:\n{task_text}"
+    )
+    
+    # If Groq is not available, return keyword-based extraction
+    if client is None:
+        keywords = {
+            "React": ["react", "jsx", "component", "frontend", "ui"],
+            "Node.js": ["node", "express", "api", "backend", "jwt", "auth"],
+            "Database": ["database", "sql", "schema", "query", "postgres", "mysql"],
+            "UI Design": ["figma", "ux", "design", "wireframe", "layout"],
+            "Spring Boot": ["spring", "springboot", "java", "controller"],
+            "Testing": ["test", "testing", "junit", "jest", "bug"],
+            "DevOps": ["docker", "deploy", "pipeline", "ci", "cd"],
+            "Python": ["python", "django", "flask", "fastapi"],
+        }
+        
+        task_lower = task_text.lower()
+        found = {}
+        for skill, kw_list in keywords.items():
+            count = sum(1 for kw in kw_list if kw in task_lower)
+            if count > 0:
+                found[skill] = count
+        
+        if not found:
+            return JSONResponse({
+                "skills": [{"name": "General", "weight": 1.0}],
+                "explanation": "No specific technical skills detected. General development skills required."
+            })
+        
+        total = sum(found.values())
+        skills = [{"name": k, "weight": v / total} for k, v in sorted(found.items(), key=lambda x: -x[1])]
+        return JSONResponse({
+            "skills": skills,
+            "explanation": f"Extracted {len(skills)} skills from task description."
+        })
+    
+    # Use Groq AI
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You analyze task descriptions and extract required technical skills as JSON."
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+            response_format={"type": "json_object"},
+        )
+        
+        content = response.choices[0].message.content or "{}"
+        payload = json.loads(content)
+        
+        skills = payload.get("skills") or [{"name": "General", "weight": 1.0}]
+        explanation = payload.get("explanation") or "Skill extraction complete."
+        
+        return JSONResponse({
+            "skills": skills,
+            "explanation": explanation
+        })
+    except Exception as e:
+        return JSONResponse({
+            "skills": [{"name": "General", "weight": 1.0}],
+            "explanation": f"Error extracting skills: {str(e)}"
+        }, status_code=500)
