@@ -565,31 +565,15 @@ public class TaskAssignmentService {
     }
 
     private String buildExplanation(DeveloperSummaryDto dev, List<String> matched, List<String> missing, int active, int cap, double availabilityScore, double specializationScore, double difficulty) {
+        // Return a short, friendly fallback explanation for the UI.
         StringBuilder sb = new StringBuilder();
-        sb.append("Suggested ").append(dev.getName()).append(" because ");
-
+        sb.append("Good match");
         if (!matched.isEmpty()) {
-            sb.append("they match ").append(String.join(", ", matched)).append(" ");
-        } else {
-            sb.append("no strong skill matches were found ");
+            sb.append(" — matches: ").append(String.join(", ", matched));
         }
-
-        sb.append("current workload is ").append(active).append("/").append(cap).append(" points, ");
-        sb.append("availability is ").append(dev.getAvailabilityStatus() == null ? AvailabilityStatus.AVAILABLE : dev.getAvailabilityStatus()).append(", ");
-        sb.append("and specialization is ").append(dev.getSpecialization() == null || dev.getSpecialization().isBlank() ? "General" : dev.getSpecialization()).append(".");
-
-        if (availabilityScore < 0.7) {
-            sb.append(" Availability is reducing the score.");
-        }
-
-        if (specializationScore >= 0.95) {
-            sb.append(" Specialization aligns with this task.");
-        }
-
-        sb.append(" Estimated difficulty: ").append(String.format(java.util.Locale.US, "%.2f", difficulty)).append(".");
-
-        if (!missing.isEmpty() && !missing.contains("General")) {
-            sb.append(" Missing skills: ").append(String.join(", ", missing)).append(".");
+        sb.append(" • workload ").append(active).append("/").append(cap);
+        if (dev.getAvailabilityStatus() != null) {
+            sb.append(" • ").append(dev.getAvailabilityStatus().name().toLowerCase());
         }
         return sb.toString();
     }

@@ -1,6 +1,6 @@
 const BACKEND_API_URL = "http://localhost:8081/api";
 const BACKEND_URL = `${BACKEND_API_URL}/chat`;
-const AI_URL = "http://127.0.0.1:8000";
+const AI_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://127.0.0.1:8001";
 
 function authHeaders(extra?: HeadersInit): HeadersInit {
   const token = localStorage.getItem("token");

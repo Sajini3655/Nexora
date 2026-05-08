@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import axios from 'axios';
 
+const AI_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://127.0.0.1:8001";
+
 export default function ChatWindow() {
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
@@ -14,7 +16,7 @@ export default function ChatWindow() {
     setInput("");
 
     try {
-      const res = await axios.post("http://127.0.0.1:8000/chat", {
+      const res = await axios.post(`${AI_URL}/chat`, {
         message: input
       });
 

@@ -6,6 +6,8 @@ interface Message {
   ai: string;
 }
 
+const AI_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://127.0.0.1:8001";
+
 const App: React.FC = () => {
   const [chatStarted, setChatStarted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -24,7 +26,7 @@ const App: React.FC = () => {
 
   const startChat = async () => {
     try {
-      await fetch("http://127.0.0.1:8000/chat/start", { method: "POST" });
+      await fetch(`${AI_URL}/chat/start`, { method: "POST" });
       setChatStarted(true);
       setMessages([]);
       setSummary(null);
@@ -37,7 +39,7 @@ const App: React.FC = () => {
 
   const endChat = async (createTickets?: boolean) => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/chat/end", {
+      const res = await fetch(`${AI_URL}/chat/end`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -85,7 +87,7 @@ const App: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/chat", {
+      const res = await fetch(`${AI_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMessage }),

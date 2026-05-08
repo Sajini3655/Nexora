@@ -28,6 +28,7 @@ import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
 import SupportAgentRoundedIcon from "@mui/icons-material/SupportAgentRounded";
 
 import api from "../../../services/api";
+import ErrorNotice from "../../../components/ui/ErrorNotice.jsx";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import {
   suggestManagerTaskAssignment,

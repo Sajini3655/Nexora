@@ -26,6 +26,7 @@ public class ManagerTaskController {
     }
 
     @PostMapping("/tasks/suggest")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<SuggestAssigneeResponse> suggest(@Valid @RequestBody SuggestAssigneeRequest request) {
         return ResponseEntity.ok(taskAssignmentService.suggest(request));
     }

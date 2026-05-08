@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Box, Drawer, IconButton, Typography } from "@mui/material";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -14,6 +14,13 @@ export default function UnifiedSidebar({
   const topbarClearance = layoutGaps.topbar.topInset + layoutGaps.topbar.height - 64;
   const navigate = useNavigate();
   const location = useLocation();
+  const closeButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    closeButtonRef.current?.focus();
+  }, [open]);
 
   const handleItemClick = (to) => {
     onClose?.();
@@ -64,6 +71,7 @@ export default function UnifiedSidebar({
     >
       <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 0.4 }}>
         <IconButton
+          ref={closeButtonRef}
           onClick={onClose}
           size="small"
           sx={{

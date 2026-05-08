@@ -52,7 +52,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/timesheets/*/approve", "/api/timesheets/*/reject").hasRole("MANAGER")
                 .requestMatchers("/api/timesheets/*").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/manager/**").hasRole("MANAGER")
+                .requestMatchers("/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
                 .requestMatchers("/api/developer/**").hasRole("DEVELOPER")
                 .requestMatchers("/api/client/**").hasRole("CLIENT")
                 .anyRequest().authenticated()

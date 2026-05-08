@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
-load_dotenv()
+from pathlib import Path
+
+load_dotenv(Path(__file__).resolve().with_name(".env"))
 
 import os
 import json
@@ -131,10 +133,20 @@ except Exception:
     Groq = None
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY) if Groq and GROQ_API_KEY else None
 MODEL = get_first_available_model()
 MODEL = os.getenv("GROQ_MODEL") or MODEL
 print("Using model:", MODEL)
+
+
+def _get_groq_client():
+    if not Groq or not GROQ_API_KEY:
+        return None
+
+    try:
+        return Groq(api_key=GROQ_API_KEY)
+    except Exception as exc:
+        print("Groq client initialization failed:", exc)
+        return None
 
 # ----------------------------
 # Endpoints
@@ -145,7 +157,14 @@ def home():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": MODEL}
+    groq_client = _get_groq_client()
+    return {
+        "status": "ok",
+        "model": MODEL,
+        "groqSdkAvailable": bool(Groq),
+        "groqKeyPresent": bool(GROQ_API_KEY),
+        "groqClientAvailable": groq_client is not None,
+    }
 
 @app.post("/chat/message")
 async def chat_message(req: Request):
@@ -201,6 +220,229 @@ async def chat_end(req: Request):
         "ticket_message": ai_result["ticket_message"],
         "ticket_prompt_needed": ai_result["ticket_prompt_needed"]
     })
+
+
+def _extract_task_skills(title: str, description: str) -> List[Dict[str, float]]:
+    keywords = {
+        "React": ["react", "jsx", "component", "frontend", "ui"],
+        "Node.js": ["node", "express", "api", "backend", "jwt", "auth"],
+        "Database": ["database", "sql", "schema", "query", "postgres", "mysql", "h2"],
+        "UI Design": ["figma", "ux", "design", "wireframe", "layout"],
+        "Spring Boot": ["spring", "springboot", "java", "controller", "service"],
+        "Testing": ["test", "testing", "junit", "jest", "bug", "bugfix"],
+        "DevOps": ["docker", "deploy", "pipeline", "ci", "cd"],
+        "Python": ["python", "django", "flask", "fastapi"],
+    }
+
+    text = f"{title or ''} {description or ''}".lower()
+    hits: Dict[str, int] = {}
+
+    for skill, terms in keywords.items():
+        count = sum(1 for term in terms if term in text)
+        if count > 0:
+            hits[skill] = count
+
+    if not hits:
+        return [{"name": "General", "weight": 1.0}]
+
+    total = sum(hits.values())
+    return [{"name": name, "weight": count / total} for name, count in sorted(hits.items(), key=lambda item: -item[1])]
+
+
+def _score_assignee_candidate(task_text: str, task_skills: List[Dict[str, float]], candidate: Dict[str, Any]) -> Dict[str, Any]:
+    skills = candidate.get("skills") or []
+    skill_levels: Dict[str, float] = {}
+    for skill in skills:
+        skill_name = str((skill or {}).get("name") or "").strip().lower()
+        if not skill_name:
+            continue
+        raw_level = (skill or {}).get("level")
+        try:
+            level = float(raw_level if raw_level is not None else 3)
+        except Exception:
+            level = 3.0
+        skill_levels[skill_name] = level
+
+    matched: List[str] = []
+    missing: List[str] = []
+    skill_score = 0.0
+
+    for required in task_skills:
+        req_name = str(required.get("name") or "").strip()
+        if not req_name:
+            continue
+        weight = float(required.get("weight") or 0.0)
+        level = skill_levels.get(req_name.lower())
+        if level is not None:
+            matched.append(req_name)
+            normalized = min(1.0, max(0.0, level / 5.0))
+            skill_score += weight * normalized
+        else:
+            missing.append(req_name)
+
+    capacity = candidate.get("capacityPoints")
+    capacity_points = int(capacity if isinstance(capacity, (int, float)) and capacity is not None else 20)
+    active_workload = candidate.get("activeWorkloadPoints")
+    active_points = int(active_workload if isinstance(active_workload, (int, float)) and active_workload is not None else 0)
+    workload_ratio = 1.0 if capacity_points <= 0 else min(1.0, active_points / float(capacity_points))
+    workload_score = 1.0 - workload_ratio
+
+    experience = candidate.get("years")
+    years = float(experience if isinstance(experience, (int, float)) and experience is not None else 1)
+    years_score = max(0.35, min(1.0, years / 10.0))
+    if candidate.get("experienceLevel"):
+        experience_level = str(candidate.get("experienceLevel") or "JUNIOR").upper()
+        exp_value = {"JUNIOR": 0.70, "MID": 0.85, "SENIOR": 1.00}.get(experience_level, 0.70)
+    else:
+        exp_value = 0.70
+    experience_score = max(0.6, min(1.0, (exp_value * 0.7) + (years_score * 0.3)))
+
+    availability = str(candidate.get("availability") or "AVAILABLE").upper()
+    availability_score = {
+        "AVAILABLE": 1.00,
+        "LIMITED": 0.82,
+        "BUSY": 0.55,
+        "UNAVAILABLE": 0.12,
+    }.get(availability, 1.00)
+
+    weekly_hours = candidate.get("weeklyCapacityHours")
+    if isinstance(weekly_hours, (int, float)) and weekly_hours is not None:
+        availability_score *= max(0.5, min(1.0, float(weekly_hours) / 40.0))
+    availability_score = max(0.1, min(1.0, availability_score))
+
+    specialization = str(candidate.get("specialization") or "").strip().lower()
+    specialization_score = 0.5
+    if specialization:
+        tokens = re.split(r"[^a-z0-9]+", specialization)
+        for token in tokens:
+            if not token:
+                continue
+            if token in task_text:
+                specialization_score = 1.0
+                break
+            if any(token in str(item.get("name") or "").lower() for item in task_skills):
+                specialization_score = 1.0
+                break
+        else:
+            specialization_score = 0.65
+
+    total = max(0.0, min(1.0, (0.48 * skill_score) + (0.18 * workload_score) + (0.14 * experience_score) + (0.12 * availability_score) + (0.08 * specialization_score)))
+
+    explanation = (
+        f"Suggested {candidate.get('name') or candidate.get('email') or 'developer'} because "
+        f"they match {', '.join(matched) if matched else 'no strong skill matches were found'}; "
+        f"current workload is {active_points}/{capacity_points} points, availability is {availability}, "
+        f"and specialization is {candidate.get('specialization') or 'General'}."
+    )
+
+    if missing:
+        explanation += f" Missing skills: {', '.join(missing)}."
+
+    return {
+        "recommendedEmail": candidate.get("email"),
+        "recommendedName": candidate.get("name"),
+        "matchedSkills": matched,
+        "confidence": total,
+        "explanation": explanation,
+    }
+
+
+def _fallback_recommend_developer(title: str, description: str, candidates: List[Dict[str, Any]]) -> Dict[str, Any]:
+    task_text = f"{title or ''} {description or ''}".lower()
+    task_skills = _extract_task_skills(title, description)
+
+    best_result = None
+    best_score = -1.0
+
+    for candidate in candidates or []:
+        result = _score_assignee_candidate(task_text, task_skills, candidate)
+        if result["confidence"] > best_score:
+            best_score = result["confidence"]
+            best_result = result
+
+    if best_result is None:
+        return {
+            "recommendedEmail": None,
+            "recommendedName": None,
+            "matchedSkills": [],
+            "confidence": 0.0,
+            "explanation": "No candidates available.",
+        }
+
+    best_result["explanation"] = "Heuristic recommendation (Groq unavailable). " + best_result["explanation"]
+    return best_result
+
+
+@app.post("/assign/recommend")
+async def assign_recommend(req: Request):
+    """Recommend the best developer for a task, preferring Groq when available."""
+    body = await req.json()
+    title = (body.get("title") or "").strip()
+    description = (body.get("description") or "").strip()
+    candidates = body.get("candidates") or []
+
+    if not isinstance(candidates, list):
+        candidates = []
+
+    if not candidates:
+        return JSONResponse({
+            "recommendedEmail": None,
+            "recommendedName": None,
+            "matchedSkills": [],
+            "confidence": 0.0,
+            "explanation": "No candidates provided.",
+        }, status_code=200)
+
+    task_skills = _extract_task_skills(title, description)
+    prompt = (
+        "You are a senior technical staffing assistant. Pick the single best developer for this task. "
+        "Prioritize skill match first, then workload, then availability, then experience, then specialization. "
+        "Return ONLY valid JSON with this shape: "
+        "{\"recommendedEmail\": string|null, \"recommendedName\": string|null, \"matchedSkills\": [string], \"confidence\": float, \"explanation\": string}. "
+        f"Task title: {title}\n"
+        f"Task description: {description or '(No description)'}\n"
+        f"Extracted task skills: {json.dumps(task_skills)}\n"
+        f"Candidates: {json.dumps(candidates)}"
+    )
+
+    groq_client = _get_groq_client()
+
+    if groq_client is None:
+        result = _fallback_recommend_developer(title, description, candidates)
+        return JSONResponse(result, status_code=200)
+
+    try:
+        response = groq_client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": "You return strict JSON for developer recommendation."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.0,
+            response_format={"type": "json_object"},
+        )
+
+        content = response.choices[0].message.content or "{}"
+        payload = json.loads(content)
+
+        recommended_email = payload.get("recommendedEmail")
+        candidate_emails = {str(candidate.get("email") or "").lower() for candidate in candidates if candidate.get("email")}
+        if recommended_email and str(recommended_email).lower() not in candidate_emails:
+            result = _fallback_recommend_developer(title, description, candidates)
+            result["explanation"] = "Groq returned an unknown candidate. " + result["explanation"]
+            return JSONResponse(result, status_code=200)
+
+        return JSONResponse({
+            "recommendedEmail": recommended_email,
+            "recommendedName": payload.get("recommendedName"),
+            "matchedSkills": payload.get("matchedSkills") or [],
+            "confidence": payload.get("confidence") or 0.0,
+            "explanation": payload.get("explanation") or "Groq recommendation complete.",
+        }, status_code=200)
+    except Exception as exc:
+        result = _fallback_recommend_developer(title, description, candidates)
+        result["explanation"] = f"Groq recommendation failed; heuristic fallback: {exc}. " + result["explanation"]
+        return JSONResponse(result, status_code=200)
 
 
 # ----------------------------
