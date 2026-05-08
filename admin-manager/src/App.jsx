@@ -204,7 +204,7 @@ export default function App() {
         />
       </Route>
 
-       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="TICKETS" />}>
+       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
          <Route
          path="/manager/tickets"
          element={
