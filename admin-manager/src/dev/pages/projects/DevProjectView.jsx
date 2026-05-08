@@ -86,7 +86,7 @@ function buildProjects(tasks) {
 
 export default function DevProjectView() {
   const { id } = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, moduleAccess } = useAuth();
   const [tasks, setTasks] = useState(() => loadTasks());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -94,6 +94,7 @@ export default function DevProjectView() {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const currentUserId = String(user?.id || user?.email || "");
   const currentUserName = user?.name || user?.email || "Developer";
+  const canAccessChat = Boolean(moduleAccess?.CHAT);
 
   // Fetch chat sessions using React Query with 30s refetch interval
   // Load project tasks
@@ -334,7 +335,9 @@ export default function DevProjectView() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} lg={5}>
+        {
+         canAccessChat && (
+            <Grid item xs={12} lg={5}>
           <Card sx={{ p: 3, height: "100%" }}>
             <Stack spacing={2}>
               <Box>
@@ -500,6 +503,8 @@ export default function DevProjectView() {
             </Stack>
           </Card>
         </Grid>
+          )
+        }
       </Grid>
 
       {/* Centered Dialog-based Chat Modal */}

@@ -75,7 +75,7 @@ function buildSummaryPreview(session) {
 export default function ProjectDetailsPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, moduleAccess } = useAuth();
   const currentUserId = user?.id != null ? String(user.id) : "";
   const currentUserName = user?.name || user?.email || "Manager";
 
@@ -85,6 +85,7 @@ export default function ProjectDetailsPage() {
   const [chatListLoading, setChatListLoading] = useState(false);
   const [chatListError, setChatListError] = useState("");
   const [sessions, setSessions] = useState([]);
+  const canAccessChat = Boolean(moduleAccess?.CHAT);
 
   const taskSummary = useMemo(() => {
     if (!project?.tasks?.length) return { open: 0, inProgress: 0, done: 0 };
@@ -283,7 +284,8 @@ export default function ProjectDetailsPage() {
         </Grid>
       </Grid>
 
-      <Grid container spacing={2.5}>
+      {canAccessChat && (      
+        <Grid container spacing={2.5}>
         <Grid item xs={12}>
           <Paper sx={{ p: 2.25, borderRadius: 3, bgcolor: "#0b1628", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "none" }}>
             <Stack spacing={2}>
@@ -428,7 +430,8 @@ export default function ProjectDetailsPage() {
             </Stack>
           </Paper>
         </Grid>
-      </Grid>
+      </Grid>)}
+
 
       <Dialog
         open={chatDrawerOpen}

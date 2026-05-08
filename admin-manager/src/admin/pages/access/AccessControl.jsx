@@ -31,17 +31,6 @@ import {
  * - PUT /api/admin/access/role-matrix
  */
 
-const MODULES = [
-  { key: "DASHBOARD", label: "Dashboard", desc: "Basic overview access" },
-  { key: "TASKS", label: "Tasks", desc: "Task workflows and boards" },
-  { key: "CHAT", label: "Chat", desc: "Messaging and announcements" },
-  { key: "FILES", label: "Files", desc: "Uploads and downloads" },
-  { key: "REPORTS", label: "Reports", desc: "Exports and analytics" }
-];
-
-const ROLES = ["MANAGER", "DEVELOPER", "CLIENT"];
-
-
 export default function AccessControl() {
   const [modules, setModules] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -80,7 +69,7 @@ export default function AccessControl() {
   const toggleRole = (role, moduleKey) => {
     setRoleAccess((prev) => ({
       ...prev,
-      [role]: { ...prev[role], [moduleKey]: !prev[role][moduleKey] }
+      [role]: { ...(prev?.[role] ?? {}), [moduleKey]: !prev?.[role]?.[moduleKey] }
     }));
   };
 
@@ -182,7 +171,7 @@ function RoleMatrix({ modules, roles, roleAccess, onToggleRole }) {
                           onChange={() => onToggleRole(r, m.key)}
                         />
                       }
-                      label={`${r}: ${roleAccess[r][m.key] ? "On" : "Off"}`}
+                      label={`${r}: ${roleAccess?.[r]?.[m.key] ? "On" : "Off"}`}
                       sx={{ m: 0 }}
                     />
                   ))}

@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "../../../context/AuthContext.jsx";
+import { useAuth } from "../../../context/AuthContext";
 import { getManagerQueryScope, managerKeys } from "../../data/useManager";
 import { createProject, getErrorMessage, fetchManagerClients } from "../../../services/managerService";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
@@ -42,9 +42,8 @@ export default function AddProject() {
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState("");
   const queryClient = useQueryClient();
-  const { user } = useAuth() || {};
+  const { user, moduleAccess } = useAuth();
   const scope = getManagerQueryScope(user);
-
   const canCreate = useMemo(() => {
     if (!projectName.trim()) return false;
     if (!projectDescription.trim()) return false;
@@ -246,7 +245,8 @@ export default function AddProject() {
         </Paper>
 
         {/* TASKS SECTION */}
-        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
+        {Boolean(moduleAccess?.TASKS) && (
+          <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} sx={{ mb: 1.5 }}>
             <Box>
               <Typography sx={{ fontWeight: 900 }}>Tasks</Typography>
@@ -407,6 +407,8 @@ export default function AddProject() {
             ))}
           </Stack>
         </Paper>
+        )}
+        
 
         {/* ACTION BUTTONS */}
         <Stack direction="row" spacing={1}>
