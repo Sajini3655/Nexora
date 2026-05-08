@@ -63,7 +63,9 @@ def build_ai_summary(messages, create_tickets=None):
         f"Chat transcript:\n" + "\n".join(transcript_lines)
     )
 
-    if client is None:
+    groq_client = _get_groq_client()
+
+    if groq_client is None:
         blockers = extract_blockers(messages)
         summary_text = (
             "Project cannot proceed due to: " + ", ".join(blockers)
@@ -79,7 +81,7 @@ def build_ai_summary(messages, create_tickets=None):
         }
 
     try:
-        response = client.chat.completions.create(
+        response = groq_client.chat.completions.create(
             model=MODEL,
             messages=[
                 {
@@ -587,8 +589,10 @@ async def nlq_resolve(req: Request):
             "reason": "Role switch requested",
         }, status_code=200)
 
+    groq_client = _get_groq_client()
+
     # If no LLM is configured, fall back to a safe heuristic.
-    if client is None:
+    if groq_client is None:
         destination_id = _best_destination_id(query, allowed)
         entity = _detect_entity(current_role, query) or {}
         return JSONResponse({
@@ -621,7 +625,7 @@ async def nlq_resolve(req: Request):
     )
 
     try:
-        response = client.chat.completions.create(
+        response = groq_client.chat.completions.create(
             model=MODEL,
             messages=[
                 {"role": "system", "content": "You return strict JSON for navigation intent."},
@@ -700,8 +704,10 @@ async def skill_extract(req: Request):
         f"Task:\n{task_text}"
     )
     
+    groq_client = _get_groq_client()
+
     # If Groq is not available, return keyword-based extraction
-    if client is None:
+    if groq_client is None:
         keywords = {
             "React": ["react", "jsx", "component", "frontend", "ui"],
             "Node.js": ["node", "express", "api", "backend", "jwt", "auth"],
@@ -735,7 +741,7 @@ async def skill_extract(req: Request):
     
     # Use Groq AI
     try:
-        response = client.chat.completions.create(
+        response = groq_client.chat.completions.create(
             model=MODEL,
             messages=[
                 {
