@@ -106,6 +106,7 @@ export default function NLQNav() {
         <TextField
           size="small"
           value={value}
+          inputProps={{ "aria-label": "Natural language navigation", id: "nlq-search-input" }}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -115,7 +116,6 @@ export default function NLQNav() {
           }}
           placeholder="Go to…"
           disabled={busy}
-          inputProps={{ "aria-label": "Natural language navigation" }}
           sx={{
             width: { xs: 160, sm: 240, md: 340 },
             "& .MuiInputBase-root": {

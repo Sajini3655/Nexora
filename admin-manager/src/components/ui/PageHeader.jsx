@@ -31,18 +31,7 @@ export default function PageHeader({
             {title}
           </Typography>
 
-          {subtitle ? (
-            <Typography
-              variant="body2"
-              sx={{
-                mt: 0.55,
-                opacity: 0.72,
-                maxWidth: 860
-              }}
-            >
-              {subtitle}
-            </Typography>
-          ) : null}
+          {/* subtitle removed globally (avoid AI-generated subtitles) */}
         </Box>
 
         {right ? (

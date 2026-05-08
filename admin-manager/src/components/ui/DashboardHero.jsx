@@ -55,16 +55,7 @@ export default function DashboardHero({
             </Typography>
           </Stack>
 
-          <Typography
-            variant="body2"
-            sx={{
-              color: "#94a3b8",
-              fontSize: 14,
-              maxWidth: 720,
-            }}
-          >
-            {subtitle}
-          </Typography>
+          {/* subtitle removed globally (avoid AI-generated subtitles) */}
         </Box>
 
         {actionLabel ? (

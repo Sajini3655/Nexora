@@ -61,7 +61,7 @@ import { getActiveRole, getUserRoles, setActiveRole } from "./utils/roleRouting"
  */
 function UnifiedShell({ children, role }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const { openSidebar: adminOpenSidebar } = useLayout();
+  const { openSidebar: adminOpenSidebar, toggleSidebar: adminToggleSidebar } = useLayout();
   const { user } = useAuth();
 
   React.useEffect(() => {
@@ -91,7 +91,7 @@ function UnifiedShell({ children, role }) {
   };
 
   // Admin uses context for sidebar, others use state
-  const handleMenuClick = role?.toUpperCase() === "ADMIN" ? adminOpenSidebar : () => setSidebarOpen(true);
+  const handleMenuClick = role?.toUpperCase() === "ADMIN" ? adminToggleSidebar : () => setSidebarOpen((s) => !s);
 
   return (
     <div

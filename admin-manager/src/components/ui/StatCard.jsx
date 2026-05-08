@@ -13,9 +13,7 @@ export default function StatCard({ title, value, subtitle, icon, badge }) {
             <div className="text-[15px] font-semibold text-slate-200">
               {title}
             </div>
-            {subtitle ? (
-              <div className="mt-1 text-[13px] text-slate-400">{subtitle}</div>
-            ) : null}
+            {/* subtitle removed globally (avoid AI-generated subtitles) */}
           </div>
         </div>
 

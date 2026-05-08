@@ -99,6 +99,10 @@ export default function Topbar({ onMenuClick }) {
         </IconButton>
 
         <Box
+          onClick={() => {
+            const base = roleLabel === "DEVELOPER" ? "/dev" : roleLabel === "CLIENT" ? "/client" : roleLabel === "MANAGER" ? "/manager" : roleLabel === "ADMIN" ? "/admin" : "/";
+            navigate(base);
+          }}
           sx={{
             width: 34,
             height: 34,
@@ -107,10 +111,14 @@ export default function Topbar({ onMenuClick }) {
             boxShadow: "0 10px 24px rgba(91,108,255,0.16)",
             border: "1px solid rgba(255,255,255,0.10)",
             flexShrink: 0,
+            cursor: "pointer",
           }}
         />
 
-        <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ minWidth: 0, cursor: "pointer" }} onClick={() => {
+            const base = roleLabel === "DEVELOPER" ? "/dev" : roleLabel === "CLIENT" ? "/client" : roleLabel === "MANAGER" ? "/manager" : roleLabel === "ADMIN" ? "/admin" : "/";
+            navigate(base);
+        }}>
           <Typography
             sx={{
               fontWeight: 900,
@@ -186,7 +194,7 @@ export default function Topbar({ onMenuClick }) {
             </IconButton>
 
             <IconButton
-              onClick={(event) => setAnchorEl(event.currentTarget)}
+              onClick={(event) => setAnchorEl((prev) => (prev ? null : event.currentTarget))}
               sx={{
                 p: 0.55,
                 borderRadius: "50%",
@@ -213,8 +221,8 @@ export default function Topbar({ onMenuClick }) {
               anchorEl={anchorEl}
               open={open}
               onClose={() => setAnchorEl(null)}
-              disableAutoFocusItem
               MenuListProps={{ autoFocusItem: false }}
+              ModalProps={{ disableAutoFocus: true, disableEnforceFocus: true }}
               PaperProps={{
                 sx: {
                   mt: 1.2,
@@ -227,10 +235,6 @@ export default function Topbar({ onMenuClick }) {
                   backdropFilter: "blur(18px)",
                 },
               }}
-              disableEnforceFocus
-              disableAutoFocus
-              disableRestoreFocus
-              hideBackdrop
             >
               <Box sx={{ px: 2, py: 1.5 }}>
                 <Typography sx={{ fontWeight: 950 }}>
@@ -283,3 +287,5 @@ export default function Topbar({ onMenuClick }) {
     </AppBar>
   );
 }
+
+// end Topbar

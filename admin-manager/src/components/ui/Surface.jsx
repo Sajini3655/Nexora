@@ -5,21 +5,12 @@ export default function Surface({ title, subtitle, children, className = "" }) {
     >
       <div className="pointer-events-none absolute inset-0 rounded-[40px] border border-white/5" />
 
-      {(title || subtitle) && (
+      {title ? (
         <div className="relative mb-6 border-b border-white/10 pb-5">
-          {title ? (
-            <h2 className="text-[28px] font-extrabold tracking-tight text-white md:text-[34px]">
-              {title}
-            </h2>
-          ) : null}
-
-          {subtitle ? (
-            <p className="mt-2 text-base text-slate-300 md:text-lg">
-              {subtitle}
-            </p>
-          ) : null}
+          <h2 className="text-[28px] font-extrabold tracking-tight text-white md:text-[34px]">{title}</h2>
+          {/* subtitle removed globally (avoid AI-generated subtitles) */}
         </div>
-      )}
+      ) : null}
 
       <div className="relative">{children}</div>
     </section>

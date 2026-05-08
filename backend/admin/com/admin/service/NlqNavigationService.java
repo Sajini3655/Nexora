@@ -333,6 +333,12 @@ public class NlqNavigationService {
                 .build();
             }
 
+            // Check for direct command matches before calling AI
+            NlqResolveResponse directMatch = resolveDirectCommand(query, activeRole, moduleAccess, authentication, email);
+            if (directMatch != null) {
+            return directMatch;
+            }
+
             AiNlqResolveResponse ai = callAiResolve(query, activeRole, allowed);
 
             if (ai != null && "SWITCH_ROLE".equalsIgnoreCase(safe(ai.getAction()))) {
@@ -399,6 +405,56 @@ public class NlqNavigationService {
                 .message("Navigation failed. Please try again.")
                 .build();
         }
+    }
+
+    /**
+     * Resolve direct command patterns before consulting AI.
+     * Handles edge cases where plural or slight variations don't match expected keywords.
+     */
+    private NlqResolveResponse resolveDirectCommand(
+            String query,
+            Role activeRole,
+            Map<String, Boolean> moduleAccess,
+            Authentication authentication,
+            String email
+    ) {
+        String normalized = normalize(query).toLowerCase(Locale.ROOT);
+
+        // Manager: "add projects" or "add project" -> add project page
+        if (activeRole == Role.MANAGER && (normalized.equals("add projects") || normalized.equals("add project"))) {
+            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+                return null;
+            }
+            return NlqResolveResponse.builder()
+                    .action("NAVIGATE")
+                    .path("/manager/add-project")
+                    .build();
+        }
+
+        // Manager: "add task" or "add tasks" -> ai assignment page
+        if (activeRole == Role.MANAGER && (normalized.equals("add task") || normalized.equals("add tasks"))) {
+            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.TASKS.name()))) {
+                return null;
+            }
+            return NlqResolveResponse.builder()
+                    .action("NAVIGATE")
+                    .path("/manager/ai-assignment")
+                    .build();
+        }
+
+        // Manager: "projects list" or "all projects" -> projects management
+        if (activeRole == Role.MANAGER && (normalized.contains("projects list") || normalized.equals("all projects"))) {
+            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+                return null;
+            }
+            return NlqResolveResponse.builder()
+                    .action("NAVIGATE")
+                    .path("/manager/project-management")
+                    .build();
+        }
+
+        // No direct match
+        return null;
     }
 
     private String resolveEntityOrPath(

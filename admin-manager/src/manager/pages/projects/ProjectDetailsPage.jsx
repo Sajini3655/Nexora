@@ -217,7 +217,7 @@ export default function ProjectDetailsPage() {
             {project.name || project.projectName || `Project ${projectId}`}
           </Typography>
           <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1, maxWidth: 720 }}>
-            A concise manager view of this project’s status, task summary, and progress.
+            {project?.description || project?.projectDescription || "A concise manager view of this project’s status, task summary, and progress."}
           </Typography>
         </Box>
 
@@ -240,7 +240,7 @@ export default function ProjectDetailsPage() {
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>
               Overview
             </Typography>
-            <DetailRow label="Project ID" value={projectId} />
+            <DetailRow label="Project ID" value={project?.id ?? projectId} />
             <DetailRow label="Manager" value={project.manager || "Unassigned"} />
             <DetailRow label="Requests" value={`${project.tasks?.length ?? 0}`} />
             <DetailRow label="Last updated" value={updatedAt} />
