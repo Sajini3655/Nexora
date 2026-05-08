@@ -3,6 +3,9 @@ load_dotenv()
 
 import os
 import json
+import re
+from difflib import SequenceMatcher
+from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -198,3 +201,225 @@ async def chat_end(req: Request):
         "ticket_message": ai_result["ticket_message"],
         "ticket_prompt_needed": ai_result["ticket_prompt_needed"]
     })
+
+
+# ----------------------------
+# NLQ navigation resolve
+# ----------------------------
+def _normalize(text: str) -> str:
+    text = (text or "").strip().lower()
+    text = re.sub(r"[^a-z0-9\s]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _best_destination_id(query: str, allowed_destinations: List[Dict[str, Any]]) -> Optional[str]:
+    q = _normalize(query)
+    if not q:
+        return None
+
+    best_id = None
+    best_score = 0.0
+
+    for d in allowed_destinations or []:
+        dest_id = (d.get("id") or "").strip()
+        label = _normalize(d.get("label") or "")
+        keywords = d.get("keywords") or []
+        haystacks = [label] + [_normalize(k) for k in keywords if k]
+
+        score = 0.0
+        for h in haystacks:
+            if not h:
+                continue
+            if h == q:
+                score = max(score, 1.0)
+                continue
+            if h in q or q in h:
+                score = max(score, 0.92)
+                continue
+            score = max(score, SequenceMatcher(None, q, h).ratio())
+
+        if score > best_score:
+            best_score = score
+            best_id = dest_id
+
+    # Small threshold to avoid nonsense picks
+    return best_id if best_score >= 0.55 else None
+
+
+def _detect_switch_role(query: str) -> Optional[str]:
+    q = _normalize(query)
+    if not q:
+        return None
+
+    if "switch" in q or "change role" in q or "go to" in q or q.startswith("as "):
+        for role in ["admin", "manager", "developer", "client"]:
+            if role in q:
+                return role.upper()
+    return None
+
+
+def _detect_entity(current_role: str, query: str) -> Optional[Dict[str, str]]:
+    q = _normalize(query)
+    role = (current_role or "").strip().upper()
+
+    # Strip common navigation verbs.
+    stripped = re.sub(r"^(go to|goto|open|show|take me to|navigate|navigate to)\s+", "", q).strip()
+
+    if role == "MANAGER":
+        if "ticket" in stripped or "tickets" in stripped:
+            name = stripped.replace("tickets", "").replace("ticket", "").strip()
+            return {"entityType": "MANAGER_TICKET", "entityName": name}
+        if "task" in stripped or "tasks" in stripped:
+            name = stripped.replace("tasks", "").replace("task", "").strip()
+            return {"entityType": "MANAGER_TASK", "entityName": name}
+        if "project" in stripped or "projects" in stripped or "workstream" in stripped or "workstreams" in stripped:
+            name = stripped
+            for w in ["projects", "project", "workstreams", "workstream"]:
+                name = name.replace(w, "")
+            name = name.strip()
+            return {"entityType": "MANAGER_PROJECT", "entityName": name}
+
+    if role == "CLIENT":
+        if "ticket" in stripped or "tickets" in stripped:
+            name = stripped.replace("tickets", "").replace("ticket", "").strip()
+            return {"entityType": "CLIENT_TICKET", "entityName": name}
+        if "project" in stripped or "projects" in stripped or "workstream" in stripped or "workstreams" in stripped:
+            name = stripped
+            for w in ["projects", "project", "workstreams", "workstream"]:
+                name = name.replace(w, "")
+            name = name.strip()
+            return {"entityType": "CLIENT_PROJECT", "entityName": name}
+
+    if role == "DEVELOPER":
+        if "task" in stripped or "tasks" in stripped:
+            name = stripped.replace("tasks", "").replace("task", "").strip()
+            return {"entityType": "DEVELOPER_TASK", "entityName": name}
+        if "ticket" in stripped or "tickets" in stripped:
+            name = stripped.replace("tickets", "").replace("ticket", "").strip()
+            return {"entityType": "TICKET", "entityName": name}
+
+    return None
+
+
+@app.post("/nlq/resolve")
+async def nlq_resolve(req: Request):
+    """Resolve an NLQ navigation query to a constrained JSON response.
+
+    Input shape (from backend):
+      {"query": str, "currentRole": str, "allowedDestinations": [{id,label,path,keywords}]}
+
+    Output shape:
+      {"action": "NAVIGATE"|"SWITCH_ROLE"|"UNKNOWN", "destinationId": str|null,
+       "targetRole": str|null, "entityType": str|null, "entityName": str|null,
+       "searchQuery": str|null, "confidence": float|null, "reason": str}
+    """
+    body = await req.json()
+    query = (body.get("query") or "").strip()
+    current_role = (body.get("currentRole") or "").strip().upper()
+    allowed = body.get("allowedDestinations") or []
+
+    if not query:
+        return JSONResponse({
+            "action": "UNKNOWN",
+            "destinationId": None,
+            "targetRole": None,
+            "entityType": None,
+            "entityName": None,
+            "searchQuery": None,
+            "confidence": 0.0,
+            "reason": "Empty query",
+        }, status_code=200)
+
+    # Switch role intent is handled explicitly.
+    target_role = _detect_switch_role(query)
+    if target_role:
+        return JSONResponse({
+            "action": "SWITCH_ROLE",
+            "destinationId": None,
+            "targetRole": target_role,
+            "entityType": None,
+            "entityName": None,
+            "searchQuery": None,
+            "confidence": 0.9,
+            "reason": "Role switch requested",
+        }, status_code=200)
+
+    # If no LLM is configured, fall back to a safe heuristic.
+    if client is None:
+        destination_id = _best_destination_id(query, allowed)
+        entity = _detect_entity(current_role, query) or {}
+        return JSONResponse({
+            "action": "NAVIGATE" if destination_id else "UNKNOWN",
+            "destinationId": destination_id,
+            "targetRole": None,
+            "entityType": entity.get("entityType"),
+            "entityName": entity.get("entityName"),
+            "searchQuery": None,
+            "confidence": 0.6 if destination_id else 0.0,
+            "reason": "Heuristic resolver (no GROQ_API_KEY)",
+        }, status_code=200)
+
+    allowed_ids = [d.get("id") for d in allowed if d.get("id")]
+    prompt = (
+        "You are a navigation intent classifier for a web app. "
+        "Pick EXACTLY ONE destinationId from allowedDestinations, or respond UNKNOWN. "
+        "Handle spelling mistakes and variants (e.g., 'goto dashbord' -> dashboard). "
+        "If the query mentions an entity by name (project or ticket), extract the entity name into entityName and set entityType. "
+        "Rules:\n"
+        "- action must be one of: NAVIGATE, SWITCH_ROLE, UNKNOWN\n"
+        "- destinationId must be one of the allowedDestinations IDs when action=NAVIGATE\n"
+        "- targetRole must be one of: ADMIN, MANAGER, DEVELOPER, CLIENT when action=SWITCH_ROLE\n"
+        "- entityType must be one of: MANAGER_PROJECT, CLIENT_PROJECT, CLIENT_TICKET, TICKET, or null\n"
+        "- Return ONLY valid JSON with keys: action,destinationId,targetRole,entityType,entityName,searchQuery,confidence,reason\n\n"
+        f"currentRole: {current_role}\n"
+        f"allowedDestinations (ids only): {allowed_ids}\n"
+        f"allowedDestinations detail: {json.dumps(allowed)}\n\n"
+        f"User query: {query}"
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": "You return strict JSON for navigation intent."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.0,
+            response_format={"type": "json_object"},
+        )
+
+        content = response.choices[0].message.content or "{}"
+        payload = json.loads(content)
+
+        action = str(payload.get("action") or "UNKNOWN").upper()
+        destination_id = payload.get("destinationId")
+
+        if action == "NAVIGATE" and destination_id not in allowed_ids:
+            # Guardrail: never emit a destination outside allowed list.
+            action = "UNKNOWN"
+            destination_id = None
+
+        return JSONResponse({
+            "action": action,
+            "destinationId": destination_id,
+            "targetRole": payload.get("targetRole"),
+            "entityType": payload.get("entityType"),
+            "entityName": payload.get("entityName"),
+            "searchQuery": payload.get("searchQuery"),
+            "confidence": payload.get("confidence"),
+            "reason": payload.get("reason") or "LLM resolved",
+        }, status_code=200)
+    except Exception as e:
+        destination_id = _best_destination_id(query, allowed)
+        entity = _detect_entity(current_role, query) or {}
+        return JSONResponse({
+            "action": "NAVIGATE" if destination_id else "UNKNOWN",
+            "destinationId": destination_id,
+            "targetRole": None,
+            "entityType": entity.get("entityType"),
+            "entityName": entity.get("entityName"),
+            "searchQuery": None,
+            "confidence": 0.55 if destination_id else 0.0,
+            "reason": f"LLM failed; heuristic fallback: {str(e)}",
+        }, status_code=200)

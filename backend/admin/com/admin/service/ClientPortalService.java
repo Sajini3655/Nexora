@@ -165,6 +165,7 @@ public class ClientPortalService {
                 .title(task.getTitle())
                 .priority(task.getPriority())
                 .status(task.getStatus())
+                .estimatedPoints(task.getEstimatedPoints())
                 .build())
             .toList();
 

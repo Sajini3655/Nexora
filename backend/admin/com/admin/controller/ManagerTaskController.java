@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/manager")
@@ -55,5 +56,23 @@ public class ManagerTaskController {
             @Valid @RequestBody UpdateTaskRequest request
     ) {
         return ResponseEntity.ok(taskAssignmentService.updateTaskDetails(authentication.getName(), taskId, request));
+    }
+
+    @PatchMapping("/tasks/{taskId}/estimate")
+    public ResponseEntity<TaskDto> updateTaskEstimate(
+            Authentication authentication,
+            @PathVariable Long taskId,
+            @RequestBody Map<String, Object> payload
+    ) {
+        Object rawValue = payload == null ? null : payload.get("estimatedPoints");
+        Integer estimatedPoints = 0;
+
+        if (rawValue instanceof Number number) {
+            estimatedPoints = number.intValue();
+        } else if (rawValue != null) {
+            estimatedPoints = Integer.parseInt(String.valueOf(rawValue));
+        }
+
+        return ResponseEntity.ok(taskAssignmentService.updateTaskEstimate(authentication.getName(), taskId, estimatedPoints));
     }
 }

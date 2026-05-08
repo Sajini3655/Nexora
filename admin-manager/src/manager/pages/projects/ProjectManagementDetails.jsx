@@ -55,6 +55,7 @@ const emptyTaskForm = {
   priority: "MEDIUM",
   dueDate: "",
   assignedToId: "",
+  estimatedPoints: 0,
 };
 
 const emptyStoryPointForm = {
@@ -93,7 +94,7 @@ function getTaskAssignee(task) {
 }
 
 function getTaskPointTotals(task) {
-  const totalPointValue = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+  const totalPointValue = Number(task?.totalPointValue ?? 0);
   const completedPointValue = Number(task?.completedPointValue ?? 0);
   const totalStoryPoints = Number(task?.totalStoryPoints ?? 0);
   const completedStoryPoints = Number(task?.completedStoryPoints ?? 0);
@@ -111,6 +112,22 @@ function getTaskPointTotals(task) {
   };
 }
 
+function getTaskEstimatePoints(task) {
+  const rawValue = Number(
+    task?.estimatedPoints ??
+    task?.estimatePoints ??
+    task?.storyPointEstimate ??
+    task?.storyPointsEstimate ??
+    0
+  );
+
+  if (!Number.isFinite(rawValue)) {
+    return 0;
+  }
+
+  return Math.max(0, rawValue);
+}
+
 function getProjectName(project) {
   return project?.name || project?.projectName || "Untitled Project";
 }
@@ -120,7 +137,7 @@ function getProjectDescription(project) {
 }
 
 function getStoryPointLabel(storyPoint) {
-  return `${storyPoint?.title || "Untitled"} - ${Number(storyPoint?.pointValue || 0)} pt`;
+  return `${Number(storyPoint?.pointValue || 0)} pt`;
 }
 
 function formatChatTime(value) {
@@ -434,9 +451,7 @@ export default function ProjectManagementDetails() {
   const canAddTask = Boolean(newTask.title.trim() && newTask.priority);
 
   const canSaveStoryPoint = Boolean(
-    selectedTask?.id &&
-      storyPointForm.title.trim() &&
-      Number(storyPointForm.pointValue) > 0
+    selectedTask?.id && Number(storyPointForm.pointValue) > 0
   );
 
   const openTaskModal = async (task) => {
@@ -448,6 +463,7 @@ export default function ProjectManagementDetails() {
       priority: getTaskPriority(task),
       dueDate: task?.dueDate || "",
       status: getTaskStatus(task),
+      estimatedPoints: getTaskEstimatePoints(task),
     };
     setTaskDraft(newTaskDraft);
     setOriginalTaskDraft(JSON.parse(JSON.stringify(newTaskDraft)));
@@ -485,7 +501,8 @@ export default function ProjectManagementDetails() {
       taskDraft?.description !== originalTaskDraft.description ||
       taskDraft?.priority !== originalTaskDraft.priority ||
       taskDraft?.dueDate !== originalTaskDraft.dueDate ||
-      taskDraft?.status !== originalTaskDraft.status;
+      taskDraft?.status !== originalTaskDraft.status ||
+      Number(taskDraft?.estimatedPoints || 0) !== Number(originalTaskDraft.estimatedPoints || 0);
     
     const developerChanged = selectedDeveloperId !== originalDeveloperId;
     
@@ -508,18 +525,26 @@ export default function ProjectManagementDetails() {
         taskDraft?.description !== originalTaskDraft?.description ||
         taskDraft?.priority !== originalTaskDraft?.priority ||
         taskDraft?.dueDate !== originalTaskDraft?.dueDate ||
-        taskDraft?.status !== originalTaskDraft?.status;
+        taskDraft?.status !== originalTaskDraft?.status ||
+        Number(taskDraft?.estimatedPoints || 0) !== Number(originalTaskDraft?.estimatedPoints || 0);
 
+      let taskUpdatePromise = null;
       if (taskDetailsChanged) {
-        savePromises.push(
-          updateManagerTask(Number(selectedTask.id), {
+        const estimateValue = Math.max(0, Number(taskDraft?.estimatedPoints || 0));
+        taskUpdatePromise = (async () => {
+          const updatedTask = await updateManagerTask(Number(selectedTask.id), {
             title: (taskDraft?.title || "").trim(),
             description: taskDraft?.description || "",
             priority: (taskDraft?.priority || "MEDIUM").toUpperCase(),
             dueDate: taskDraft?.dueDate || null,
             status: (taskDraft?.status || "TODO").toUpperCase(),
-          })
-        );
+            estimatedPoints: estimateValue,
+          });
+
+          const updatedEstimateTask = await updateManagerTaskEstimate(Number(selectedTask.id), estimateValue);
+          return { ...updatedTask, ...updatedEstimateTask, estimatedPoints: estimateValue };
+        })();
+        savePromises.push(taskUpdatePromise);
       }
 
       // Save developer assignment if changed
@@ -535,13 +560,48 @@ export default function ProjectManagementDetails() {
         await Promise.all(savePromises);
       }
 
+      if (taskUpdatePromise) {
+        const updatedTask = await taskUpdatePromise;
+        if (updatedTask) {
+          const refreshedTaskDraft = {
+            ...taskDraft,
+            title: updatedTask.title ?? taskDraft?.title,
+            description: updatedTask.description ?? taskDraft?.description,
+            priority: updatedTask.priority ?? taskDraft?.priority,
+            dueDate: updatedTask.dueDate ?? taskDraft?.dueDate,
+            status: updatedTask.status ?? taskDraft?.status,
+            estimatedPoints: Number(updatedTask.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0),
+          };
+          setTaskDraft(refreshedTaskDraft);
+          setSelectedTask((prev) => (prev ? { ...prev, ...updatedTask } : updatedTask));
+          setOriginalTaskDraft(JSON.parse(JSON.stringify(refreshedTaskDraft)));
+        }
+      }
+
       setSuccess("All changes saved successfully.");
-      setOriginalTaskDraft(JSON.parse(JSON.stringify(taskDraft)));
       setOriginalDeveloperId(selectedDeveloperId);
       
       // Single reload after all saves are done
-      projectDetailsQuery.refetch();
-      developersQuery.refetch();
+      await projectDetailsQuery.refetch();
+      await developersQuery.refetch();
+
+      const refreshedTask = (Array.isArray(project?.tasks) ? project.tasks : []).find((task) => String(task.id) === String(selectedTask.id));
+      const savedTask = refreshedTask || (taskUpdatePromise ? await taskUpdatePromise : selectedTask);
+      if (savedTask) {
+        const refreshedTaskDraft = {
+          ...taskDraft,
+          title: savedTask.title ?? taskDraft?.title,
+          description: savedTask.description ?? taskDraft?.description,
+          priority: savedTask.priority ?? taskDraft?.priority,
+          dueDate: savedTask.dueDate ?? taskDraft?.dueDate,
+          status: savedTask.status ?? taskDraft?.status,
+          estimatedPoints: Number(savedTask.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0),
+        };
+        setSelectedTask(savedTask);
+        setTaskDraft(refreshedTaskDraft);
+        setOriginalTaskDraft(JSON.parse(JSON.stringify(refreshedTaskDraft)));
+      }
+      await loadStoryPoints(savedTask?.id);
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to save changes."));
     } finally {
@@ -612,6 +672,7 @@ export default function ProjectManagementDetails() {
         dueDate: newTask.dueDate || null,
         assignedToId: newTask.assignedToId ? Number(newTask.assignedToId) : null,
         status: "TODO",
+        estimatedPoints: Number(newTask.estimatedPoints || 0),
       });
 
       setNewTask(emptyTaskForm);
@@ -731,6 +792,7 @@ export default function ProjectManagementDetails() {
       if (refreshedTask) {
         setSelectedTask(refreshedTask);
       }
+      await loadStoryPoints(selectedTask.id);
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to save assignment."));
     } finally {
@@ -751,6 +813,7 @@ export default function ProjectManagementDetails() {
       const taskPriority = (taskDraft?.priority || getTaskPriority(selectedTask) || "MEDIUM").toUpperCase();
       const taskDueDate = taskDraft?.dueDate || selectedTask?.dueDate || null;
       const taskStatus = (taskDraft?.status || getTaskStatus(selectedTask) || "TODO").toUpperCase();
+      const estimateValue = Math.max(0, Number(taskDraft?.estimatedPoints || 0));
 
       const updated = await updateManagerTask(Number(selectedTask.id), {
         title: taskTitle,
@@ -758,11 +821,32 @@ export default function ProjectManagementDetails() {
         priority: taskPriority,
         dueDate: taskDueDate,
         status: taskStatus,
+        estimatedPoints: estimateValue,
       });
 
-      setTaskDraft({});
+      const updatedEstimateTask = await updateManagerTaskEstimate(Number(selectedTask.id), estimateValue);
+      const mergedUpdated = { ...updated, ...updatedEstimateTask, estimatedPoints: estimateValue };
+
+      const savedEstimate = Number(mergedUpdated?.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0);
+      const savedTask = selectedTask
+        ? { ...selectedTask, ...mergedUpdated, estimatedPoints: savedEstimate }
+        : { ...mergedUpdated, estimatedPoints: savedEstimate };
+      const updatedTaskDraft = {
+        ...taskDraft,
+        title: savedTask.title ?? taskTitle,
+        description: savedTask.description ?? taskDescription,
+        priority: savedTask.priority ?? taskPriority,
+        dueDate: savedTask.dueDate ?? taskDueDate,
+        status: savedTask.status ?? taskStatus,
+        estimatedPoints: Number(savedTask.estimatedPoints ?? taskDraft?.estimatedPoints ?? 0),
+      };
+      setTaskDraft(updatedTaskDraft);
+      setSelectedTask(savedTask);
+      setOriginalTaskDraft(JSON.parse(JSON.stringify(updatedTaskDraft)));
       setSuccess("Task details updated successfully.");
-      projectDetailsQuery.refetch();
+
+      await projectDetailsQuery.refetch();
+      await loadStoryPoints(savedTask.id);
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to save task details."));
     } finally {
@@ -778,11 +862,18 @@ export default function ProjectManagementDetails() {
     setSuccess("");
 
     try {
-      await api.post(`/tasks/${selectedTask.id}/story-points`, {
-        title: storyPointForm.title.trim(),
-        description: storyPointForm.description.trim() || null,
-        pointValue: Number(storyPointForm.pointValue),
-      });
+      const pv = Number(storyPointForm.pointValue);
+      if (!pv || pv < 1) {
+        setActionError("Point value must be at least 1.");
+        return;
+      }
+
+      const payload = {
+        title: storyPointForm.title ? storyPointForm.title.trim() : null,
+        description: storyPointForm.description ? storyPointForm.description.trim() : null,
+        pointValue: pv,
+      };
+      await api.post(`/tasks/${selectedTask.id}/story-points`, payload);
 
       setStoryPointForm(emptyStoryPointForm);
       setSuccess("Story point added.");
@@ -812,11 +903,18 @@ export default function ProjectManagementDetails() {
     setSuccess("");
 
     try {
-      await api.put(`/story-points/${editingStoryPointId}`, {
-        title: storyPointForm.title.trim(),
-        description: storyPointForm.description.trim() || null,
-        pointValue: Number(storyPointForm.pointValue),
-      });
+      const pv = Number(storyPointForm.pointValue);
+      if (!pv || pv < 1) {
+        setActionError("Point value must be at least 1.");
+        return;
+      }
+
+      const payload = {
+        title: storyPointForm.title ? storyPointForm.title.trim() : null,
+        description: storyPointForm.description ? storyPointForm.description.trim() : null,
+        pointValue: pv,
+      };
+      await api.put(`/story-points/${editingStoryPointId}`, payload);
 
       setEditingStoryPointId(null);
       setStoryPointForm(emptyStoryPointForm);
@@ -922,7 +1020,7 @@ export default function ProjectManagementDetails() {
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Add New Task</Typography>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr 0.7fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
             <TextField size="small" label="Task title" value={newTask.title} onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))} />
             <TextField size="small" label="Task description" value={newTask.description} onChange={(e) => setNewTask((prev) => ({ ...prev, description: e.target.value }))} />
             <TextField select size="small" label="Priority" value={newTask.priority} onChange={(e) => setNewTask((prev) => ({ ...prev, priority: e.target.value }))}>
@@ -939,7 +1037,17 @@ export default function ProjectManagementDetails() {
               InputLabelProps={{ shrink: true }}
             />
 
-            <Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
+            
+
+            <TextField
+              size="small"
+              label="Story points estimate"
+              type="number"
+              inputProps={{ min: 0 }}
+              value={newTask.estimatedPoints}
+              onChange={(e) => setNewTask((prev) => ({ ...prev, estimatedPoints: Math.max(0, Number(e.target.value) || 0) }))}
+            />
+<Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
               {addingTask ? "Adding..." : "Add Task"}
             </Button>
           </Box>
@@ -1260,7 +1368,7 @@ export default function ProjectManagementDetails() {
             <Box sx={{ overflowX: "auto" }}>
               <Box sx={{ minWidth: 960 }}>
                 <Box sx={{ display: "grid", gridTemplateColumns: "1.2fr 1.15fr 0.55fr 0.55fr 0.85fr 0.7fr 0.85fr 0.65fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)" }}>
-                  {["Task", "Description", "Priority", "Status", "Assigned", "Story Points", "Weighted", "Progress", "Action"].map((header) => (
+                  {["Task", "Description", "Priority", "Status", "Assigned", "Estimate", "Weighted", "Progress", "Action"].map((header) => (
                     <Typography key={header} variant="caption" sx={{ color: "#64748b", textTransform: "uppercase", fontWeight: 800 }}>
                       {header}
                     </Typography>
@@ -1276,7 +1384,7 @@ export default function ProjectManagementDetails() {
                       <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskPriority(task)}</Typography>
                       <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskStatus(task)}</Typography>
                       <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskAssignee(task) || "Unassigned"}</Typography>
-                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{totals.completedStoryPoints}/{totals.totalStoryPoints}</Typography>
+                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskEstimatePoints(task)} pts</Typography>
                       <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{totals.completedPointValue}/{totals.totalPointValue}</Typography>
                       <Box>
                         <Typography variant="caption" sx={{ color: "#cbd5e1" }}>{totals.progressPercentage}%</Typography>
@@ -1306,6 +1414,7 @@ export default function ProjectManagementDetails() {
         onClose={() => setChatDrawerOpen(false)}
         maxWidth="sm"
         fullWidth
+        container={() => document.body}
         PaperProps={{
           sx: {
             width: { xs: "94vw", sm: "94vw", md: "760px", lg: "820px" },
@@ -1361,7 +1470,7 @@ export default function ProjectManagementDetails() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={taskModalOpen} onClose={closeTaskModal} fullWidth maxWidth="lg">
+      <Dialog open={taskModalOpen} onClose={closeTaskModal} fullWidth maxWidth="lg" container={() => document.body}>
         <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box>
             <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
@@ -1393,7 +1502,16 @@ export default function ProjectManagementDetails() {
                   <MenuItem value="IN_PROGRESS">IN_PROGRESS</MenuItem>
                   <MenuItem value="COMPLETED">COMPLETED</MenuItem>
                 </TextField>
-                <TextField size="small" label="Description" value={taskDraft?.description || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: "1", md: "1 / -1" } }} />
+                
+                <TextField
+                  size="small"
+                  label="Story points estimate"
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  value={taskDraft?.estimatedPoints || 0}
+                  onChange={(e) => setTaskDraft((prev) => ({ ...prev, estimatedPoints: Math.max(0, Number(e.target.value) || 0) }))}
+                />
+<TextField size="small" label="Description" value={taskDraft?.description || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: "1", md: "1 / -1" } }} />
               </Box>
 
               <Box sx={{ mt: 1, display: "flex", justifyContent: "flex-end" }}>
@@ -1438,60 +1556,13 @@ export default function ProjectManagementDetails() {
               ) : null}
             </Paper>
 
-            <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
+                        <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
               <Typography sx={{ fontWeight: 900, mb: 1 }}>Story Points</Typography>
 
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1.2fr 0.4fr auto" }, gap: 1, alignItems: "center", mb: 1 }}>
-                <TextField size="small" label="Title" value={storyPointForm.title} onChange={(e) => setStoryPointForm((prev) => ({ ...prev, title: e.target.value }))} />
-                <TextField size="small" label="Description" value={storyPointForm.description} onChange={(e) => setStoryPointForm((prev) => ({ ...prev, description: e.target.value }))} />
-                <TextField
-                  size="small"
-                  type="number"
-                  inputProps={{ min: 1 }}
-                  label="Point"
-                  value={storyPointForm.pointValue}
-                  onChange={(e) => setStoryPointForm((prev) => ({ ...prev, pointValue: Math.max(1, Number(e.target.value) || 1) }))}
-                />
-
-                {editingStoryPointId ? (
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="contained" onClick={handleSaveEditedStoryPoint} disabled={!canSaveStoryPoint || savingStoryPoint}>Save</Button>
-                    <Button variant="outlined" onClick={handleCancelStoryPointEdit}>Cancel</Button>
-                  </Stack>
-                ) : (
-                  <Button variant="contained" onClick={handleCreateStoryPoint} disabled={!canSaveStoryPoint || savingStoryPoint}>Add Story Point</Button>
-                )}
-              </Box>
-
-              <Divider sx={{ my: 1 }} />
-
-              {loadingStoryPoints ? (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>Loading story points...</Typography>
-              ) : storyPoints.length === 0 ? (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>No story points yet.</Typography>
-              ) : (
-                <Stack spacing={0.8}>
-                  {storyPoints.map((row) => (
-                    <Box key={row.id} sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-                      <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{getStoryPointLabel(row)}</Typography>
-                        <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                          {row.description || "No description"} - {String(row.status || "TODO").toUpperCase()}
-                        </Typography>
-                      </Box>
-
-                      <Stack direction="row" spacing={0.5}>
-                        <IconButton size="small" onClick={() => handleStartEditStoryPoint(row)}>
-                          <EditOutlinedIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => handleDeleteStoryPoint(row.id)}>
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
+              <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                Manager should only set the task story point estimate in Task Details above.
+                The assigned developer will split that estimate into subtasks from the developer dashboard.
+              </Typography>
             </Paper>
           </Stack>
         </DialogContent>
@@ -1655,3 +1726,4 @@ function ManagerChatRow({ label, value }) {
     </Stack>
   );
 }
+

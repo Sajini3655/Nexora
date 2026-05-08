@@ -319,9 +319,6 @@ export default function ManagerTickets() {
           <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5 }}>
             Manager Tickets
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-            View email, chatbox, and client complaint tickets before converting them into tasks.
-          </Typography>
         </Box>
 
         <Chip

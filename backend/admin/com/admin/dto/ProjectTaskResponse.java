@@ -15,4 +15,5 @@ public class ProjectTaskResponse {
     private String title;
     private TaskPriority priority;
     private TaskStatus status;
+    private Integer estimatedPoints;
 }

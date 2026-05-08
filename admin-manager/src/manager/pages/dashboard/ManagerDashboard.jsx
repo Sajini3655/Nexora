@@ -368,7 +368,10 @@ export default function ManagerDashboard() {
   const projectsQuery = useManagerProjects(!authLoading);
   const tasksQuery = useManagerTasks(!authLoading);
   const developersQuery = useManagerDevelopers(!authLoading);
-  const emailTicketsQuery = useRecentEmailTickets(!authLoading);
+  const shouldLoadTickets =
+    !authLoading &&
+    (projectsQuery.isSuccess || tasksQuery.isSuccess);
+  const emailTicketsQuery = useRecentEmailTickets(shouldLoadTickets);
   const { refetch: refetchProjects } = projectsQuery;
   const { refetch: refetchTasks } = tasksQuery;
   const { refetch: refetchDevelopers } = developersQuery;
@@ -461,7 +464,7 @@ export default function ManagerDashboard() {
 
     if (completedByStatus) return true;
 
-    const totalPointValue = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+    const totalPointValue = Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0);
     const completedPointValue = Number(task?.completedPointValue ?? task?.completedStoryPoints ?? 0);
     return totalPointValue > 0 && completedPointValue >= totalPointValue;
   };
@@ -748,12 +751,12 @@ export default function ManagerDashboard() {
       const totalTasks = projectTaskList.length;
       const doneTasks = projectTaskList.filter((task) => isCompletedTask(task)).length;
       const totalPointValue = projectTaskList.reduce(
-        (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0),
+        (sum, task) => sum + Number(task?.totalPointValue ?? 0),
         0
       );
       const completedPointValue = projectTaskList.reduce(
         (sum, task) => {
-          const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+          const taskTotal = Number(task?.totalPointValue ?? 0);
           const taskCompleted = Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
           return sum + taskCompleted;
         },
@@ -801,11 +804,11 @@ export default function ManagerDashboard() {
 
   const completionRate = useMemo(() => {
     const totalPointValue = dashboardTasks.reduce(
-      (sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0),
+      (sum, task) => sum + Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0),
       0
     );
     const completedPointValue = dashboardTasks.reduce((sum, task) => {
-      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+      const taskTotal = Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0);
       return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0);
 
@@ -814,13 +817,13 @@ export default function ManagerDashboard() {
   }, [dashboardTasks]);
 
   const totalWeighted = useMemo(
-    () => dashboardTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0), 0),
+    () => dashboardTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? 0), 0),
     [dashboardTasks]
   );
 
   const doneWeighted = useMemo(
     () => dashboardTasks.reduce((sum, task) => {
-      const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? task?.totalStoryPoints ?? 0);
+      const taskTotal = Number(task?.totalPointValue ?? task?.totalStoryPoints ?? 0);
       return sum + Number(task?.completedPointValue ?? task?.completedStoryPoints ?? (isCompletedTask(task) ? taskTotal : 0));
     }, 0),
     [dashboardTasks]
@@ -1010,40 +1013,100 @@ export default function ManagerDashboard() {
 
       {/* Show errors inline inside their relevant widgets instead of a global banner */}
 
-      <Grid container spacing={1.6} sx={{ mb: 2.4 }}>
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            label="Total Projects"
-            value={projectRows.length}
-            hint={`${activeProjectCount} active projects`}
-            icon={<FolderRoundedIcon />}
-          />
+      {initialLoading ? (
+        <Grid container spacing={1.6} sx={{ mb: 2.4 }}>
+          {[...Array(4)].map((_, i) => (
+            <Grid item xs={12} sm={6} lg={3} key={i}>
+              <Paper
+                sx={{
+                  p: 1.6,
+                  borderRadius: 2,
+                  bgcolor: "#0f1b2f",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+                  <Box
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 2,
+                      bgcolor: "rgba(124,92,255,0.14)",
+                      animation: "pulse 2s infinite",
+                      "@keyframes pulse": {
+                        "0%, 100%": { opacity: 0.5 },
+                        "50%": { opacity: 1 },
+                      },
+                    }}
+                  />
+                  <Box sx={{ flex: 1 }}>
+                    <Box
+                      sx={{
+                        height: 16,
+                        borderRadius: 1,
+                        bgcolor: "rgba(124,92,255,0.14)",
+                        mb: 0.8,
+                        animation: "pulse 2s infinite",
+                        "@keyframes pulse": {
+                          "0%, 100%": { opacity: 0.5 },
+                          "50%": { opacity: 1 },
+                        },
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        height: 24,
+                        borderRadius: 1,
+                        bgcolor: "rgba(124,92,255,0.14)",
+                        animation: "pulse 2s infinite",
+                        "@keyframes pulse": {
+                          "0%, 100%": { opacity: 0.5 },
+                          "50%": { opacity: 1 },
+                        },
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
         </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            label="At Risk Projects"
-            value={atRiskProjectCount}
-            hint="Low progress"
-            icon={<PriorityHighRoundedIcon />}
-          />
+      ) : (
+        <Grid container spacing={1.6} sx={{ mb: 2.4 }}>
+          <Grid item xs={12} sm={6} lg={3}>
+            <StatCard
+              label="Total Projects"
+              value={projectRows.length}
+              hint={`${activeProjectCount} active projects`}
+              icon={<FolderRoundedIcon />}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} lg={3}>
+            <StatCard
+              label="At Risk Projects"
+              value={atRiskProjectCount}
+              hint="Low progress"
+              icon={<PriorityHighRoundedIcon />}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} lg={3}>
+            <StatCard
+              label="Weighted Progress"
+              value={`${completionRate}%`}
+              hint={`${doneWeighted}/${totalWeighted} points completed`}
+              icon={<TrendingUpRoundedIcon />}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} lg={3}>
+            <StatCard
+              label="Weighted Done"
+              value={doneWeighted}
+              hint="Point value completed"
+              icon={<DoneAllRoundedIcon />}
+            />
+          </Grid>
         </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            label="Weighted Progress"
-            value={`${completionRate}%`}
-            hint={`${doneWeighted}/${totalWeighted} points completed`}
-            icon={<TrendingUpRoundedIcon />}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            label="Weighted Done"
-            value={doneWeighted}
-            hint="Point value completed"
-            icon={<DoneAllRoundedIcon />}
-          />
-        </Grid>
-      </Grid>
+      )}
 
       <Paper sx={{ ...sectionCardSx, mb: 2.35 }}>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={1.2} sx={{ mb: 1.35 }}>

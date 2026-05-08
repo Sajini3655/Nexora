@@ -194,3 +194,11 @@ export const fetchProjectDetails = async (projectId) => {
     tasks: projectTasks,
   };
 };
+
+
+export const updateManagerTaskEstimate = async (taskId, estimatedPoints) => {
+  const response = await api.patch(`/manager/tasks/${taskId}/estimate`, {
+    estimatedPoints: Number(estimatedPoints || 0),
+  });
+  return response.data;
+};

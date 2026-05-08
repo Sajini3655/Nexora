@@ -20,6 +20,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { layoutGaps } from "../../theme/layoutGaps.js";
 import { getActiveRole } from "../../utils/roleRouting";
 import { getUserRoles } from "../../utils/roleRouting";
+import NLQNav from "./NLQNav.jsx";
 
 function roleFromPathname(pathname) {
   const path = String(pathname || "");
@@ -123,7 +124,9 @@ export default function Topbar({ onMenuClick }) {
           </Typography>
         </Box>
 
-        <Box sx={{ flexGrow: 1 }} />
+        <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
+          <NLQNav />
+        </Box>
 
         {user ? (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -210,6 +213,8 @@ export default function Topbar({ onMenuClick }) {
               anchorEl={anchorEl}
               open={open}
               onClose={() => setAnchorEl(null)}
+              disableAutoFocusItem
+              MenuListProps={{ autoFocusItem: false }}
               PaperProps={{
                 sx: {
                   mt: 1.2,
@@ -222,6 +227,10 @@ export default function Topbar({ onMenuClick }) {
                   backdropFilter: "blur(18px)",
                 },
               }}
+              disableEnforceFocus
+              disableAutoFocus
+              disableRestoreFocus
+              hideBackdrop
             >
               <Box sx={{ px: 2, py: 1.5 }}>
                 <Typography sx={{ fontWeight: 950 }}>

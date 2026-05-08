@@ -3,7 +3,6 @@ import React from "react";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import PeopleIcon from "@mui/icons-material/People";
 import SecurityIcon from "@mui/icons-material/Security";
-import SettingsIcon from "@mui/icons-material/Settings";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 
 import { useLayout } from "../../context/LayoutContext";
@@ -20,7 +19,6 @@ export default function Sidebar() {
 
   const itemsSecurity = [
     { to: "/access", label: "Access Control", icon: <SecurityIcon /> },
-    { to: "/settings", label: "System Settings", icon: <SettingsIcon /> },
   ];
 
   return (

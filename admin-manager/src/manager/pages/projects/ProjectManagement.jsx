@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -7,10 +7,12 @@ import {
   LinearProgress,
   Paper,
   Stack,
+  TextField,
+  MenuItem,
   Typography,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import { getErrorMessage } from "../../../services/managerService";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getErrorMessage, fetchManagerClients } from "../../../services/managerService";
 import api from "../../../services/api";
 import { useManagerProjects, useManagerTasks } from "../../data/useManager";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
@@ -35,6 +37,7 @@ function getProjectDescription(project) {
 
 export default function ProjectManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
   const projectsQuery = useManagerProjects();
   const tasksQuery = useManagerTasks();
 
@@ -47,6 +50,30 @@ export default function ProjectManagement() {
     "";
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [clients, setClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
+
+  const [newProjectForm, setNewProjectForm] = useState({ name: "", description: "" });
+  const [creatingProject, setCreatingProject] = useState(false);
+
+  const q = useMemo(() => {
+    const params = new URLSearchParams(location.search || "");
+    return String(params.get("q") || "").trim().toLowerCase();
+  }, [location.search]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchManagerClients();
+        if (mounted) setClients(list);
+      } catch (err) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const projectRows = useMemo(() => {
     const tasksByProject = new Map();
@@ -63,9 +90,9 @@ export default function ProjectManagement() {
       const projectTasks = Array.isArray(project?.tasks) ? project.tasks : tasksByProject.get(projectId) || [];
       const taskCount = projectTasks.length;
       const completedTaskCount = projectTasks.filter((task) => isCompletedTask(task)).length;
-      const totalPointValue = projectTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0), 0);
+      const totalPointValue = projectTasks.reduce((sum, task) => sum + Number(task?.totalPointValue ?? 0), 0);
       const completedPointValue = projectTasks.reduce((sum, task) => {
-        const taskTotal = Number(task?.totalPointValue ?? task?.estimatedPoints ?? 0);
+        const taskTotal = Number(task?.totalPointValue ?? 0);
         return sum + Number(task?.completedPointValue ?? (isCompletedTask(task) ? taskTotal : 0));
       }, 0);
       const weightedProgress = totalPointValue > 0
@@ -73,7 +100,6 @@ export default function ProjectManagement() {
         : (taskCount > 0 ? Math.round((completedTaskCount * 100) / taskCount) : 0);
       const status = taskCount === 0 ? "Planning" : completedTaskCount === taskCount ? "Completed" : "Active";
 
-      console.log("[ProjectManagement] Project ID extracted:", projectId, "from project:", project);
       return {
         id: projectId,
         name: getProjectName(project),
@@ -90,6 +116,47 @@ export default function ProjectManagement() {
     });
   }, [projects, tasks]);
 
+  const visibleProjectRows = useMemo(() => {
+    if (!q) return projectRows;
+    return projectRows.filter((project) => {
+      const text = `${project?.name || ""} ${project?.description || ""} ${project?.clientName || ""}`.toLowerCase();
+      return text.includes(q);
+    });
+  }, [projectRows, q]);
+
+  const handleCreateNewProject = async () => {
+    if (!newProjectForm.name.trim()) {
+      setError("Project name is required.");
+      return;
+    }
+
+    setCreatingProject(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const created = await api.post("/manager/projects", {
+        name: newProjectForm.name.trim(),
+        description: newProjectForm.description.trim() || null,
+        clientId: selectedClientId ? Number(selectedClientId) : null,
+      });
+
+      setSuccess("New project created successfully!");
+      setNewProjectForm({ name: "", description: "" });
+      setSelectedClientId("");
+
+      projectsQuery.refetch();
+
+      // Navigate to the new project after a short delay
+      setTimeout(() => {
+        navigate(`/manager/project-management/${created.id}`);
+      }, 500);
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to create project."));
+    } finally {
+      setCreatingProject(false);
+    }
+  };
   const getStatusChipStyle = (status) => {
     const normalized = String(status || "").toLowerCase();
     if (normalized === "completed") return { bgcolor: "rgba(34,197,94,0.16)", color: "#86efac" };
@@ -126,9 +193,7 @@ export default function ProjectManagement() {
             <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
               Project Management
             </Typography>
-            <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
-              Manage tasks, story points, and developer assignments.
-            </Typography>
+            {/* Subtitle removed per request */}
           </Box>
         </Stack>
       </Paper>
@@ -136,16 +201,18 @@ export default function ProjectManagement() {
       {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="project-management-error" /> : null}
       {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="project-management-success" /> : null}
 
-      <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
+      {/* Create New Project widget removed per request */}
+
+      <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 340px)" }}>
         <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Your Projects</Typography>
-        {projectRows.length === 0 ? (
+        {visibleProjectRows.length === 0 ? (
           <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-            No projects found for this manager.
+            {q ? `No projects match “${q}”.` : "No projects found for this manager."}
           </Typography>
         ) : (
-          <Box sx={{ overflowX: "auto" }}>
+          <Box sx={{ overflow: "auto", flex: 1, minHeight: 0 }}>
             <Box sx={{ minWidth: 860 }}>
-              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)" }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)", position: "sticky", top: 0, zIndex: 1, background: "rgba(15,23,42,0.96)" }}>
                 {["Project", "Status", "Tasks", "Completed", "Weighted", "Progress"].map((header) => (
                   <Typography key={header} variant="caption" sx={{ color: "#64748b", textTransform: "uppercase", fontWeight: 800 }}>
                     {header}
@@ -153,7 +220,7 @@ export default function ProjectManagement() {
                 ))}
               </Box>
 
-              {projectRows.map((project) => (
+              {visibleProjectRows.map((project) => (
                 <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid rgba(148,163,184,0.12)" }}>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 800, fontSize: 14 }} noWrap>
@@ -171,7 +238,6 @@ export default function ProjectManagement() {
                         variant="outlined" 
                         disabled={!project.id}
                         onClick={() => {
-                          console.log("[ProjectManagement] Navigating to project:", project.id);
                           if (project.id) navigate(`/manager/project-management/${project.id}`);
                         }} 
                         sx={{ textTransform: "none", fontWeight: 700 }}

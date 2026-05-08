@@ -9,11 +9,13 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../../context/AuthContext";
+import { getManagerQueryScope, managerKeys } from "../../data/useManager";
 import { createProject, getErrorMessage, fetchManagerClients } from "../../../services/managerService";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import { useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { useAuth } from "../../../context/AuthContext";
 
 const emptyTask = {
   title: "",
@@ -39,8 +41,9 @@ export default function AddProject() {
   const [success, setSuccess] = useState("");
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState("");
-  const { moduleAccess } = useAuth();
-
+  const queryClient = useQueryClient();
+  const { user, moduleAccess } = useAuth();
+  const scope = getManagerQueryScope(user);
   const canCreate = useMemo(() => {
     if (!projectName.trim()) return false;
     if (!projectDescription.trim()) return false;
@@ -152,6 +155,12 @@ export default function AddProject() {
       setSuccess("Project created successfully.");
 
       if (createdProjectId) {
+        try {
+          await queryClient.invalidateQueries({ queryKey: managerKeys.projects(scope) });
+          await queryClient.refetchQueries({ queryKey: managerKeys.projects(scope) });
+        } catch (e) {
+          // ignore cache operations, navigate anyway
+        }
         navigate(`/manager/project-management/${createdProjectId}`);
       }
     } catch (err) {
@@ -192,9 +201,7 @@ export default function AddProject() {
         <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
           Add Project
         </Typography>
-        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
-          Create a project with tasks and optional story points. Developer assignment happens in Manage Project.
-        </Typography>
+            {/* Subtitle removed per request */}
       </Paper>
 
       {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="add-project-error" /> : null}

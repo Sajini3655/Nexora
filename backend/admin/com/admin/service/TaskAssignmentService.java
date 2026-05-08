@@ -49,11 +49,8 @@ public class TaskAssignmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
         // All actors (admin, manager, developer) get the same list of all developers
-        // Scoping is done at the task/progress level, not at the developer visibility level
-        List<User> devUsers = userRepository.findAll().stream()
-            .filter(user -> Boolean.TRUE.equals(user.getEnabled()))
-            .filter(user -> user.getAllRoles().contains(Role.DEVELOPER))
-            .toList();
+        // Query only enabled developers to reduce dataset size
+        List<User> devUsers = userRepository.findByRoleAndEnabled(Role.DEVELOPER, true);
 
         return devUsers.stream()
                 .map(this::toDeveloperSummary)
@@ -62,8 +59,9 @@ public class TaskAssignmentService {
     }
 
     private List<TaskItem> getManagerVisibleTasks(User manager) {
-        return projectRepository.findByManagerOrderByCreatedAtDesc(manager).stream()
-                .flatMap(project -> taskRepository.findByProject_Id(project.getId()).stream())
+        List<Project> projects = projectRepository.findByManagerOrderByCreatedAtDesc(manager);
+        return projects.stream()
+                .flatMap(project -> project.getTasks().stream())
                 .collect(Collectors.toList());
     }
 
@@ -195,23 +193,50 @@ public class TaskAssignmentService {
         TaskItem task = taskRepository.findById(Objects.requireNonNull(taskId))
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (task.getCreatedBy() == null || task.getCreatedBy().getId() == null
-                || !task.getCreatedBy().getId().equals(manager.getId())) {
-            throw new AccessDeniedException("You can only update your own tasks");
+        if (task.getProject() == null || task.getProject().getManager() == null
+                || !task.getProject().getManager().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only update tasks for projects you manage");
         }
 
         task.setTitle(req.getTitle().trim());
         task.setDescription(req.getDescription());
         task.setPriority(req.getPriority() == null ? TaskPriority.MEDIUM : req.getPriority());
         task.setDueDate(req.getDueDate());
+
         if (req.getStatus() != null) {
             task.setStatus(req.getStatus());
+        }
+        if (req.getEstimatedPoints() != null) {
+            task.setEstimatedPoints(Math.max(0, req.getEstimatedPoints()));
         }
         task.setUpdatedAt(LocalDateTime.now());
 
         TaskItem saved = taskRepository.save(task);
         TaskDto dto = toTaskDto(saved);
         liveUpdatePublisher.publishTasksChanged("updated");
+        return dto;
+    }
+
+    @Transactional
+    public TaskDto updateTaskEstimate(String managerEmail, Long taskId, Integer estimatedPoints) {
+        User manager = userRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
+        TaskItem task = taskRepository.findById(Objects.requireNonNull(taskId))
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (task.getProject() == null || task.getProject().getManager() == null
+                || !task.getProject().getManager().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only update tasks for projects you manage");
+        }
+
+        int safeEstimate = estimatedPoints == null ? 0 : Math.max(0, estimatedPoints);
+        task.setEstimatedPoints(safeEstimate);
+        task.setUpdatedAt(LocalDateTime.now());
+
+        TaskItem saved = taskRepository.save(task);
+        TaskDto dto = toTaskDto(saved);
+        liveUpdatePublisher.publishTasksChanged("estimate-updated");
         return dto;
     }
 
