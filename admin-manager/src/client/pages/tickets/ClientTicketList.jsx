@@ -61,6 +61,45 @@ export default function ClientTicketList() {
   const liveTopics = useMemo(() => ["/topic/tickets"], []);
   useLiveRefresh(liveTopics, refetchTickets, { debounceMs: 400 });
 
+  const [suggestions, setSuggestions] = useState({});
+
+  const handleSuggest = useCallback(async (ticket) => {
+    if (!ticket) return;
+    setSuggestions((prev) => ({ ...prev, [ticket.id]: { loading: true } }));
+
+    try {
+      const res = await fetch("/assign/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: ticket.id, title: ticket.title, description: ticket.description || "" }),
+      });
+
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+
+      // Prefer structured recommendation fields from the AI service
+      let text = "";
+      if (data?.recommendedName || data?.recommendedEmail) {
+        text = `${data.recommendedName || "(unknown)"}${data.recommendedEmail ? ` <${data.recommendedEmail}>` : ""}`;
+        if (data.explanation) text += ` — ${data.explanation}`;
+        if (typeof data.confidence !== "undefined") text += ` (confidence=${Number(data.confidence).toFixed(2)})`;
+      } else if (data?.summary) {
+        text = data.summary;
+      } else if (data?.ticket_message) {
+        text = data.ticket_message;
+      } else if (data?.explanation) {
+        text = data.explanation;
+      } else {
+        text = data?.suggestion || data?.result || data?.message || data?.detail || JSON.stringify(data);
+      }
+
+      setSuggestions((prev) => ({ ...prev, [ticket.id]: { loading: false, text, raw: data } }));
+    } catch (err) {
+      console.error("AI suggest failed", err);
+      setSuggestions((prev) => ({ ...prev, [ticket.id]: { loading: false, error: String(err) } }));
+    }
+  }, []);
+
   const onCreate = async () => {
     if (!canCreate || creating) return;
 
@@ -255,9 +294,38 @@ export default function ClientTicketList() {
                       borderBottom: "1px solid rgba(255,255,255,0.06)",
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                      {ticket.title}
-                    </Typography>
+                    <Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {ticket.title}
+                        </Typography>
+
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleSuggest(ticket)}
+                          disabled={suggestions[ticket.id]?.loading}
+                          sx={{ textTransform: "none", height: 30 }}
+                        >
+                          {suggestions[ticket.id]?.loading ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            "AI Suggest"
+                          )}
+                        </Button>
+                      </Box>
+
+                      {suggestions[ticket.id]?.text ? (
+                        <Box sx={{ mt: 1 }}>
+                          <Alert severity="info">{suggestions[ticket.id].text}</Alert>
+                        </Box>
+                      ) : suggestions[ticket.id]?.error ? (
+                        <Box sx={{ mt: 1 }}>
+                          <Alert severity="error">{suggestions[ticket.id].error}</Alert>
+                        </Box>
+                      ) : null}
+                    </Box>
+
                     <Typography variant="caption" sx={{ color: "#94a3b8" }}>
                       {ticket.category || "-"}
                     </Typography>

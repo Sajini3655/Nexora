@@ -221,8 +221,8 @@ export default function Topbar({ onMenuClick }) {
               anchorEl={anchorEl}
               open={open}
               onClose={() => setAnchorEl(null)}
+              autoFocus={false}
               MenuListProps={{ autoFocusItem: false }}
-              ModalProps={{ disableAutoFocus: true, disableEnforceFocus: true }}
               PaperProps={{
                 sx: {
                   mt: 1.2,

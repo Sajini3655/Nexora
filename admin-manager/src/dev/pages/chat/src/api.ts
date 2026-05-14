@@ -1,4 +1,6 @@
-const BACKEND_API_URL = "http://localhost:8081/api";
+import { API_BASE_URL } from "../../../../utils/constants";
+
+const BACKEND_API_URL = `${API_BASE_URL}/api`;
 const BACKEND_URL = `${BACKEND_API_URL}/chat`;
 const AI_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://127.0.0.1:8000";
 

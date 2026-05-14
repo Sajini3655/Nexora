@@ -20,6 +20,7 @@ import {
   createProjectSession,
   getMessages,
 } from "./api";
+import { API_BASE_URL } from "../../../../utils/constants";
 
 interface Message {
   user: "me" | "other" | "assistant";
@@ -57,7 +58,7 @@ interface ChatBoxProps {
   selectedSessionId?: string | null; // null = new chat, string = specific thread
 }
 
-const WS_URL = "http://localhost:8081/ws";
+const WS_URL = `${API_BASE_URL}/ws`;
 
 const BLOCKER_KEYWORDS = [
   "blocked",
@@ -305,7 +306,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           const mappedMessages: Message[] = sessionMessages
             .map((m: any) => {
               const senderName = m.senderName ?? "Unknown";
-              const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "AI Shadow";
+              const isAi = String(senderName).toLowerCase().includes("ai") || senderName === "Nexo AI";
               const isMe = String(m.senderId) === String(currentUserId);
 
               return {
@@ -869,7 +870,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           {/* Modal Header */}
           <div style={styles.modalHeader}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 900, color: "#f8fafc" }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#fb1010" }}>
                 Team Chat
               </div>
               <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
