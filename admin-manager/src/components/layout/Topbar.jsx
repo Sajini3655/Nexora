@@ -81,7 +81,10 @@ export default function Topbar({ onMenuClick }) {
         }}
       >
         <IconButton
-          onClick={onMenuClick}
+          onClick={(event) => {
+            event.currentTarget.blur();
+            onMenuClick?.();
+          }}
           sx={{
             width: 42,
             height: 42,

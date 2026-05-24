@@ -156,6 +156,9 @@ export default function ManagerTickets() {
   }, [tickets]);
 
   const openConvertModal = (ticket) => {
+    window.requestAnimationFrame(() => {
+      document.activeElement instanceof HTMLElement && document.activeElement.blur();
+    });
     setSelectedTicket(ticket);
     setSelectedProjectId(String(ticket?.projectId || ""));
     setSelectedDeveloperId(String(ticket?.assignedToId || ""));
@@ -442,6 +445,7 @@ export default function ManagerTickets() {
                   <Button
                     variant="contained"
                     onClick={handleSuggestDeveloper}
+                    type="button"
                     disabled={suggestingDeveloper || submitting}
                     startIcon={<AutoAwesomeIcon />}
                     sx={{
@@ -694,7 +698,10 @@ function TicketRow({ ticket, onConvert }) {
             <Button
               variant="contained"
               size="small"
-              onClick={() => onConvert(ticket)}
+              onClick={(event) => {
+                event.currentTarget.blur();
+                onConvert(ticket);
+              }}
               sx={{
                 minWidth: 150,
                 textTransform: "none",

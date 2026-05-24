@@ -1,4 +1,5 @@
 import api from "./api";
+import { API_BASE_URL } from "../utils/constants";
 
 export const createProject = async (payload) => {
   const response = await api.post("/manager/projects", payload);
@@ -95,8 +96,36 @@ export const fetchManagerDevelopers = async () => {
 };
 
 export const suggestManagerTaskAssignment = async (payload) => {
-  const response = await api.post("/manager/tasks/suggest", payload);
-  return response.data;
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_BASE_URL}/api/manager/tasks/suggest`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const responseText = await response.text();
+  let responseData = null;
+
+  if (responseText) {
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = responseText;
+    }
+  }
+
+  if (!response.ok) {
+    const message =
+      responseData?.message ||
+      responseData?.error ||
+      (typeof responseData === "string" ? responseData : "AI suggestion failed.");
+    throw new Error(message);
+  }
+
+  return responseData;
 };
 
 export const createManagerTask = async (payload) => {

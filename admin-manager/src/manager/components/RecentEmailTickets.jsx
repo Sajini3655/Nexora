@@ -150,6 +150,7 @@ export default function RecentEmailTickets() {
   const openCount = useMemo(() => tickets.filter(isOpenTicket).length, [tickets]);
 
   const openConvertModal = (ticket) => {
+    document.activeElement instanceof HTMLElement && document.activeElement.blur();
     setSelectedTicket(ticket);
     setSelectedProjectId(String(ticket?.projectId || ""));
     setSelectedDeveloperId(String(ticket?.assignedToId || ""));
@@ -414,7 +415,10 @@ export default function RecentEmailTickets() {
                   <Button
                     variant="contained"
                     size="small"
-                    onClick={() => openConvertModal(ticket)}
+                    onClick={(event) => {
+                      event.currentTarget.blur();
+                      openConvertModal(ticket);
+                    }}
                     sx={{
                       textTransform: "none",
                       fontWeight: 700,

@@ -331,7 +331,8 @@ export default function AdminDashboard() {
             {healthCards.map((item) => (
               <Box
                 key={item.title}
-                onClick={() => {
+                onClick={(event) => {
+                  event.currentTarget.blur();
                   setSelectedHealthItem(item);
                   setDetailDialogOpen(true);
                 }}
