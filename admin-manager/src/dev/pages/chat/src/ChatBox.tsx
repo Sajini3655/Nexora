@@ -405,7 +405,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         setSocketConnected(false);
       },
       onWebSocketClose: () => {
-        console.debug("ChatBox:WebSocket closed");
         setSocketConnected(false);
       },
     });
@@ -633,17 +632,17 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       flexDirection: "column",
       height: "100%",
       minHeight: 0,
-      background: "#0b1628",
+      background: "var(--nx-bg)",
     },
     // Header for modal
     modalHeader: {
       padding: "16px 18px",
-      borderBottom: "1px solid rgba(148,163,184,0.12)",
+      borderBottom: "1px solid var(--nx-border)",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
       gap: 14,
-      background: "#0d182b",
+      background: "var(--nx-panel)",
       flexShrink: 0,
     },
     // Messages container - scrollable
@@ -655,14 +654,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       display: "flex",
       flexDirection: "column",
       gap: 12,
-      background:
-        "radial-gradient(800px 300px at 15% 0%, rgba(109,93,252,0.08), transparent 55%), #081323",
+      background: "var(--nx-bg)",
     },
     // Composer section - always visible at bottom
     composerSection: {
       padding: 12,
-      borderTop: "1px solid rgba(148,163,184,0.12)",
-      background: "#0d182b",
+      borderTop: "1px solid var(--nx-border)",
+      background: "var(--nx-panel)",
       display: "flex",
       flexDirection: "column",
       gap: 8,
@@ -679,9 +677,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       minWidth: 0,
       padding: "12px 14px",
       borderRadius: 14,
-      border: "1px solid rgba(148,163,184,0.22)",
-      background: "#101b2f",
-      color: "#f8fafc",
+      border: "1px solid var(--nx-border)",
+      background: "var(--nx-input)",
+      color: "var(--nx-text)",
       outline: "none",
       fontSize: 14,
     },
@@ -689,11 +687,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       margin: "auto",
       maxWidth: 460,
       textAlign: "center",
-      color: "#94a3b8",
+      color: "var(--nx-muted)",
       padding: 24,
       borderRadius: 18,
-      border: "1px dashed rgba(148,163,184,0.22)",
-      background: "rgba(255,255,255,0.025)",
+      border: "1px dashed var(--nx-border)",
+      background: "var(--nx-panel-2)",
     },
     bubbleWrapUser: {
       alignSelf: "flex-end",
@@ -710,41 +708,39 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       maxWidth: "72%",
     },
     bubbleUser: {
-      background: "linear-gradient(135deg, #6d5dfc, #4f46e5)",
-      color: "#fff",
+      background: "var(--nx-purple)",
+      color: "var(--nx-bg)",
       padding: "11px 14px",
       borderRadius: "16px 16px 4px 16px",
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
-      boxShadow: "0 12px 26px rgba(109,93,252,0.24)",
       fontSize: 14,
       lineHeight: 1.5,
     },
     bubbleAI: {
-      background: "#111d33",
-      color: "#e2e8f0",
+      background: "var(--nx-panel)",
+      color: "var(--nx-text)",
       padding: "11px 14px",
       borderRadius: "16px 16px 16px 4px",
-      border: "1px solid rgba(148,163,184,0.12)",
+      border: "1px solid var(--nx-border)",
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
       fontSize: 14,
       lineHeight: 1.5,
     },
     bubbleOther: {
-      background: "linear-gradient(135deg, #2b6cb0, #1e40af)",
-      color: "#fff",
+      background: "var(--nx-blue)",
+      color: "var(--nx-bg)",
       padding: "11px 14px",
       borderRadius: "16px 16px 4px 16px",
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
       fontSize: 14,
       lineHeight: 1.5,
-      boxShadow: "0 8px 18px rgba(30,64,175,0.12)",
     },
     meta: {
       fontSize: 11,
-      color: "#64748b",
+      color: "var(--nx-muted)",
       marginBottom: 5,
       display: "flex",
       gap: 8,
@@ -753,35 +749,35 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       marginTop: 8,
       padding: 14,
       borderRadius: 16,
-      background: "rgba(109,93,252,0.13)",
+      background: "var(--nx-panel-2)",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       gap: 12,
       flexWrap: "wrap",
-      border: "1px solid rgba(109,93,252,0.28)",
+      border: "1px solid var(--nx-border)",
     },
     summaryBox: {
       marginTop: 12,
       padding: 14,
       borderRadius: 12,
-      background: "rgba(17,29,51,0.6)",
-      border: "1px solid rgba(148,163,184,0.06)",
-      color: "#e6eef8",
+      background: "var(--nx-panel)",
+      border: "1px solid var(--nx-border)",
+      color: "var(--nx-text)",
       fontSize: 14,
       whiteSpace: "pre-wrap",
     },
     errorBox: {
       padding: 12,
       borderRadius: 14,
-      background: "rgba(239,68,68,0.12)",
-      color: "#fecaca",
+      background: "var(--nx-panel-2)",
+      color: "var(--nx-red)",
       fontSize: 13,
-      border: "1px solid rgba(239,68,68,0.24)",
+      border: "1px solid var(--nx-border)",
     },
     smallLabel: {
       fontSize: 11,
-      color: "#64748b",
+      color: "var(--nx-muted)",
       fontWeight: 800,
       letterSpacing: 0.7,
       textTransform: "uppercase",
@@ -793,14 +789,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       gridTemplateColumns: hideSidebar ? "minmax(0, 1fr)" : "270px minmax(0, 1fr)",
       borderRadius: 22,
       overflow: "hidden",
-      background: "linear-gradient(180deg, #0f1b2f 0%, #0b1628 100%)",
-      border: "1px solid rgba(148,163,184,0.14)",
-      boxShadow: "0 24px 70px rgba(0,0,0,0.28)",
+      background: "var(--nx-panel)",
+      border: "1px solid var(--nx-border)",
+      boxShadow: "var(--nx-shadow)",
     },
     sidebar: {
       padding: 18,
-      background: "#0a1222",
-      borderRight: "1px solid rgba(148,163,184,0.12)",
+      background: "var(--nx-panel-2)",
+      borderRight: "1px solid var(--nx-border)",
       display: "flex",
       flexDirection: "column",
       gap: 14,
@@ -808,14 +804,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     roomCard: {
       padding: 14,
       borderRadius: 16,
-      background: "#111d33",
-      border: "1px solid rgba(148,163,184,0.14)",
+      background: "var(--nx-panel)",
+      border: "1px solid var(--nx-border)",
     },
     memberCard: {
       padding: "10px 12px",
       borderRadius: 14,
-      background: "#0f1b2f",
-      border: "1px solid rgba(148,163,184,0.10)",
+      background: "var(--nx-panel)",
+      border: "1px solid var(--nx-border)",
       display: "flex",
       alignItems: "center",
       gap: 10,
@@ -824,17 +820,17 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       minWidth: 0,
       display: "flex",
       flexDirection: "column",
-      background: "#0b1628",
+      background: "var(--nx-bg)",
     },
     header: {
       minHeight: 74,
       padding: "16px 18px",
-      borderBottom: "1px solid rgba(148,163,184,0.12)",
+      borderBottom: "1px solid var(--nx-border)",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
       gap: 14,
-      background: "#0d182b",
+      background: "var(--nx-panel)",
     },
     window: {
       flex: 1,
@@ -845,13 +841,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       display: "flex",
       flexDirection: "column",
       gap: 12,
-      background:
-        "radial-gradient(800px 300px at 15% 0%, rgba(109,93,252,0.08), transparent 55%), #081323",
+      background: "var(--nx-bg)",
     },
     inputBar: {
       padding: 12,
-      borderTop: "1px solid rgba(148,163,184,0.12)",
-      background: "#0d182b",
+      borderTop: "1px solid var(--nx-border)",
+      background: "var(--nx-panel)",
       display: "grid",
       gridTemplateColumns: "minmax(0, 1fr) auto auto",
       gap: 8,
@@ -870,10 +865,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           {/* Modal Header */}
           <div style={styles.modalHeader}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 900, color: "#fb1010" }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "var(--nx-red)" }}>
                 Team Chat
               </div>
-              <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+              <div style={{ color: "var(--nx-muted)", fontSize: 13, marginTop: 3 }}>
                 {projectName}
               </div>
             </div>
@@ -882,8 +877,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                 size="small"
                 label={socketConnected ? "Live" : wsConnecting ? "Connecting…" : "Offline"}
                 sx={{
-                  bgcolor: socketConnected ? "rgba(34,197,94,0.14)" : wsConnecting ? "rgba(100,116,139,0.16)" : "rgba(239,68,68,0.14)",
-                  color: socketConnected ? "#86efac" : wsConnecting ? "#cbd5e1" : "#fecaca",
+                  bgcolor: socketConnected ? "var(--nx-green)" : wsConnecting ? "var(--nx-panel-2)" : "var(--nx-red)",
+                  color: socketConnected ? "var(--nx-bg)" : wsConnecting ? "var(--nx-text)" : "var(--nx-bg)",
                   fontWeight: 900,
                 }}
               />
@@ -891,8 +886,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                 size="small"
                 label={chatEnded ? "Ended" : "Active"}
                 sx={{
-                  bgcolor: chatEnded ? "rgba(107,114,128,0.16)" : "rgba(34,197,94,0.14)",
-                  color: chatEnded ? "#d1d5db" : "#86efac",
+                  bgcolor: chatEnded ? "var(--nx-panel-2)" : "var(--nx-green)",
+                  color: chatEnded ? "var(--nx-text)" : "var(--nx-bg)",
                   fontWeight: 900,
                 }}
               />
@@ -907,10 +902,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               <>
                 {chat.length === 0 && (
                   <div style={styles.emptyState}>
-                    <div style={{ fontWeight: 900, color: "#f8fafc", marginBottom: 6 }}>
+                    <div style={{ fontWeight: 900, color: "var(--nx-text)", marginBottom: 6 }}>
                       Start the project conversation
                     </div>
-                    <div>
+                    <div style={{ color: "var(--nx-muted)" }}>
                       Send the first message to begin this thread.
                     </div>
                   </div>
@@ -937,17 +932,17 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                 {showTicketPrompt && (
                   <div style={styles.ticketPrompt}>
                     <div>
-                      <div style={{ color: "#f8fafc", fontWeight: 900 }}>
+                      <div style={{ color: "var(--nx-text)", fontWeight: 900 }}>
                         Create a ticket from this summary?
                       </div>
-                      <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+                      <div style={{ color: "var(--nx-muted)", fontSize: 13, marginTop: 3 }}>
                         The manager can review and assign it as a task.
                       </div>
                     </div>
 
                     <div style={{ display: "flex", gap: 8 }}>
                       <IconButton
-                        style={{ color: "#22c55e", background: "rgba(34,197,94,0.12)" }}
+                        style={{ color: "var(--nx-green)", background: "var(--nx-panel)" }}
                         onClick={() => handleTicketChoice(true)}
                         size="small"
                       >
@@ -955,7 +950,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                       </IconButton>
 
                       <IconButton
-                        style={{ color: "#ef4444", background: "rgba(239,68,68,0.12)" }}
+                        style={{ color: "var(--nx-red)", background: "var(--nx-panel)" }}
                         onClick={() => handleTicketChoice(false)}
                         size="small"
                       >
@@ -969,11 +964,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                   <div style={styles.summaryBox}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <div style={{ fontWeight: 900 }}>Chat summary</div>
-                      <div style={{ fontSize: 12, color: "#86efac", fontWeight: 800 }}>
+                      <div style={{ fontSize: 12, color: "var(--nx-green)", fontWeight: 800 }}>
                         {summaryData.source === "ai" ? "AI Summary" : "Local Summary"}
                       </div>
                     </div>
-                    <div style={{ color: "#cbd5e1", fontSize: 13, whiteSpace: "pre-wrap" }}>{summaryData.summary}</div>
+                    <div style={{ color: "var(--nx-text-soft)", fontSize: 13, whiteSpace: "pre-wrap" }}>{summaryData.summary}</div>
 
                     {chatEnded && !showTicketPrompt && onClose ? (
                       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
@@ -1044,20 +1039,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             <aside style={styles.sidebar} className="nx-chat-sidebar">
               <div>
                 <div style={styles.smallLabel}>Workspace</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: "#f8fafc", marginTop: 4 }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "var(--nx-text)", marginTop: 4 }}>
                   AI Shadow Chat
                 </div>
-                <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
+                <div style={{ fontSize: 13, color: "var(--nx-muted)", marginTop: 4 }}>
                   Project discussion with live updates.
                 </div>
               </div>
 
               <div style={styles.roomCard}>
                 <div style={styles.smallLabel}>Active room</div>
-                <div style={{ color: "#f8fafc", fontWeight: 900, marginTop: 6 }}>
+                <div style={{ color: "var(--nx-text)", fontWeight: 900, marginTop: 6 }}>
                   {projectName}
                 </div>
-                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
+                <div style={{ color: "var(--nx-muted)", fontSize: 12, marginTop: 4 }}>
                   Project ID: {projectId}
                 </div>
               </div>
@@ -1070,14 +1065,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                       width: 30,
                       height: 30,
                       borderRadius: "50%",
-                      background: "linear-gradient(135deg, #6d5dfc, #22c55e)",
+                      background: "linear-gradient(135deg, var(--nx-purple), var(--nx-green))",
                     }}
                   />
                   <div>
-                    <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
+                    <div style={{ color: "var(--nx-text)", fontWeight: 800, fontSize: 13 }}>
                       {currentUserName}
                     </div>
-                    <div style={{ color: "#64748b", fontSize: 12 }}>Developer</div>
+                    <div style={{ color: "var(--nx-muted)", fontSize: 12 }}>Developer</div>
                   </div>
                 </div>
                 <div style={{ ...styles.memberCard, marginTop: 8 }}>
@@ -1086,10 +1081,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                       width: 30,
                       height: 30,
                       borderRadius: "50%",
-                      background: "#1e293b",
+                      background: "var(--nx-panel-2)",
                       display: "grid",
                       placeItems: "center",
-                      color: "#a78bfa",
+                      color: "var(--nx-purple)",
                       fontWeight: 900,
                       fontSize: 12,
                     }}
@@ -1097,21 +1092,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                     AI
                   </div>
                   <div>
-                    <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 13 }}>
+                    <div style={{ color: "var(--nx-text)", fontWeight: 800, fontSize: 13 }}>
                       AI Shadow
                     </div>
-                    <div style={{ color: "#64748b", fontSize: 12 }}>Summary assistant</div>
+                    <div style={{ color: "var(--nx-muted)", fontSize: 12 }}>Summary assistant</div>
                   </div>
                 </div>
               </div>
 
               <div style={{ marginTop: "auto" }}>
                 <div style={styles.smallLabel}>Status</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#cbd5e1", fontSize: 13, marginTop: 8 }}>
-                  <CircleRoundedIcon sx={{ fontSize: 10, color: socketConnected ? "#22c55e" : "#64748b" }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--nx-text)", fontSize: 13, marginTop: 8 }}>
+                  <CircleRoundedIcon sx={{ fontSize: 10, color: socketConnected ? "var(--nx-green)" : "var(--nx-muted)" }} />
                   {socketConnected ? "Live connection" : "Offline"}
                 </div>
-                <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>
+                <div style={{ color: "var(--nx-muted)", fontSize: 12, marginTop: 6 }}>
                   {chatEnded ? "Chat ended. Summary processed." : "Messages sync in real time."}
                 </div>
               </div>
@@ -1121,10 +1116,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           <main style={styles.main}>
             <header style={styles.header}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 900, color: "#f8fafc" }}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: "var(--nx-text)" }}>
                   {projectName}
                 </div>
-                <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+                <div style={{ color: "var(--nx-muted)", fontSize: 13, marginTop: 3 }}>
                   {chatEnded ? "Chat ended" : "Live project discussion"}
                 </div>
               </div>
@@ -1134,8 +1129,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                   size="small"
                   label={socketConnected ? "Live" : "Offline"}
                   sx={{
-                    bgcolor: socketConnected ? "rgba(34,197,94,0.14)" : "rgba(100,116,139,0.16)",
-                    color: socketConnected ? "#86efac" : "#cbd5e1",
+                    bgcolor: socketConnected ? "var(--nx-green)" : "var(--nx-panel-2)",
+                    color: socketConnected ? "var(--nx-bg)" : "var(--nx-text)",
                     fontWeight: 900,
                   }}
                 />
@@ -1143,8 +1138,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                   size="small"
                   label={`${chat.length} messages`}
                   sx={{
-                    bgcolor: "rgba(96,165,250,0.14)",
-                    color: "#bfdbfe",
+                    bgcolor: "var(--nx-blue)",
+                    color: "var(--nx-bg)",
                     fontWeight: 900,
                   }}
                 />
@@ -1207,10 +1202,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                 <>
                   {chat.length === 0 && (
                     <div style={styles.emptyState}>
-                      <div style={{ fontWeight: 900, color: "#f8fafc", marginBottom: 6 }}>
+                      <div style={{ fontWeight: 900, color: "var(--nx-text)", marginBottom: 6 }}>
                         Start the project conversation
                       </div>
-                      <div>
+                      <div style={{ color: "var(--nx-muted)" }}>
                         Share blockers, implementation notes, or project updates. End the chat to generate an AI summary and create tickets when needed.
                       </div>
                     </div>
@@ -1237,17 +1232,17 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                   {showTicketPrompt && (
                     <div style={styles.ticketPrompt}>
                       <div>
-                        <div style={{ color: "#f8fafc", fontWeight: 900 }}>
+                        <div style={{ color: "var(--nx-text)", fontWeight: 900 }}>
                           Create a ticket from this summary?
                         </div>
-                        <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 3 }}>
+                        <div style={{ color: "var(--nx-muted)", fontSize: 13, marginTop: 3 }}>
                           The manager can review and assign it as a task.
                         </div>
                       </div>
 
                       <div style={{ display: "flex", gap: 8 }}>
                         <IconButton
-                          style={{ color: "#22c55e", background: "rgba(34,197,94,0.12)" }}
+                          style={{ color: "var(--nx-green)", background: "var(--nx-panel)" }}
                           onClick={() => handleTicketChoice(true)}
                           size="small"
                         >
@@ -1255,7 +1250,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                         </IconButton>
 
                         <IconButton
-                          style={{ color: "#ef4444", background: "rgba(239,68,68,0.12)" }}
+                          style={{ color: "var(--nx-red)", background: "var(--nx-panel)" }}
                           onClick={() => handleTicketChoice(false)}
                           size="small"
                         >
@@ -1269,11 +1264,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                     <div style={styles.summaryBox}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                         <div style={{ fontWeight: 900 }}>Chat summary</div>
-                        <div style={{ fontSize: 12, color: "#86efac", fontWeight: 800 }}>
+                        <div style={{ fontSize: 12, color: "var(--nx-green)", fontWeight: 800 }}>
                           {summaryData.source === "ai" ? "AI Summary" : "Local Summary"}
                         </div>
                       </div>
-                      <div style={{ color: "#cbd5e1", fontSize: 13, whiteSpace: "pre-wrap" }}>{summaryData.summary}</div>
+                      <div style={{ color: "var(--nx-text-soft)", fontSize: 13, whiteSpace: "pre-wrap" }}>{summaryData.summary}</div>
                     </div>
                   )}
 
@@ -1338,8 +1333,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           }
 
           /* Improve placeholder visibility and ensure input stays visible when embedded */
-          .nx-chat-shell input::placeholder { color: rgba(148,163,184,0.7); }
-          .nx-chat-shell input { caret-color: #a78bfa; }
+          .nx-chat-shell input::placeholder { color: var(--nx-muted); }
+          .nx-chat-shell input { caret-color: var(--nx-purple); }
           
           /* Scrollbar styling for message container */
           .nx-chat-shell section::-webkit-scrollbar {
@@ -1349,11 +1344,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             background: transparent;
           }
           .nx-chat-shell section::-webkit-scrollbar-thumb {
-            background: rgba(148,163,184,0.3);
+            background: var(--nx-border);
             border-radius: 4px;
           }
           .nx-chat-shell section::-webkit-scrollbar-thumb:hover {
-            background: rgba(148,163,184,0.5);
+            background: var(--nx-border-strong);
           }
         `}
       </style>

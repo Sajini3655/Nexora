@@ -160,7 +160,7 @@ export default function DevTaskView() {
   if (loading) {
     return (
       <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
-        <CircularProgress sx={{ color: "#6b51ff" }} />
+        <CircularProgress sx={{ color: "var(--nx-purple)" }} />
       </Box>
     );
   }
@@ -171,7 +171,7 @@ export default function DevTaskView() {
         {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
         <Card sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 900 }}>Task not found</Typography>
-          <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.72)" }}>
+          <Typography variant="body2" sx={{ mt: 1, color: "var(--nx-muted)" }}>
             The backend did not return task <strong>{id}</strong> for the current developer.
           </Typography>
           <Box sx={{ mt: 2 }}>
@@ -186,13 +186,13 @@ export default function DevTaskView() {
     <>
       <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", flexWrap: "wrap", mb: 3 }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>
+          <Typography variant="overline" sx={{ color: "var(--nx-muted)" }}>
             {task.projectName || "Backend Task"}
           </Typography>
           <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>
             {task.title}
           </Typography>
-          <Typography variant="body2" sx={{ mt: 0.75, color: "rgba(231,233,238,0.72)" }}>
+          <Typography variant="body2" sx={{ mt: 0.75, color: "var(--nx-text-soft)" }}>
             ID {task.id} • Due {task.dueDate || "-"} • Assignee {task.assignedToName || task.assignee || "You"}
           </Typography>
         </Box>
@@ -212,7 +212,7 @@ export default function DevTaskView() {
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
               Description
             </Typography>
-            <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.82)", whiteSpace: "pre-wrap" }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", whiteSpace: "pre-wrap" }}>
               {task.description || "No description provided by the backend."}
             </Typography>
 
@@ -224,10 +224,10 @@ export default function DevTaskView() {
 
             <Box sx={{ mt: 2 }}>
               <ProgressBar value={storyPointTotals.progressPercentage} />
-              <Typography variant="caption" sx={{ color: "#94a3b8", mt: 0.6, display: "block" }}>
+              <Typography variant="caption" sx={{ color: "var(--nx-muted)", mt: 0.6, display: "block" }}>
                 Completed Subtasks: {storyPointTotals.completedStoryPoints} / {storyPointTotals.totalStoryPoints}
               </Typography>
-              <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
+              <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block" }}>
                 Weighted Points: {storyPointTotals.completedPointValue} / {storyPointTotals.allocatedPointValue}
               </Typography>
             </Box>
@@ -239,13 +239,13 @@ export default function DevTaskView() {
 
               <Box sx={{ mt: 1, mb: 1 }}>
                 <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                  <Typography variant="caption" sx={{ color: "#94a3b8" }}>Budget:</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>Budget:</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>{budgetPoints} pts</Typography>
 
-                  <Typography variant="caption" sx={{ color: "#94a3b8", ml: 2 }}>Allocated:</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--nx-muted)", ml: 2 }}>Allocated:</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>{storyPointTotals.allocatedPointValue} pts</Typography>
 
-                  <Typography variant="caption" sx={{ color: "#94a3b8", ml: 2 }}>Remaining:</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--nx-muted)", ml: 2 }}>Remaining:</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>{storyPointTotals.remainingPointValue} pts</Typography>
                 </Stack>
               </Box>
@@ -316,8 +316,8 @@ export default function DevTaskView() {
 
 function Metric({ label, value }) {
   return (
-    <Box sx={{ p: 2, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{label}</Typography>
+    <Box sx={{ p: 2, borderRadius: "22px", background: "var(--nx-panel)", border: "1px solid var(--nx-border)" }}>
+      <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>{label}</Typography>
       <Typography variant="body1" sx={{ mt: 0.5, fontWeight: 800 }}>{value}</Typography>
     </Box>
   );
@@ -326,7 +326,7 @@ function Metric({ label, value }) {
 function StackedInfo({ label, value }) {
   return (
     <Box sx={{ mb: 1.5 }}>
-      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{label}</Typography>
+      <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>{label}</Typography>
       <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 700 }}>{String(value)}</Typography>
     </Box>
   );

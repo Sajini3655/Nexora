@@ -58,7 +58,7 @@ export default function DevWorkspace() {
   if (loading) {
     return (
       <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
-        <CircularProgress sx={{ color: "#6b51ff" }} />
+        <CircularProgress sx={{ color: "var(--nx-purple)" }} />
       </Box>
     );
   }
@@ -72,9 +72,8 @@ export default function DevWorkspace() {
           mb: 3,
           p: { xs: 2.5, md: 3 },
           borderRadius: 4,
-          border: "1px solid rgba(148,163,184,0.14)",
-          background:
-            "linear-gradient(135deg, rgba(124,92,255,0.18) 0%, rgba(11,22,40,0.95) 100%)",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-panel-2)",
         }}
       >
         <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, lg: { alignItems: "center", justifyContent: "space-between" }, gap: 2 }}>
@@ -82,22 +81,22 @@ export default function DevWorkspace() {
             <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.5 }}>
               {projectSnapshot.name}
             </Typography>
-            <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.74)", mt: 0.75 }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.75 }}>
               Backend ID: <strong>{projectSnapshot.id}</strong> • Progress: <strong>{projectSnapshot.progress}%</strong>
             </Typography>
           </Box>
 
-          <Card sx={{ p: 2.5, background: "rgba(124,92,255,0.1)", border: "1px solid rgba(124,92,255,0.18)" }}>
+          <Card sx={{ p: 2.5, background: "var(--nx-surface)", border: "1px solid var(--nx-border)" }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "center" }}>
               <Box>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Project Progress</Typography>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>Project Progress</Typography>
                 <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>{projectSnapshot.progress}%</Typography>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)", display: "block", mt: 0.5 }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block", mt: 0.5 }}>
                   Open tasks: {projectSnapshot.myOpen}
                 </Typography>
               </Box>
               <Box sx={{ width: 32, height: 32 }}>
-                <CircularProgress variant="determinate" value={projectSnapshot.progress} sx={{ color: "#6b51ff" }} />
+                <CircularProgress variant="determinate" value={projectSnapshot.progress} sx={{ color: "var(--nx-purple)" }} />
               </Box>
             </Box>
           </Card>
@@ -111,15 +110,15 @@ export default function DevWorkspace() {
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>Assigned Tasks</Typography>
             <Box sx={{ display: "grid", gap: 1.5 }}>
               {assignedTasks.map((task) => (
-                <Card key={task.id} sx={{ p: 2, background: "rgba(255,255,255,0.04)", cursor: "pointer" }} onClick={() => navigate(`/dev/tasks/${task.id}`)}>
+                <Card key={task.id} sx={{ p: 2, background: "var(--nx-surface)", cursor: "pointer", border: "1px solid var(--nx-border)" }} onClick={() => navigate(`/dev/tasks/${task.id}`)}>
                   <Typography variant="body2" sx={{ fontWeight: 800 }}>{task.title}</Typography>
-                  <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)", display: "block", mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block", mt: 0.5 }}>
                     {task.id} • {task.projectName} • {task.priority} priority
                   </Typography>
                 </Card>
               ))}
               {assignedTasks.length === 0 ? (
-                <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", textAlign: "center", py: 2 }}>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)", textAlign: "center", py: 2 }}>
                   No assigned tasks. Sync from dashboard.
                 </Typography>
               ) : null}
@@ -131,16 +130,16 @@ export default function DevWorkspace() {
           <Card sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>Task Stats</Typography>
             <Box sx={{ display: "grid", gap: 1.5 }}>
-              <Box sx={{ p: 1.5, background: "rgba(255,255,255,0.05)", borderRadius: 2 }}>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Total Tasks</Typography>
+              <Box sx={{ p: 1.5, background: "var(--nx-surface)", borderRadius: 2, border: "1px solid var(--nx-border)" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>Total Tasks</Typography>
                 <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>{tasks.length}</Typography>
               </Box>
-              <Box sx={{ p: 1.5, background: "rgba(255,255,255,0.05)", borderRadius: 2 }}>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Assigned</Typography>
+              <Box sx={{ p: 1.5, background: "var(--nx-surface)", borderRadius: 2, border: "1px solid var(--nx-border)" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>Assigned</Typography>
                 <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>{assignedTasks.length}</Typography>
               </Box>
-              <Box sx={{ p: 1.5, background: "rgba(255,255,255,0.05)", borderRadius: 2 }}>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>Open</Typography>
+              <Box sx={{ p: 1.5, background: "var(--nx-surface)", borderRadius: 2, border: "1px solid var(--nx-border)" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>Open</Typography>
                 <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>{projectSnapshot.myOpen}</Typography>
               </Box>
             </Box>

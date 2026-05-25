@@ -9,22 +9,24 @@ export default function Input({ sx, ...props }) {
       sx={{
         "& .MuiOutlinedInput-root": {
           borderRadius: 2.2,
-          backgroundColor: "rgba(255,255,255,0.05)",
-          backdropFilter: "blur(12px)",
+          backgroundColor: "var(--nx-input)",
           transition: "all 160ms ease",
           "& fieldset": {
-            borderColor: "rgba(255,255,255,0.14)"
+            borderColor: "var(--nx-border)"
           },
           "&:hover fieldset": {
-            borderColor: "rgba(255,255,255,0.22)"
+            borderColor: "var(--nx-border-strong)"
           },
           "&.Mui-focused fieldset": {
-            borderColor: "rgba(124,92,255,0.75)",
+            borderColor: "var(--nx-purple)",
             borderWidth: 1
           }
         },
         "& .MuiInputLabel-root": {
-          color: "rgba(231,233,238,0.72)"
+          color: "var(--nx-muted)"
+        },
+        "& .MuiInputBase-input": {
+          color: "var(--nx-text)"
         },
         ...sx
       }}

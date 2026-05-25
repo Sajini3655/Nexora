@@ -145,10 +145,6 @@ function RoleMatrix({ modules, roles, roleAccess, onToggleRole }) {
         />
       </Stack>
 
-      <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
-        Toggle module access for each role. Changes apply globally to all users with that role.
-      </Typography>
-
       <Grid container spacing={2.5}>
         {modules.map((m) => (
           <Grid item xs={12} key={m.key}>

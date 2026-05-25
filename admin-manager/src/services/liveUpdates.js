@@ -27,6 +27,7 @@ function ensureClient() {
     reconnectDelay: 5000,
     onConnect: () => {
       isConnected = true;
+      stompSubscriptions.clear();
       resubscribeAll();
     },
     onWebSocketError: () => {

@@ -9,7 +9,7 @@ export default function DevSettings() {
         <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.5 }}>
           Settings
         </Typography>
-        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.75 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.75 }}>
           Personal preferences and workspace behavior.
         </Typography>
       </Box>
@@ -18,7 +18,7 @@ export default function DevSettings() {
         <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
           Settings placeholder
         </Typography>
-        <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)" }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>
           We can build this section later with theme, notification, and workspace controls.
         </Typography>
       </Card>

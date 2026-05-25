@@ -10,10 +10,7 @@ import {
 } from "@mui/material";
 
 import CategoryPicker from "../tickets/CategoryPicker";
-import {
-  clientTicketCategories,
-  createClientTicket,
-} from "../../services/clientService";
+import { clientTicketCategories, createClientTicket } from "../../services/clientService";
 
 const emptyForm = {
   category: "",
@@ -67,33 +64,23 @@ export default function ClientQuickRequest({ projects = [], onTicketCreated }) {
     <Paper
       sx={{
         p: 2.2,
-        borderRadius: 3,
-        bgcolor: "#0b1628",
-        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: "22px",
+        bgcolor: "var(--nx-panel)",
+        border: "1px solid var(--nx-border)",
         boxShadow: "none",
       }}
     >
       <Stack spacing={2}>
         <Box>
-          <Typography sx={{ fontWeight: 900, fontSize: 17 }}>
+          <Typography sx={{ fontWeight: 900, fontSize: 17, color: "var(--nx-text)" }}>
             Quick Request
-          </Typography>
-
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.4 }}>
-            Send a bug report, change request, or feedback without leaving the dashboard.
           </Typography>
         </Box>
 
         {error ? <Alert severity="error">{error}</Alert> : null}
         {success ? <Alert severity="success">{success}</Alert> : null}
 
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-            gap: 1.5,
-          }}
-        >
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1.5 }}>
           <TextField
             select
             label="Project"
@@ -162,8 +149,9 @@ export default function ClientQuickRequest({ projects = [], onTicketCreated }) {
             sx={{
               textTransform: "none",
               fontWeight: 800,
-              bgcolor: "#6d5dfc",
-              "&:hover": { bgcolor: "#5b4ee6" },
+              bgcolor: "var(--nx-purple)",
+              color: "#fff",
+              "&:hover": { bgcolor: "var(--nx-purple)" },
             }}
           >
             {creating ? "Submitting..." : "Submit Request"}

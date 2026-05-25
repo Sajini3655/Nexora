@@ -9,17 +9,14 @@ export default function AdminLayout({ children, page, setPage }) {
 
   return (
     <Box
-      sx={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.08), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
-        color: "#e7e9ee",
-      }}
+      className="nx-app-shell"
+      sx={{ minHeight: "100vh" }}
     >
       <Topbar />
       <Sidebar page={page} setPage={setPage} />
       <Box sx={{ height: `${topbarClearance}px` }} />
       <Box
+        className="nx-main-content"
         sx={{
           pt: layoutGaps.contentTopGap,
           px: `${layoutGaps.adminManager.side}px`,

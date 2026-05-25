@@ -15,7 +15,7 @@ export const clientDataKeys = {
 };
 
 /**
- * Fetch all client tickets with 30s refetch and staleTime=0 (always refetch in background)
+ * Fetch all client tickets with a 5 minute staleTime.
  */
 export function useClientTickets(enabled = true) {
   return useQuery({
@@ -29,7 +29,7 @@ export function useClientTickets(enabled = true) {
 }
 
 /**
- * Fetch all client projects with 30s refetch
+ * Fetch all client projects with a 5 minute staleTime.
  */
 export function useClientProjects(enabled = true) {
   return useQuery({

@@ -11,7 +11,7 @@ export default function UnifiedSidebar({
   footer,
   width = 292,
 }) {
-  const topbarClearance = layoutGaps.topbar.topInset + layoutGaps.topbar.height - 64;
+  const topbarClearance = layoutGaps.topbar.topInset + layoutGaps.topbar.height;
   const navigate = useNavigate();
   const location = useLocation();
   const closeButtonRef = useRef(null);
@@ -47,7 +47,7 @@ export default function UnifiedSidebar({
         keepMounted: true,
         container: () => document.body,
         sx: {
-          top: `${topbarClearance }px`,
+          top: `${topbarClearance}px`,
           "& .MuiBackdrop-root": {
             top: `${topbarClearance}px`,
           },
@@ -62,10 +62,10 @@ export default function UnifiedSidebar({
           px: 2,
           pt: 1.2,
           pb: 2,
-          color: "#e5e7eb",
-          background: "rgba(12,18,32,0.98)",
-          borderRight: "1px solid rgba(148,163,184,0.10)",
-          boxShadow: "18px 0 44px rgba(0,0,0,0.28)",
+          color: "var(--nx-text)",
+          background: "var(--nx-panel)",
+          borderRight: "1px solid var(--nx-border)",
+          boxShadow: "var(--nx-shadow)",
         },
       }}
     >
@@ -77,11 +77,11 @@ export default function UnifiedSidebar({
           sx={{
             width: 38,
             height: 38,
-            color: "#e5e7eb",
-            border: "1px solid rgba(148,163,184,0.12)",
-            background: "rgba(255,255,255,0.03)",
+            color: "var(--nx-text)",
+            border: "1px solid var(--nx-border)",
+            background: "var(--nx-panel-2)",
             "&:hover": {
-              background: "rgba(255,255,255,0.06)",
+              background: "var(--nx-card)",
             },
           }}
         >
@@ -94,7 +94,7 @@ export default function UnifiedSidebar({
           {section.label ? (
             <Typography
               sx={{
-                color: "#94a3b8",
+                color: "var(--nx-muted)",
                 fontWeight: 900,
                 fontSize: 11,
                 letterSpacing: 0.9,
@@ -121,7 +121,7 @@ export default function UnifiedSidebar({
                   minHeight: 46,
                   px: 1.35,
                   borderRadius: 2.5,
-                  color: "#cbd5e1",
+                  color: "var(--nx-text-soft)",
                   textDecoration: "none",
                   fontSize: 14.5,
                   fontWeight: 800,
@@ -132,19 +132,19 @@ export default function UnifiedSidebar({
                   background: "transparent",
                   appearance: "none",
                   width: "100%",
-                  "& svg": { fontSize: 20, color: "#94a3b8" },
+                  "& svg": { fontSize: 20, color: "var(--nx-muted)" },
                   "&:hover": {
-                    color: "#ffffff",
-                    background: "rgba(255,255,255,0.04)",
-                    borderColor: "rgba(148,163,184,0.10)",
+                    color: "var(--nx-text)",
+                    background: "var(--nx-panel-2)",
+                    borderColor: "var(--nx-border)",
                   },
                   ...(isActivePath(item)
                     ? {
-                        color: "#ffffff",
-                        background: "rgba(255,255,255,0.05)",
-                        borderColor: "rgba(91,108,255,0.18)",
+                        color: "var(--nx-text)",
+                        background: "var(--nx-panel-2)",
+                        borderColor: "var(--nx-border-strong)",
                         boxShadow: "none",
-                        "& svg": { color: "#dbe4ff" },
+                        "& svg": { color: "var(--nx-blue)" },
                       }
                     : {}),
                 }}
@@ -159,7 +159,7 @@ export default function UnifiedSidebar({
 
       {footer ? (
         <Box sx={{ mt: "auto", px: 1, pt: 1.5 }}>
-          <Typography sx={{ color: "#64748b", fontSize: 11.5 }}>{footer}</Typography>
+          <Typography sx={{ color: "var(--nx-muted)", fontSize: 11.5 }}>{footer}</Typography>
         </Box>
       ) : null}
     </Drawer>

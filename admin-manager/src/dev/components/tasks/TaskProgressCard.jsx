@@ -29,10 +29,10 @@ export default function TaskProgressCard({
           <Typography variant="h6" sx={{ fontWeight: 900 }} noWrap>
             {task.title}
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.3 }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.3 }}>
             Project: {task.projectName || "Unlinked"}
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
             Due: {task.dueDate || "-"} • Priority: {task.priority || "MEDIUM"}
           </Typography>
         </Box>
@@ -42,16 +42,16 @@ export default function TaskProgressCard({
 
       <Box sx={{ mt: 1.5 }}>
         <ProgressBar value={progress?.progressPercentage || 0} />
-        <Typography variant="caption" sx={{ color: "#94a3b8", mt: 0.8, display: "block" }}>
+        <Typography variant="caption" sx={{ color: "var(--nx-muted)", mt: 0.8, display: "block" }}>
           Story Points: {progress?.completedStoryPoints || 0} / {progress?.totalStoryPoints || 0} completed
         </Typography>
-        <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
+        <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block" }}>
           Weighted: {progress?.completedPointValue || 0} / {progress?.totalPointValue || 0} points
         </Typography>
       </Box>
 
       <Box sx={{ mt: 1.4 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#e2e8f0" }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "var(--nx-text)" }}>
           Story Points
         </Typography>
         <StoryPointChecklist

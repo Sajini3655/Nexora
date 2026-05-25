@@ -141,9 +141,6 @@ export default function DevProfile() {
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold">Developer Profile</h2>
-          <p className="text-sm text-slate-300 mt-1">
-            Full profile details used for developer matching, workload tracking, and AI assignment.
-          </p>
         </div>
         {statusMsg && (
           <span
@@ -305,9 +302,6 @@ export default function DevProfile() {
         {/* Skills */}
         <div className="glass-card p-5">
           <h3 className="text-lg font-bold mb-3">Skills</h3>
-          <p className="text-xs text-slate-400 mb-3">
-            Add skills you have and set your proficiency level for better assignment matching.
-          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_120px_auto] gap-2">
             <input

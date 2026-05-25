@@ -15,7 +15,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [blockers, setBlockers] = useState<string[]>([]);
-  const [ticketsCreated, setTicketsCreated] = useState<any[]>([]); 
+  const [ticketsCreated, setTicketsCreated] = useState<any[]>([]);
   const [showTicketDialog, setShowTicketDialog] = useState(false);
   const [pendingEndData, setPendingEndData] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -60,7 +60,7 @@ const App: React.FC = () => {
       } else {
         setSummary(data.summary);
         setBlockers(data.blockers);
-        setTicketsCreated(data.tickets_created || []); 
+        setTicketsCreated(data.tickets_created || []);
         setChatStarted(false);
         setPendingEndData(null);
       }
@@ -126,9 +126,10 @@ const App: React.FC = () => {
         margin: "50px auto",
         padding: 3,
         borderRadius: 4,
-        bgcolor: "#0b1a2b",
-        color: "#ffffff",
-        boxShadow: "0 4px 30px rgba(0,0,0,0.7)",
+        bgcolor: "var(--nx-card)",
+        color: "var(--nx-text)",
+        border: "1px solid var(--nx-border)",
+        boxShadow: "var(--nx-shadow)",
       }}
     >
       <Typography
@@ -136,7 +137,7 @@ const App: React.FC = () => {
         sx={{
           mb: 3,
           fontWeight: 700,
-          color: "#00bfff",
+          color: "var(--nx-blue)",
           textAlign: "center",
           letterSpacing: 1,
         }}
@@ -147,7 +148,13 @@ const App: React.FC = () => {
       {!chatStarted ? (
         <Button
           variant="contained"
-          sx={{ backgroundColor: "#00bfff", color: "#0b1a2b", width: "100%" }}
+          sx={{
+            bgcolor: "var(--nx-blue)",
+            color: "var(--nx-on-accent)",
+            width: "100%",
+            textTransform: "none",
+            fontWeight: 800,
+          }}
           onClick={startChat}
         >
           Start Chat
@@ -160,21 +167,23 @@ const App: React.FC = () => {
               overflowY: "auto",
               p: 2,
               mb: 2,
-              bgcolor: "#0f223e",
+              bgcolor: "var(--nx-panel)",
               borderRadius: 3,
+              border: "1px solid var(--nx-border)",
             }}
           >
             {messages.map((m, i) => (
               <Box key={i} sx={{ mb: 2 }}>
                 <Box
                   sx={{
-                    bgcolor: "#1f2f4f",
-                    color: "#00d1ff",
+                    bgcolor: "color-mix(in srgb, var(--nx-blue) 20%, transparent)",
+                    color: "var(--nx-blue)",
                     px: 2,
                     py: 1,
                     borderRadius: 2,
                     mb: 1,
                     maxWidth: "80%",
+                    border: "1px solid color-mix(in srgb, var(--nx-blue) 30%, transparent)",
                   }}
                 >
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -185,12 +194,13 @@ const App: React.FC = () => {
 
                 <Box
                   sx={{
-                    bgcolor: "#22334f",
-                    color: "#90ee90",
+                    bgcolor: "color-mix(in srgb, var(--nx-green) 16%, transparent)",
+                    color: "var(--nx-green)",
                     px: 2,
                     py: 1,
                     borderRadius: 2,
                     maxWidth: "80%",
+                    border: "1px solid color-mix(in srgb, var(--nx-green) 30%, transparent)",
                   }}
                 >
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -212,19 +222,24 @@ const App: React.FC = () => {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               sx={{
-                bgcolor: "#0b1a2b",
-                input: { color: "#ffffff" },
+                bgcolor: "var(--nx-input)",
+                input: { color: "var(--nx-text)" },
                 "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#00bfff",
+                  borderColor: "var(--nx-border)",
                 },
                 "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#00d1ff",
+                  borderColor: "var(--nx-border-strong)",
                 },
               }}
             />
             <Button
               variant="contained"
-              sx={{ backgroundColor: "#00bfff", color: "#0b1a2b" }}
+              sx={{
+                bgcolor: "var(--nx-blue)",
+                color: "var(--nx-on-accent)",
+                textTransform: "none",
+                fontWeight: 800,
+              }}
               onClick={sendMessage}
               disabled={loading}
             >
@@ -237,9 +252,11 @@ const App: React.FC = () => {
             sx={{
               mt: 2,
               width: "100%",
-              color: "#ff6b81",
-              borderColor: "#ff6b81",
-              "&:hover": { borderColor: "#ff6b81" },
+              color: "var(--nx-red)",
+              borderColor: "var(--nx-red)",
+              textTransform: "none",
+              fontWeight: 800,
+              "&:hover": { borderColor: "var(--nx-red)", backgroundColor: "color-mix(in srgb, var(--nx-red) 10%, transparent)" },
             }}
             onClick={() => endChat()}
           >
@@ -254,18 +271,19 @@ const App: React.FC = () => {
             mt: 3,
             p: 2,
             borderRadius: 3,
-            bgcolor: "#112233",
-            color: "#ffffff",
+            bgcolor: "var(--nx-panel)",
+            color: "var(--nx-text)",
+            border: "1px solid var(--nx-border)",
           }}
         >
-          <Typography variant="h6" sx={{ mb: 1, color: "#00bfff" }}>
+          <Typography variant="h6" sx={{ mb: 1, color: "var(--nx-blue)" }}>
             Chat Summary
           </Typography>
           <Typography sx={{ mb: 1 }}>{summary}</Typography>
 
           {blockers.length > 0 && (
             <>
-              <Typography variant="h6" sx={{ mt: 1, color: "#ff6b81" }}>
+              <Typography variant="h6" sx={{ mt: 1, color: "var(--nx-red)" }}>
                 Blockers Detected
               </Typography>
               {blockers.map((b, i) => (
@@ -278,7 +296,7 @@ const App: React.FC = () => {
 
           {ticketsCreated.length > 0 && (
             <>
-              <Typography variant="h6" sx={{ mt: 2, color: "#00ff99" }}>
+              <Typography variant="h6" sx={{ mt: 2, color: "var(--nx-green)" }}>
                 Tickets Created
               </Typography>
               {ticketsCreated.map((t) => (

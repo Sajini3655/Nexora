@@ -105,16 +105,12 @@ export default function DeveloperTaskProgress() {
         My Task Progress
       </Typography>
 
-      <Typography variant="body2" sx={{ mb: 2, color: "#94a3b8" }}>
-        Select one open task to inspect its story points and live weighted progress.
-      </Typography>
-
       {error ? <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert> : null}
 
       {tasks.length > 0 ? (
         <Stack spacing={2}>
           <FormControl size="small" sx={{ maxWidth: 420 }}>
-            <Typography variant="caption" sx={{ color: "#94a3b8", mb: 0.5 }}>
+            <Typography variant="caption" sx={{ color: "var(--nx-muted)", mb: 0.5 }}>
               Selected task
             </Typography>
             <Box
@@ -122,9 +118,9 @@ export default function DeveloperTaskProgress() {
               value={selectedTaskId}
               onChange={(event) => setSelectedTaskId(event.target.value)}
               style={{
-                background: "#0f172a",
-                color: "#f8fafc",
-                border: "1px solid rgba(148,163,184,0.3)",
+                background: "var(--nx-input)",
+                color: "var(--nx-text)",
+                border: "1px solid var(--nx-border)",
                 borderRadius: 8,
                 padding: "10px 12px",
               }}
@@ -150,7 +146,7 @@ export default function DeveloperTaskProgress() {
           ) : null}
         </Stack>
       ) : (
-        <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
           No assigned tasks available.
         </Typography>
       )}

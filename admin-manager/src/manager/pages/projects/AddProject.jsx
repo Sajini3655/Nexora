@@ -190,12 +190,12 @@ export default function AddProject() {
           mb: 2,
           p: 1.8,
           borderRadius: 2.5,
-          border: "1px solid rgba(148,163,184,0.16)",
-          background: "rgba(15,23,42,0.68)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-card)",
+          boxShadow: "var(--nx-shadow)",
         }}
       >
-        <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.4 }}>
+        <Typography variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.4 }}>
           Manager / Projects
         </Typography>
         <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
@@ -209,7 +209,7 @@ export default function AddProject() {
 
       <Stack spacing={2}>
         {/* PROJECT DETAILS SECTION */}
-        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
+        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-card)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Project Details</Typography>
           <Stack spacing={1.2}>
             <TextField
@@ -246,11 +246,11 @@ export default function AddProject() {
 
         {/* TASKS SECTION */}
         {Boolean(moduleAccess?.TASKS) && (
-          <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
+          <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-card)" }}>
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} sx={{ mb: 1.5 }}>
             <Box>
               <Typography sx={{ fontWeight: 900 }}>Tasks</Typography>
-              <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                 Add tasks and optional story points for planning breakdown.
               </Typography>
             </Box>
@@ -269,11 +269,11 @@ export default function AddProject() {
               <Paper
                 key={`task-${taskIndex}`}
                 elevation={0}
-                sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f" }}
+                sx={{ p: 1.4, borderRadius: 2, border: "1px solid var(--nx-border)", background: "var(--nx-panel-2)" }}
               >
                 {/* Task header */}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.2 }}>
-                  <Typography sx={{ fontWeight: 700, color: "#cbd5e1" }}>
+                  <Typography sx={{ fontWeight: 700, color: "var(--nx-text-soft)" }}>
                     Task {taskIndex + 1}
                   </Typography>
                   <Button
@@ -332,13 +332,13 @@ export default function AddProject() {
                 </Stack>
 
                 {/* Story Points subsection */}
-                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: "1px solid rgba(148,163,184,0.12)" }}>
+                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: "1px solid var(--nx-border)" }}>
                   <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} sx={{ mb: 1 }}>
                     <Box>
-                      <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#cbd5e1" }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: 14, color: "var(--nx-text-soft)" }}>
                         Story Points (Optional)
                       </Typography>
-                      <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                      <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                         {task.storyPoints.length} point{task.storyPoints.length !== 1 ? "s" : ""} added
                       </Typography>
                     </Box>
@@ -347,7 +347,7 @@ export default function AddProject() {
                       size="small"
                       startIcon={<Plus size={14} />}
                       onClick={() => handleAddStoryPoint(taskIndex)}
-                      sx={{ textTransform: "none", fontWeight: 600, color: "#c4b5fd" }}
+                      sx={{ textTransform: "none", fontWeight: 600, color: "var(--nx-purple)" }}
                     >
                       Add Story Point
                     </Button>
@@ -359,7 +359,7 @@ export default function AddProject() {
                         <Paper
                           key={`sp-${spIndex}`}
                           elevation={0}
-                          sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(124,92,255,0.16)", background: "rgba(124,92,255,0.08)" }}
+                          sx={{ p: 1, borderRadius: 1.5, border: "1px solid color-mix(in srgb, var(--nx-purple) 16%, transparent)", background: "color-mix(in srgb, var(--nx-purple) 8%, transparent)" }}
                         >
                           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.1fr 1.2fr 0.4fr auto" }, gap: 0.8, alignItems: "center" }}>
                             <TextField
@@ -398,7 +398,7 @@ export default function AddProject() {
                       ))}
                     </Stack>
                   ) : (
-                    <Typography variant="caption" sx={{ color: "#64748b", fontStyle: "italic" }}>
+                    <Typography variant="caption" sx={{ color: "var(--nx-muted)", fontStyle: "italic" }}>
                       No story points added yet. Story points are optional.
                     </Typography>
                   )}
@@ -419,10 +419,10 @@ export default function AddProject() {
             sx={{
               textTransform: "none",
               fontWeight: 600,
-              bgcolor: "rgba(124,92,255,0.24)",
-              color: "#ddd6fe",
-              border: "1px solid rgba(124,92,255,0.45)",
-              "&:hover": { bgcolor: "rgba(124,92,255,0.32)" },
+              bgcolor: "color-mix(in srgb, var(--nx-purple) 24%, transparent)",
+              color: "var(--nx-purple)",
+              border: "1px solid color-mix(in srgb, var(--nx-purple) 45%, transparent)",
+              "&:hover": { bgcolor: "color-mix(in srgb, var(--nx-purple) 32%, transparent)" },
               "&:disabled": { opacity: 0.5 },
             }}
           >

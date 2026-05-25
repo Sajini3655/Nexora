@@ -1,7 +1,11 @@
 // src/pages/auth/Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { IconButton } from "@mui/material";
+import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useThemeMode } from "../../context/ThemeContext.jsx";
 import {
   getDefaultPath,
   getDefaultRole,
@@ -13,6 +17,7 @@ import {
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { mode, toggleColorScheme } = useThemeMode();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,25 +72,49 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center p-4">
-      <div className="glass-card p-6 w-full" style={{ maxWidth: 420 }}>
-        <h2 className="text-center text-2xl font-extrabold">Login</h2>
+    <div className="nx-app-shell min-h-screen grid place-items-center p-4">
+      <div className="nx-card p-6 w-full" style={{ maxWidth: 420 }}>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div>
+            <p className="nx-muted text-sm font-semibold">Nexora</p>
+            <h2 className="text-2xl font-extrabold">Login</h2>
+          </div>
+
+          <IconButton
+            onClick={() => toggleColorScheme(mode === "dark" ? "light" : "dark")}
+            aria-label="Toggle color scheme"
+            title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            sx={{
+              width: 42,
+              height: 42,
+              color: "var(--nx-text)",
+              border: "1px solid var(--nx-border)",
+              background: "var(--nx-panel-2)",
+              "&:hover": {
+                background: "var(--nx-card)",
+                borderColor: "var(--nx-border-strong)",
+              },
+            }}
+          >
+            {mode === "dark" ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}
+          </IconButton>
+        </div>
 
         {error && (
-          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <div className="nx-inner-panel mt-4 px-4 py-3 text-sm" style={{ color: "var(--nx-red)" }}>
             {error}
           </div>
         )}
 
         {debug && (
-          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <div className="nx-inner-panel mt-4 px-4 py-3 text-sm" style={{ color: "var(--nx-green)" }}>
             {debug}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
-            <label className="text-sm text-slate-200">Email</label>
+            <label className="text-sm" style={{ color: "var(--nx-text-soft)" }}>Email</label>
             <input
               type="email"
               value={email}
@@ -98,7 +127,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="text-sm text-slate-200">Password</label>
+            <label className="text-sm" style={{ color: "var(--nx-text-soft)" }}>Password</label>
             <input
               type="password"
               value={password}

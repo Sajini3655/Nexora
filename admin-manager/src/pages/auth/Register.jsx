@@ -110,8 +110,7 @@ export default function Register() {
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        background:
-          "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.08), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
+        background: "var(--nx-bg)",
         padding: 24
       }}
     >
@@ -120,11 +119,11 @@ export default function Register() {
           width: "100%",
           maxWidth: 520,
           borderRadius: 28,
-          background: "rgba(11, 18, 45, 0.92)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
+          background: "var(--nx-card)",
+          border: "1px solid var(--nx-border)",
+          boxShadow: "var(--nx-shadow)",
           padding: 32,
-          color: "#fff"
+          color: "var(--nx-text)"
         }}
       >
         <h1 style={{ margin: 0, marginBottom: 8, fontSize: 42, fontWeight: 800 }}>
@@ -138,9 +137,9 @@ export default function Register() {
               marginBottom: 18,
               padding: "16px 18px",
               borderRadius: 18,
-              background: "rgba(110, 0, 0, 0.35)",
-              border: "1px solid rgba(255, 80, 80, 0.3)",
-              color: "#ffd5d5"
+              background: "color-mix(in srgb, var(--nx-red) 20%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--nx-red) 30%, transparent)",
+              color: "var(--nx-text)"
             }}
           >
             {error}
@@ -154,9 +153,9 @@ export default function Register() {
               marginBottom: 18,
               padding: "16px 18px",
               borderRadius: 18,
-              background: "rgba(0, 110, 50, 0.25)",
-              border: "1px solid rgba(80, 255, 140, 0.3)",
-              color: "#d9ffe6"
+              background: "color-mix(in srgb, var(--nx-green) 20%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--nx-green) 30%, transparent)",
+              color: "var(--nx-text)"
             }}
           >
             {success}
@@ -245,9 +244,9 @@ function inputStyle(disabled) {
     boxSizing: "border-box",
     padding: "18px 20px",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: disabled ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.06)",
-    color: "#fff",
+    border: "1px solid var(--nx-border)",
+    background: disabled ? "var(--nx-panel)" : "var(--nx-input)",
+    color: "var(--nx-text)",
     fontSize: 18,
     outline: "none"
   };

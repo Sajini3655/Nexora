@@ -15,7 +15,7 @@ export const devTicketKeys = {
 };
 
 /**
- * Fetch all developer tickets with 30s refetch and staleTime=0
+ * Fetch all developer tickets with a 5 minute staleTime.
  */
 export function useDeveloperTickets(enabled = true) {
   return useQuery({
@@ -36,7 +36,7 @@ export function useDeveloperTicket(ticketId: string | null | undefined, enabled 
     queryKey: devTicketKeys.detail(ticketId || ""),
     queryFn: () => fetchDeveloperTicketByIdFromBackend(ticketId!),
     enabled: enabled && !!ticketId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 

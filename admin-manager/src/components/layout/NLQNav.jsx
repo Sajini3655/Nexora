@@ -119,8 +119,11 @@ export default function NLQNav() {
           sx={{
             width: { xs: 160, sm: 240, md: 340 },
             "& .MuiInputBase-root": {
-              background: "rgba(255,255,255,0.03)",
+              background: "var(--nx-input)",
               borderRadius: 999,
+            },
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: "var(--nx-border)",
             },
           }}
         />
@@ -131,10 +134,10 @@ export default function NLQNav() {
           sx={{
             width: 42,
             height: 42,
-            color: "#e5e7eb",
-            border: "1px solid rgba(148,163,184,0.12)",
-            background: "rgba(255,255,255,0.03)",
-            "&:hover": { background: "rgba(255,255,255,0.06)" },
+            color: "var(--nx-text)",
+            border: "1px solid var(--nx-border)",
+            background: "var(--nx-panel)",
+            "&:hover": { background: "var(--nx-panel-2)" },
           }}
           aria-label="Submit navigation query"
         >

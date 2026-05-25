@@ -38,12 +38,10 @@ export default function DevTopbar({ onMenuClick }) {
         display: "flex",
         alignItems: "center",
         gap: 2,
-        background:
-          "linear-gradient(135deg, rgba(53,56,93,0.96) 0%, rgba(15,23,42,0.98) 55%, rgba(8,47,56,0.88) 100%)",
-        borderBottom: "1px solid rgba(148,163,184,0.18)",
-        boxShadow: "0 18px 45px rgba(0,0,0,0.30)",
-        backdropFilter: "blur(18px)",
-        borderRadius: "0 0 24px 24px",
+        background: "var(--nx-panel)",
+        borderBottom: "1px solid var(--nx-border)",
+        boxShadow: "var(--nx-shadow)",
+        borderRadius: "0 0 20px 20px",
       }}
     >
       <IconButton
@@ -51,12 +49,12 @@ export default function DevTopbar({ onMenuClick }) {
         sx={{
           width: 48,
           height: 48,
-          color: "#e5e7eb",
-          border: "1px solid rgba(255,255,255,0.13)",
-          background: "rgba(255,255,255,0.045)",
+          color: "var(--nx-text)",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-card)",
           "&:hover": {
-            background: "rgba(124,92,255,0.16)",
-            borderColor: "rgba(167,139,250,0.28)",
+            background: "color-mix(in srgb, var(--nx-purple) 12%, transparent)",
+            borderColor: "color-mix(in srgb, var(--nx-purple) 30%, transparent)",
           },
         }}
       >
@@ -68,8 +66,8 @@ export default function DevTopbar({ onMenuClick }) {
           width: 42,
           height: 42,
           borderRadius: "50%",
-          background: "linear-gradient(135deg, #7c5cff, #38bdf8)",
-          boxShadow: "0 14px 34px rgba(56,189,248,0.18)",
+          background: "var(--nx-purple)",
+          boxShadow: "var(--nx-shadow)",
           flexShrink: 0,
         }}
       />
@@ -79,7 +77,7 @@ export default function DevTopbar({ onMenuClick }) {
           sx={{
             fontWeight: 950,
             letterSpacing: -0.4,
-            color: "#f8fafc",
+            color: "var(--nx-text)",
             lineHeight: 1.1,
           }}
         >
@@ -88,7 +86,7 @@ export default function DevTopbar({ onMenuClick }) {
         <Typography
           variant="body2"
           sx={{
-            color: "#94a3b8",
+            color: "var(--nx-muted)",
             fontWeight: 800,
             mt: 0.25,
           }}
@@ -108,11 +106,11 @@ export default function DevTopbar({ onMenuClick }) {
             px: 1.4,
             py: 0.8,
             borderRadius: 999,
-            background: "rgba(255,255,255,0.045)",
-            border: "1px solid rgba(148,163,184,0.13)",
+            background: "var(--nx-card)",
+            border: "1px solid var(--nx-border)",
           }}
         >
-          <Typography variant="body2" sx={{ fontWeight: 900, color: "#e5e7eb" }}>
+          <Typography variant="body2" sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
             {user.name || user.email || "Developer User"}
           </Typography>
 
@@ -122,9 +120,9 @@ export default function DevTopbar({ onMenuClick }) {
             sx={{
               height: 24,
               fontWeight: 950,
-              color: "#ddd6fe",
-              background: "rgba(124,92,255,0.20)",
-              border: "1px solid rgba(167,139,250,0.26)",
+              color: "var(--nx-purple)",
+              background: "color-mix(in srgb, var(--nx-purple) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--nx-purple) 24%, transparent)",
             }}
           />
         </Box>
@@ -134,9 +132,9 @@ export default function DevTopbar({ onMenuClick }) {
         sx={{
           width: 44,
           height: 44,
-          color: "#e5e7eb",
-          border: "1px solid rgba(148,163,184,0.14)",
-          background: "rgba(255,255,255,0.035)",
+          color: "var(--nx-text)",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-card)",
         }}
       >
         <NotificationsNoneIcon />
@@ -146,17 +144,17 @@ export default function DevTopbar({ onMenuClick }) {
         onClick={(event) => setAnchorEl(event.currentTarget)}
         sx={{
           p: 0.55,
-          border: "1px solid rgba(167,139,250,0.32)",
-          background: "rgba(124,92,255,0.12)",
+          border: "1px solid color-mix(in srgb, var(--nx-purple) 28%, transparent)",
+          background: "color-mix(in srgb, var(--nx-purple) 12%, transparent)",
         }}
       >
         <Avatar
           sx={{
             width: 38,
             height: 38,
-            bgcolor: "#6d5dfc",
+            bgcolor: "var(--nx-purple)",
             fontWeight: 950,
-            color: "#fff",
+            color: "var(--nx-on-accent)",
           }}
         >
           {initials}
@@ -172,10 +170,10 @@ export default function DevTopbar({ onMenuClick }) {
             mt: 1,
             minWidth: 230,
             borderRadius: 3,
-            color: "#e5e7eb",
-            background: "#0f172a",
-            border: "1px solid rgba(148,163,184,0.18)",
-            boxShadow: "0 18px 60px rgba(0,0,0,0.45)",
+            color: "var(--nx-text)",
+            background: "var(--nx-panel)",
+            border: "1px solid var(--nx-border)",
+            boxShadow: "var(--nx-shadow)",
           },
         }}
       >
@@ -183,12 +181,12 @@ export default function DevTopbar({ onMenuClick }) {
           <Typography sx={{ fontWeight: 950 }}>
             {user?.name || "Developer"}
           </Typography>
-          <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+          <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
             {user?.email || ""}
           </Typography>
         </Box>
 
-        <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+        <Divider sx={{ borderColor: "var(--nx-border)" }} />
 
         <MenuItem
           onClick={() => {

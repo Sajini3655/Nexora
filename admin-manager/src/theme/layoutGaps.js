@@ -15,10 +15,10 @@ export const layoutGaps = {
   },
 
   topbar: {
-    topInset: 10,
-    sideInset: 12,
-    height: 74,
-    toolbarMinHeight: 74,
+    topInset: 12,
+    sideInset: 16,
+    height: 72,
+    toolbarMinHeight: 72,
   },
 
   // Single value all layouts use for content top gap after topbar spacer

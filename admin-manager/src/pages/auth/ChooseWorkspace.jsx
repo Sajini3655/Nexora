@@ -64,9 +64,8 @@ export default function ChooseWorkspace() {
         placeItems: "center",
         px: 2,
         py: 4,
-        color: "#e7e9ee",
-        background:
-          "radial-gradient(circle at top left, rgba(124,92,255,0.22), transparent 25%), radial-gradient(circle at top right, rgba(0,255,170,0.10), transparent 22%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
+        color: "var(--nx-text)",
+        background: "var(--nx-bg)",
       }}
     >
       <Paper
@@ -76,20 +75,19 @@ export default function ChooseWorkspace() {
           maxWidth: 900,
           p: { xs: 2.5, md: 4 },
           borderRadius: 4,
-          background:
-            "linear-gradient(180deg, rgba(12,18,45,0.96), rgba(5,10,30,0.98))",
-          border: "1px solid rgba(255,255,255,0.10)",
-          boxShadow: "0 24px 90px rgba(0,0,0,0.45)",
+          background: "var(--nx-card)",
+          border: "1px solid var(--nx-border)",
+          boxShadow: "var(--nx-shadow)",
         }}
       >
         <Stack spacing={1.2} alignItems="center" textAlign="center" sx={{ mb: 4 }}>
           <Chip
             label="Nexora"
             sx={{
-              color: "#c4b5fd",
+              color: "var(--nx-purple)",
               fontWeight: 900,
-              backgroundColor: "rgba(124,92,255,0.14)",
-              border: "1px solid rgba(124,92,255,0.28)",
+              backgroundColor: "color-mix(in srgb, var(--nx-purple) 14%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--nx-purple) 28%, transparent)",
             }}
           />
 
@@ -98,24 +96,24 @@ export default function ChooseWorkspace() {
             sx={{
               fontWeight: 950,
               letterSpacing: -1,
-              color: "#fff",
+              color: "var(--nx-text)",
             }}
           >
             Choose your workspace
           </Typography>
 
-          <Typography sx={{ color: "#94a3b8", maxWidth: 620 }}>
+          <Typography sx={{ color: "var(--nx-muted)", maxWidth: 620 }}>
             Your account has more than one role. Select how you want to continue.
           </Typography>
 
-          <Typography sx={{ color: "#cbd5e1", fontWeight: 800 }}>
+          <Typography sx={{ color: "var(--nx-text-soft)", fontWeight: 800 }}>
             {user?.name || user?.email || "User"}
           </Typography>
         </Stack>
 
         {roles.length === 0 ? (
           <Box sx={{ textAlign: "center" }}>
-            <Typography sx={{ color: "#fca5a5", mb: 2 }}>
+            <Typography sx={{ color: "var(--nx-red)", mb: 2 }}>
               No roles were found for this account.
             </Typography>
 
@@ -146,14 +144,14 @@ export default function ChooseWorkspace() {
                   p: 2.5,
                   borderRadius: 3,
                   cursor: "pointer",
-                  color: "#e7e9ee",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.10)",
+                  color: "var(--nx-text)",
+                  background: "var(--nx-panel)",
+                  border: "1px solid var(--nx-border)",
                   transition: "180ms ease",
                   "&:hover": {
                     transform: "translateY(-3px)",
-                    background: "rgba(124,92,255,0.14)",
-                    borderColor: "rgba(124,92,255,0.45)",
+                    background: "color-mix(in srgb, var(--nx-purple) 14%, transparent)",
+                    borderColor: "color-mix(in srgb, var(--nx-purple) 45%, transparent)",
                   },
                 }}
               >
@@ -165,9 +163,9 @@ export default function ChooseWorkspace() {
                       borderRadius: 2.5,
                       display: "grid",
                       placeItems: "center",
-                      color: "#c4b5fd",
-                      backgroundColor: "rgba(124,92,255,0.14)",
-                      border: "1px solid rgba(124,92,255,0.25)",
+                      color: "var(--nx-purple)",
+                      backgroundColor: "color-mix(in srgb, var(--nx-purple) 14%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--nx-purple) 25%, transparent)",
                       flexShrink: 0,
                     }}
                   >
@@ -175,11 +173,11 @@ export default function ChooseWorkspace() {
                   </Box>
 
                   <Box>
-                    <Typography sx={{ fontWeight: 950, fontSize: 18, color: "#fff" }}>
+                    <Typography sx={{ fontWeight: 950, fontSize: 18, color: "var(--nx-text)" }}>
                       {roleTitle(role)}
                     </Typography>
 
-                    <Typography sx={{ color: "#94a3b8", mt: 0.6, fontSize: 14 }}>
+                    <Typography sx={{ color: "var(--nx-muted)", mt: 0.6, fontSize: 14 }}>
                       {roleSubtitle(role)}
                     </Typography>
                   </Box>

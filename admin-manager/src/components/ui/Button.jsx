@@ -36,18 +36,26 @@ export default function Button({
       sx={{
         position: "relative",
         ...(tone === "soft" && {
-          backgroundColor: "rgba(124,92,255,0.12)",
-          borderColor: "rgba(124,92,255,0.35)",
+          backgroundColor: "var(--nx-panel-2)",
+          borderColor: "var(--nx-border)",
+          color: "var(--nx-text-soft)",
           "&:hover": {
-            backgroundColor: "rgba(124,92,255,0.22)"
+            backgroundColor: "var(--nx-panel)"
           }
         }),
         ...(tone === "danger" && {
-          backgroundColor: "rgba(239,68,68,0.9)",
+          backgroundColor: "var(--nx-red)",
+          color: "var(--nx-on-accent)",
           "&:hover": {
-            backgroundColor: "rgba(220,38,38,1)"
+            backgroundColor: "color-mix(in srgb, var(--nx-red) 88%, black 12%)"
           }
         }),
+        "&.Mui-disabled": {
+          color: "var(--nx-muted)",
+          borderColor: "var(--nx-border)",
+          backgroundColor: "var(--nx-panel-2)",
+          opacity: 0.85,
+        },
         ...(loading && {
           pointerEvents: "none"
         })

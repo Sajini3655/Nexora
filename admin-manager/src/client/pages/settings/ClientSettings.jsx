@@ -9,7 +9,7 @@ export default function ClientSettings() {
           <Typography variant="h5" sx={{ fontWeight: 900 }}>
             Settings
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.5 }}>
             Client preferences and account options.
           </Typography>
         </Box>
@@ -18,8 +18,8 @@ export default function ClientSettings() {
           sx={{
             p: 2.5,
             borderRadius: 3,
-            bgcolor: "#0b1628",
-            border: "1px solid rgba(255,255,255,0.08)",
+            bgcolor: "var(--nx-panel)",
+            border: "1px solid var(--nx-border)",
             boxShadow: "none",
             maxWidth: 760,
           }}
@@ -27,7 +27,7 @@ export default function ClientSettings() {
           <Typography sx={{ fontWeight: 900, mb: 1 }}>
             Settings scaffold
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
             Notification preferences, branding options, and report delivery settings can be connected here later.
           </Typography>
         </Paper>

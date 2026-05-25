@@ -37,10 +37,10 @@ function getDateLabel(value) {
 function DetailRow({ label, value }) {
   return (
     <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, py: 1 }}>
-      <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+      <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ color: "#f8fafc", fontWeight: 700, textAlign: "right" }}>
+      <Typography variant="body2" sx={{ color: "var(--nx-text)", fontWeight: 700, textAlign: "right" }}>
         {value}
       </Typography>
     </Box>
@@ -178,19 +178,19 @@ export default function ProjectDetailsPage() {
   if (isLoading) {
     return (
       <Box sx={{ display: "grid", placeItems: "center", minHeight: 280 }}>
-        <CircularProgress sx={{ color: "#6d5dfc" }} />
+        <CircularProgress sx={{ color: "var(--nx-purple)" }} />
       </Box>
     );
   }
 
   if (!project) {
     return (
-      <Paper sx={{ p: 3, borderRadius: 3, bgcolor: "#0b1628", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "none" }}>
+      <Paper sx={{ p: 3, borderRadius: 3, bgcolor: "var(--nx-panel)", border: "1px solid var(--nx-border)", boxShadow: "var(--nx-shadow)" }}>
         {error ? <Alert severity="warning" sx={{ mb: 2 }}>{error.message || error}</Alert> : null}
-        <Typography variant="h5" sx={{ fontWeight: 900, mb: 1 }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, color: "var(--nx-text)" }}>
           Project not found
         </Typography>
-        <Typography variant="body2" sx={{ color: "#94a3b8", mb: 2 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mb: 2 }}>
           The requested project does not exist or is not available in your current workspace.
         </Typography>
         <Button
@@ -198,7 +198,7 @@ export default function ProjectDetailsPage() {
           startIcon={<ArrowBackRoundedIcon />}
           component={Link}
           to="/manager"
-          sx={{ textTransform: "none", borderColor: "rgba(255,255,255,0.14)", color: "#cbd5e1" }}
+          sx={{ textTransform: "none", borderColor: "var(--nx-border)", color: "var(--nx-text)" }}
         >
           Back to dashboard
         </Button>
@@ -210,13 +210,13 @@ export default function ProjectDetailsPage() {
     <Stack spacing={3}>
       <Box sx={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Box>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: 1 }}>
+          <Typography variant="overline" sx={{ color: "var(--nx-muted)", letterSpacing: 1 }}>
             Project Detail
           </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5, color: "var(--nx-text)" }}>
             {project.name || project.projectName || `Project ${projectId}`}
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1, maxWidth: 720 }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 1, maxWidth: 720 }}>
             {project?.description || project?.projectDescription || "A concise manager view of this project’s status, task summary, and progress."}
           </Typography>
         </Box>
@@ -227,7 +227,7 @@ export default function ProjectDetailsPage() {
             variant="outlined"
             startIcon={<ArrowBackRoundedIcon />}
             onClick={() => navigate("/manager")}
-            sx={{ textTransform: "none", borderColor: "rgba(255,255,255,0.14)", color: "#cbd5e1" }}
+            sx={{ textTransform: "none", borderColor: "var(--nx-border)", color: "var(--nx-text)", '&:hover': { backgroundColor: "var(--nx-panel-2)" } }}
           >
             Dashboard
           </Button>
@@ -236,8 +236,8 @@ export default function ProjectDetailsPage() {
 
       <Grid container spacing={2.5}>
         <Grid item xs={12} lg={7}>
-          <Paper sx={{ p: 2.25, borderRadius: 3, bgcolor: "#0b1628", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "none", height: "100%" }}>
-            <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>
+          <Paper sx={{ p: 2.25, borderRadius: 3, bgcolor: "var(--nx-panel)", border: "1px solid var(--nx-border)", boxShadow: "var(--nx-shadow)", height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 2, color: "var(--nx-text)" }}>
               Overview
             </Typography>
             <DetailRow label="Project ID" value={project?.id ?? projectId} />
@@ -248,21 +248,21 @@ export default function ProjectDetailsPage() {
 
             <Box sx={{ mt: 2 }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                   Overall progress
                 </Typography>
-                <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-text-soft)" }}>
                     {progress}%
                 </Typography>
               </Box>
-              <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 999, bgcolor: "rgba(255,255,255,0.08)", "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" } }} />
+              <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 999, bgcolor: "var(--nx-panel-2)", "& .MuiLinearProgress-bar": { bgcolor: "var(--nx-purple)" } }} />
             </Box>
           </Paper>
         </Grid>
 
         <Grid item xs={12} lg={5}>
-          <Paper sx={{ p: 2.25, borderRadius: 3, bgcolor: "#0b1628", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "none", height: "100%" }}>
-            <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>
+          <Paper sx={{ p: 2.25, borderRadius: 3, bgcolor: "var(--nx-panel)", border: "1px solid var(--nx-border)", boxShadow: "var(--nx-shadow)", height: "100%" }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 2, color: "var(--nx-text)" }}>
               Task summary
             </Typography>
             <Stack spacing={1.25}>
@@ -275,7 +275,7 @@ export default function ProjectDetailsPage() {
                 component={Link}
                 to={`/manager/project-management/${projectId}`}
                 variant="contained"
-                sx={{ textTransform: "none", bgcolor: "#6d5dfc", color: "#fff", fontWeight: 800, boxShadow: "none", '&:hover': { bgcolor: '#5b4ee6' } }}
+                sx={{ textTransform: "none", bgcolor: "var(--nx-purple)", color: "var(--nx-card)", fontWeight: 800, boxShadow: "none", '&:hover': { bgcolor: "var(--nx-purple)" } }}
               >
                 Open management view
               </Button>
@@ -284,154 +284,155 @@ export default function ProjectDetailsPage() {
         </Grid>
       </Grid>
 
-      {canAccessChat && (      
+      {canAccessChat && (
         <Grid container spacing={2.5}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2.25, borderRadius: 3, bgcolor: "#0b1628", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "none" }}>
-            <Stack spacing={2}>
-              <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={1.5}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 900, mb: 0.75 }}>
-                    Project Chat
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-                    {activeSessions.length > 0
-                      ? `${activeSessions.length} active thread${activeSessions.length !== 1 ? "s" : ""}`
-                      : "No active chat threads."}
-                  </Typography>
-                </Box>
-
-                <Button
-                  variant="contained"
-                  onClick={handleOpenNewChat}
-                  disabled={!currentUserId || authLoading}
-                  sx={{ textTransform: "none", bgcolor: "#6d5dfc", color: "#fff", fontWeight: 800, boxShadow: "none", '&:hover': { bgcolor: '#5b4ee6' } }}
-                >
-                  New Chat
-                </Button>
-              </Stack>
-
-              {chatListLoading && sessions.length === 0 ? (
-                <Box sx={{ p: 2, borderRadius: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <Stack direction="row" spacing={1.2} alignItems="center">
-                    <CircularProgress size={18} sx={{ color: "#6b51ff" }} />
-                    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-                      Loading chat sessions...
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2.25, borderRadius: 3, bgcolor: "var(--nx-panel)", border: "1px solid var(--nx-border)", boxShadow: "var(--nx-shadow)" }}>
+              <Stack spacing={2}>
+                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} spacing={1.5}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 900, mb: 0.75, color: "var(--nx-text)" }}>
+                      Project Chat
                     </Typography>
-                  </Stack>
-                </Box>
-              ) : chatListError ? (
-                <ErrorNotice message={chatListError} severity="warning" />
-              ) : (
-                <Stack spacing={2}>
-                  {activeSessions.length > 0 ? (
-                    <Stack spacing={1.25}>
-                      {activeSessions.map((session) => (
-                        <Paper
-                          key={session.id}
-                          onClick={() => handleOpenSession(session.id)}
-                          sx={{
-                            p: 1.5,
-                            borderRadius: 3,
-                            background: "linear-gradient(135deg, rgba(30,58,138,0.24), rgba(15,23,42,0.28))",
-                            border: "1px solid rgba(59,130,246,0.2)",
-                            cursor: "pointer",
-                            transition: "all 200ms ease",
-                            '&:hover': {
-                              background: "linear-gradient(135deg, rgba(30,58,138,0.32), rgba(15,23,42,0.36))",
-                            },
-                          }}
-                        >
-                          <Stack spacing={1}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                              <Box>
-                                <Typography sx={{ fontWeight: 900, color: "#f8fafc" }}>
-                                  {session.startedByName || "Unknown"}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.58)" }}>
-                                  {formatChatTime(session.startedAt) || "Recently"}
-                                </Typography>
-                              </Box>
-                              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
-                                {session.messageCount || 0} messages
-                              </Typography>
-                            </Stack>
+                    <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
+                      {activeSessions.length > 0
+                        ? `${activeSessions.length} active thread${activeSessions.length !== 1 ? "s" : ""}`
+                        : "No active chat threads."}
+                    </Typography>
+                  </Box>
 
-                            {session.lastMessagePreview ? (
-                              <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
-                                {session.lastMessagePreview.length > 100
-                                  ? `${session.lastMessagePreview.substring(0, 100)}...`
-                                  : session.lastMessagePreview}
-                              </Typography>
-                            ) : null}
-                          </Stack>
-                        </Paper>
-                      ))}
+                  <Button
+                    variant="contained"
+                    onClick={handleOpenNewChat}
+                    disabled={!currentUserId || authLoading}
+                    sx={{ textTransform: "none", bgcolor: "var(--nx-purple)", color: "var(--nx-card)", fontWeight: 800, boxShadow: "none", '&:hover': { bgcolor: "var(--nx-purple)" } }}
+                  >
+                    New Chat
+                  </Button>
+                </Stack>
+
+                {chatListLoading && sessions.length === 0 ? (
+                  <Box sx={{ p: 2, borderRadius: 3, background: "var(--nx-panel-2)", border: "1px solid var(--nx-border)" }}>
+                    <Stack direction="row" spacing={1.2} alignItems="center">
+                      <CircularProgress size={18} sx={{ color: "var(--nx-purple)" }} />
+                      <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
+                        Loading chat sessions...
+                      </Typography>
                     </Stack>
-                  ) : null}
-
-                  <Paper sx={{ p: 1.75, borderRadius: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <Typography sx={{ fontWeight: 900, mb: 1 }}>Recent Chat Summaries</Typography>
-                    <Typography variant="body2" sx={{ color: "#94a3b8", mb: 1 }}>
-                      Latest 5 ended chat summaries for this project.
-                    </Typography>
-
-                    {recentSummaries.length > 0 ? (
-                      <Stack spacing={1}>
-                        {recentSummaries.map((session) => (
+                  </Box>
+                ) : chatListError ? (
+                  <ErrorNotice message={chatListError} severity="warning" />
+                ) : (
+                  <Stack spacing={2}>
+                    {activeSessions.length > 0 ? (
+                      <Stack spacing={1.25}>
+                        {activeSessions.map((session) => (
                           <Paper
                             key={session.id}
                             onClick={() => handleOpenSession(session.id)}
                             sx={{
                               p: 1.5,
                               borderRadius: 3,
+                              background: "var(--nx-panel-2)",
+                              border: "1px solid var(--nx-border)",
                               cursor: "pointer",
-                              background: "rgba(255,255,255,0.04)",
-                              border: "1px solid rgba(255,255,255,0.08)",
-                              transition: "all 180ms ease",
+                              transition: "all 200ms ease",
                               '&:hover': {
-                                background: "rgba(255,255,255,0.07)",
-                                borderColor: "rgba(96,165,250,0.28)",
+                                background: "var(--nx-panel)",
+                                borderColor: "var(--nx-border-strong)",
                               },
                             }}
                           >
                             <Stack spacing={1}>
-                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-                                <Box sx={{ minWidth: 0 }}>
-                                  <Typography sx={{ fontWeight: 900, color: "#f8fafc" }}>
+                              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Box>
+                                  <Typography sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
                                     {session.startedByName || "Unknown"}
                                   </Typography>
-                                  <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.58)" }}>
-                                    {formatChatTime(session.endedAt || session.startedAt)}
+                                  <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
+                                    {formatChatTime(session.startedAt) || "Recently"}
                                   </Typography>
                                 </Box>
-                                <Button size="small" variant="outlined" sx={{ whiteSpace: "nowrap", fontWeight: 900 }}>
-                                  View
-                                </Button>
+                                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
+                                  {session.messageCount || 0} messages
+                                </Typography>
                               </Stack>
 
-                              <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
-                                {buildSummaryPreview(session)}
-                              </Typography>
+                              {session.lastMessagePreview ? (
+                                <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>
+                                  {session.lastMessagePreview.length > 100
+                                    ? `${session.lastMessagePreview.substring(0, 100)}...`
+                                    : session.lastMessagePreview}
+                                </Typography>
+                              ) : null}
                             </Stack>
                           </Paper>
                         ))}
                       </Stack>
-                    ) : (
-                      <Paper sx={{ p: 1.5, borderRadius: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        <Typography variant="body2" sx={{ color: "#94a3b8" }}>
-                          No ended chat summaries yet.
-                        </Typography>
-                      </Paper>
-                    )}
-                  </Paper>
-                </Stack>
-              )}
-            </Stack>
-          </Paper>
-        </Grid>
-      </Grid>)}
+                    ) : null}
 
+                    <Paper sx={{ p: 1.75, borderRadius: 3, background: "var(--nx-panel-2)", border: "1px solid var(--nx-border)" }}>
+                      <Typography sx={{ fontWeight: 900, mb: 1, color: "var(--nx-text)" }}>Recent Chat Summaries</Typography>
+                      <Typography variant="body2" sx={{ color: "var(--nx-muted)", mb: 1 }}>
+                        Latest 5 ended chat summaries for this project.
+                      </Typography>
+
+                      {recentSummaries.length > 0 ? (
+                        <Stack spacing={1}>
+                          {recentSummaries.map((session) => (
+                            <Paper
+                              key={session.id}
+                              onClick={() => handleOpenSession(session.id)}
+                              sx={{
+                                p: 1.5,
+                                borderRadius: 3,
+                                cursor: "pointer",
+                                background: "var(--nx-panel)",
+                                border: "1px solid var(--nx-border)",
+                                transition: "all 180ms ease",
+                                '&:hover': {
+                                  background: "var(--nx-panel-2)",
+                                  borderColor: "var(--nx-border-strong)",
+                                },
+                              }}
+                            >
+                              <Stack spacing={1}>
+                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+                                  <Box sx={{ minWidth: 0 }}>
+                                    <Typography sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
+                                      {session.startedByName || "Unknown"}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
+                                      {formatChatTime(session.endedAt || session.startedAt)}
+                                    </Typography>
+                                  </Box>
+                                  <Button size="small" variant="outlined" sx={{ whiteSpace: "nowrap", fontWeight: 900, borderColor: "var(--nx-border)", color: "var(--nx-text)" }}>
+                                    View
+                                  </Button>
+                                </Stack>
+
+                                <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>
+                                  {buildSummaryPreview(session)}
+                                </Typography>
+                              </Stack>
+                            </Paper>
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Paper sx={{ p: 1.5, borderRadius: 3, background: "var(--nx-panel)", border: "1px solid var(--nx-border)" }}>
+                          <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
+                            No ended chat summaries yet.
+                          </Typography>
+                        </Paper>
+                      )}
+                    </Paper>
+                  </Stack>
+                )}
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
 
       <Dialog
         open={chatDrawerOpen}
@@ -443,9 +444,9 @@ export default function ProjectDetailsPage() {
             width: { xs: "94vw", sm: "94vw", md: "760px", lg: "820px" },
             maxHeight: "82vh",
             maxWidth: "none",
-            background: "linear-gradient(180deg, rgba(8,15,28,0.98), rgba(6,11,21,0.99))",
-            border: "1px solid rgba(148,163,184,0.14)",
-            backdropFilter: "blur(18px)",
+            background: "var(--nx-card)",
+            border: "1px solid var(--nx-border)",
+            boxShadow: "var(--nx-shadow)",
             borderRadius: 4,
             display: "flex",
             flexDirection: "column",
@@ -453,8 +454,7 @@ export default function ProjectDetailsPage() {
         }}
         BackdropProps={{
           sx: {
-            background: "rgba(0, 0, 0, 0.6)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(0, 0, 0, 0.35)",
           },
         }}
       >
@@ -465,7 +465,7 @@ export default function ProjectDetailsPage() {
             flexDirection: "column",
             height: "100%",
             minHeight: 0,
-            background: "#0b1628",
+            background: "var(--nx-card)",
             borderRadius: 4,
           }}
         >

@@ -8,6 +8,21 @@ import {
   Typography,
 } from "@mui/material";
 
+const surfaceSx = {
+  p: 2.2,
+  borderRadius: "22px",
+  bgcolor: "var(--nx-panel)",
+  border: "1px solid var(--nx-border)",
+  boxShadow: "none",
+};
+
+const innerSurfaceSx = {
+  p: 1.4,
+  borderRadius: 2,
+  bgcolor: "var(--nx-panel-2)",
+  border: "1px solid var(--nx-border)",
+};
+
 export default function ClientProjectTimeline({ project, tickets = [] }) {
   const timeline = useMemo(() => {
     const projectTickets = project?.tickets?.length ? project.tickets : tickets;
@@ -16,7 +31,6 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
     const inProgress = projectTickets.filter((ticket) => ticket.status === "In Progress").length;
     const done = projectTickets.filter((ticket) => ticket.status === "Done").length;
 
-    // These milestones are generated from live ticket progress.
     return [
       {
         title: "Request received",
@@ -65,19 +79,11 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
 
   if (!project && tickets.length === 0) {
     return (
-      <Paper
-        sx={{
-          p: 2.2,
-          borderRadius: 3,
-          bgcolor: "#0b1628",
-          border: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "none",
-        }}
-      >
-        <Typography sx={{ fontWeight: 900, fontSize: 17 }}>
+      <Paper sx={surfaceSx}>
+        <Typography sx={{ fontWeight: 900, fontSize: 17, color: "var(--nx-text)" }}>
           Project Timeline
         </Typography>
-        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 1 }}>
           No project timeline available yet. Create a ticket to start tracking client progress.
         </Typography>
       </Paper>
@@ -86,19 +92,11 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
 
   if (project && tickets.length === 0) {
     return (
-      <Paper
-        sx={{
-          p: 2.2,
-          borderRadius: 3,
-          bgcolor: "#0b1628",
-          border: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "none",
-        }}
-      >
-        <Typography sx={{ fontWeight: 900, fontSize: 17 }}>
+      <Paper sx={surfaceSx}>
+        <Typography sx={{ fontWeight: 900, fontSize: 17, color: "var(--nx-text)" }}>
           Project Timeline
         </Typography>
-        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 1 }}>
           No tickets for this project yet.
         </Typography>
       </Paper>
@@ -106,30 +104,11 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
   }
 
   return (
-    <Paper
-      sx={{
-        p: 2.2,
-        borderRadius: 3,
-        bgcolor: "#0b1628",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "none",
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 2,
-          flexWrap: "wrap",
-          mb: 2,
-        }}
-      >
+    <Paper sx={surfaceSx}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mb: 2 }}>
         <Box>
-          <Typography sx={{ fontWeight: 900, fontSize: 17 }}>
+          <Typography sx={{ fontWeight: 900, fontSize: 17, color: "var(--nx-text)" }}>
             Project Timeline
-          </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.4 }}>
-            Client-friendly milestone view for {project?.name || "your current project"}.
           </Typography>
         </Box>
 
@@ -137,9 +116,9 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
           label={`${project?.progress ?? 0}% complete`}
           size="small"
           sx={{
-            color: "#c4b5fd",
-            bgcolor: "rgba(109,93,252,0.14)",
-            border: "1px solid rgba(165,180,252,0.18)",
+            color: "var(--nx-purple)",
+            bgcolor: "var(--nx-panel-2)",
+            border: "1px solid var(--nx-border)",
             fontWeight: 800,
           }}
         />
@@ -152,24 +131,16 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
           height: 7,
           borderRadius: 999,
           mb: 2.5,
-          bgcolor: "rgba(255,255,255,0.08)",
+          bgcolor: "var(--nx-panel-2)",
           "& .MuiLinearProgress-bar": {
-            bgcolor: "#6d5dfc",
+            bgcolor: "var(--nx-purple)",
           },
         }}
       />
 
       <Stack spacing={1.4}>
         {timeline.map((item, index) => (
-          <Box
-            key={item.title}
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "28px 1fr",
-              gap: 1.5,
-              alignItems: "flex-start",
-            }}
-          >
+          <Box key={item.title} sx={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 1.5, alignItems: "flex-start" }}>
             <Box sx={{ display: "grid", justifyItems: "center" }}>
               <Box
                 sx={{
@@ -182,7 +153,7 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
                       ? "#22c55e"
                       : item.status === "In Progress"
                         ? "#f59e0b"
-                        : "#475569",
+                        : "var(--nx-muted)",
                   boxShadow:
                     item.status === "In Progress"
                       ? "0 0 0 5px rgba(245,158,11,0.12)"
@@ -191,34 +162,13 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
               />
 
               {index < timeline.length - 1 ? (
-                <Box
-                  sx={{
-                    width: 2,
-                    height: 42,
-                    bgcolor: "rgba(148,163,184,0.22)",
-                    mt: 0.8,
-                  }}
-                />
+                <Box sx={{ width: 2, height: 42, bgcolor: "var(--nx-border)", mt: 0.8 }} />
               ) : null}
             </Box>
 
-            <Box
-              sx={{
-                p: 1.4,
-                borderRadius: 2,
-                bgcolor: "#0f1b2f",
-                border: "1px solid rgba(255,255,255,0.07)",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 1,
-                  flexWrap: "wrap",
-                }}
-              >
-                <Typography sx={{ fontWeight: 850, fontSize: 15 }}>
+            <Box sx={innerSurfaceSx}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
+                <Typography sx={{ fontWeight: 850, fontSize: 15, color: "var(--nx-text)" }}>
                   {item.title}
                 </Typography>
 
@@ -230,7 +180,7 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
                         ? "#86efac"
                         : item.status === "In Progress"
                           ? "#facc15"
-                          : "#94a3b8",
+                          : "var(--nx-muted)",
                     fontWeight: 800,
                   }}
                 >
@@ -238,7 +188,7 @@ export default function ClientProjectTimeline({ project, tickets = [] }) {
                 </Typography>
               </Box>
 
-              <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.5 }}>
                 {item.description}
               </Typography>
             </Box>

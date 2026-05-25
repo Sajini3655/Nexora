@@ -47,6 +47,30 @@ const WORK_LOCATION_LABELS = {
   OTHER: "Other",
 };
 
+const neutralChipSx = {
+  bgcolor: "var(--nx-panel-2)",
+  color: "var(--nx-text-soft)",
+  borderColor: "var(--nx-border)",
+  fontWeight: 700,
+};
+
+const disabledChipSx = {
+  bgcolor: "var(--nx-panel-2)",
+  color: "var(--nx-muted)",
+  borderColor: "var(--nx-border)",
+  opacity: 0.85,
+  fontWeight: 700,
+};
+
+const disabledButtonSx = {
+  "&.Mui-disabled": {
+    color: "var(--nx-muted)",
+    borderColor: "var(--nx-border)",
+    backgroundColor: "var(--nx-panel-2)",
+    opacity: 0.85,
+  },
+};
+
 export default function DevTimesheets() {
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -212,9 +236,6 @@ export default function DevTimesheets() {
           <Typography variant="h4" sx={{ fontWeight: 900, lineHeight: 1.15 }}>
             My Timesheets
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.75 }}>
-            Track your own work. Drafts can be edited or deleted; submitted items become read-only.
-          </Typography>
         </Box>
 
         <Stack direction="row" spacing={1.5} sx={{ alignSelf: { xs: "stretch", md: "auto" } }} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
@@ -250,14 +271,14 @@ export default function DevTimesheets() {
 
       {loading ? (
         <Card sx={{ p: 3 }}>
-          <Typography sx={{ color: "#cbd5e1" }}>Loading timesheets...</Typography>
+          <Typography sx={{ color: "var(--nx-text-soft)" }}>Loading timesheets...</Typography>
         </Card>
       ) : items.length === 0 ? (
         <Card sx={{ p: 3, textAlign: "center" }}>
           <Typography variant="h6" sx={{ fontWeight: 800 }}>
             No timesheets yet.
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.5 }}>
             Create a draft to start tracking work hours.
           </Typography>
         </Card>
@@ -271,7 +292,7 @@ export default function DevTimesheets() {
                     <Typography variant="h6" sx={{ fontWeight: 900 }}>
                       {item.projectName || "Project"}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                    <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                       {item.taskTitle || "No task linked"} • {formatDate(item.workDate)}
                     </Typography>
                   </Box>
@@ -279,13 +300,13 @@ export default function DevTimesheets() {
                 </Stack>
 
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label={`${item.hours} hrs`} variant="outlined" />
-                  <Chip label={WORK_LOCATION_LABELS[item.workLocation] || item.workLocation} variant="outlined" />
-                  {item.description ? <Chip label={item.description} variant="outlined" /> : null}
+                  <Chip label={`${item.hours} hrs`} variant="outlined" sx={neutralChipSx} />
+                  <Chip label={WORK_LOCATION_LABELS[item.workLocation] || item.workLocation} variant="outlined" sx={neutralChipSx} />
+                  {item.description ? <Chip label={item.description} variant="outlined" sx={neutralChipSx} /> : null}
                 </Stack>
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between" alignItems={{ sm: "center" }}>
-                  <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                  <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                     Updated {item.updatedAt ? formatDate(item.updatedAt) : formatDate(item.createdAt)}
                   </Typography>
 
@@ -295,7 +316,7 @@ export default function DevTimesheets() {
                         <Button size="small" variant="outlined" startIcon={<EditRoundedIcon />} onClick={() => openEdit(item)}>
                           Edit
                         </Button>
-                        <Button size="small" variant="outlined" color="error" startIcon={<DeleteOutlineRoundedIcon />} onClick={() => handleDelete(item)} disabled={savingKey === `delete-${item.id}`}>
+                          <Button size="small" variant="outlined" color="error" startIcon={<DeleteOutlineRoundedIcon />} onClick={() => handleDelete(item)} disabled={savingKey === `delete-${item.id}`}>
                           Delete
                         </Button>
                         <Button size="small" variant="contained" startIcon={<PublishRoundedIcon />} onClick={() => handleSubmit(item)} disabled={savingKey === `submit-${item.id}`}>
@@ -303,7 +324,7 @@ export default function DevTimesheets() {
                         </Button>
                       </>
                     ) : (
-                      <Button size="small" variant="outlined" disabled>
+                        <Button size="small" variant="outlined" disabled sx={disabledButtonSx}>
                         View only
                       </Button>
                     )}
@@ -392,7 +413,7 @@ export default function DevTimesheets() {
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 2.2,
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  backgroundColor: "var(--nx-input)",
                 },
               }}
             />
@@ -412,7 +433,7 @@ export default function DevTimesheets() {
 function SummaryCard({ label, value }) {
   return (
     <Card sx={{ p: 2.5, height: "100%" }}>
-      <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>
+      <Typography variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", letterSpacing: 1 }}>
         {label}
       </Typography>
       <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>

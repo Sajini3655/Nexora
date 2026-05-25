@@ -219,9 +219,9 @@ export default function UserList() {
         sx={{
           borderRadius: "32px",
           p: 3,
-          border: "1px solid rgba(255,255,255,0.10)",
-          background:
-            "radial-gradient(circle at top left, rgba(100,80,255,0.12), transparent 24%), linear-gradient(180deg, rgba(12,18,45,0.96), rgba(5,10,30,0.98))",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-card)",
+          color: "var(--nx-text)",
         }}
       >
         <Stack
@@ -231,12 +231,8 @@ export default function UserList() {
           spacing={2}
         >
           <Box>
-            <Typography sx={{ fontSize: 30, fontWeight: 900, color: "#fff" }}>
+            <Typography sx={{ fontSize: 30, fontWeight: 900, color: "var(--nx-text)" }}>
               User Management
-            </Typography>
-
-            <Typography sx={{ color: "text.secondary", mt: 0.5 }}>
-              Search, filter, invite, edit roles, enable, disable, and delete users.
             </Typography>
           </Box>
 
@@ -267,8 +263,8 @@ export default function UserList() {
         sx={{
           borderRadius: "28px",
           p: 3,
-          border: "1px solid rgba(255,255,255,0.10)",
-          background: "#0b1628",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-panel)",
         }}
       >
         <Stack spacing={2}>
@@ -334,8 +330,8 @@ export default function UserList() {
         sx={{
           borderRadius: "28px",
           p: 2,
-          border: "1px solid rgba(255,255,255,0.10)",
-          background: "#0b1628",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-card)",
         }}
       >
         <Box
@@ -348,15 +344,15 @@ export default function UserList() {
               height: 8,
             },
             "&::-webkit-scrollbar-track": {
-              background: "rgba(255,255,255,0.04)",
+              background: "var(--nx-panel-2)",
               borderRadius: 999,
             },
             "&::-webkit-scrollbar-thumb": {
-              background: "rgba(124,92,255,0.55)",
+              background: "var(--nx-purple)",
               borderRadius: 999,
             },
             "&::-webkit-scrollbar-thumb:hover": {
-              background: "rgba(124,92,255,0.8)",
+              background: "var(--nx-blue)",
             },
           }}
         >
@@ -367,8 +363,8 @@ export default function UserList() {
               borderCollapse: "separate",
               borderSpacing: "0 10px",
               "& .MuiTableCell-stickyHeader": {
-                backgroundColor: "#0b1628",
-                color: "#cbd5e1",
+                backgroundColor: "var(--nx-card)",
+                color: "var(--nx-text)",
                 zIndex: 2,
               },
             }}
@@ -425,13 +421,13 @@ export default function UserList() {
                           size="small"
                           sx={{
                             fontWeight: 700,
-                            color: user.enabled ? "#86efac" : "#fca5a5",
+                            color: user.enabled ? "var(--nx-green)" : "var(--nx-red)",
                             backgroundColor: user.enabled
-                              ? "rgba(16,185,129,0.12)"
-                              : "rgba(239,68,68,0.12)",
+                              ? "color-mix(in srgb, var(--nx-green) 12%, transparent)"
+                              : "color-mix(in srgb, var(--nx-red) 12%, transparent)",
                             border: user.enabled
-                              ? "1px solid rgba(16,185,129,0.22)"
-                              : "1px solid rgba(239,68,68,0.22)",
+                              ? "1px solid color-mix(in srgb, var(--nx-green) 26%, transparent)"
+                              : "1px solid color-mix(in srgb, var(--nx-red) 26%, transparent)",
                           }}
                         />
                       </TableCell>
@@ -539,32 +535,32 @@ function RoleMultiSelect({ value, disabled, onChange }) {
           PaperProps: {
             sx: {
               mt: 1,
-              backgroundColor: "#020617",
-              color: "#ffffff",
-              border: "1px solid rgba(124,92,255,0.35)",
-              boxShadow: "0 24px 80px rgba(0,0,0,0.75)",
+              backgroundColor: "var(--nx-card)",
+              color: "var(--nx-text)",
+              border: "1px solid var(--nx-border)",
+              boxShadow: "var(--nx-shadow)",
               borderRadius: 2,
               maxHeight: 320,
               "& .MuiMenuItem-root": {
-                backgroundColor: "#020617",
-                color: "#ffffff",
+                backgroundColor: "var(--nx-card)",
+                color: "var(--nx-text)",
                 fontWeight: 800,
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                borderBottom: "1px solid var(--nx-border)",
               },
               "& .MuiMenuItem-root:hover": {
-                backgroundColor: "rgba(124,92,255,0.22)",
+                backgroundColor: "var(--nx-panel-2)",
               },
               "& .MuiMenuItem-root.Mui-selected": {
-                backgroundColor: "rgba(124,92,255,0.34)",
+                backgroundColor: "var(--nx-panel-2)",
               },
               "& .MuiMenuItem-root.Mui-selected:hover": {
-                backgroundColor: "rgba(124,92,255,0.45)",
+                backgroundColor: "var(--nx-panel-2)",
               },
               "& .MuiCheckbox-root": {
-                color: "#94a3b8",
+                color: "var(--nx-muted)",
               },
               "& .MuiCheckbox-root.Mui-checked": {
-                color: "#8b5cf6",
+                color: "var(--nx-purple)",
               },
             },
           },
@@ -573,20 +569,20 @@ function RoleMultiSelect({ value, disabled, onChange }) {
       sx={{
         minWidth: 220,
         "& .MuiOutlinedInput-root": {
-          backgroundColor: "#020617",
+          backgroundColor: "var(--nx-input)",
           borderRadius: "999px",
-          color: "#ffffff",
+          color: "var(--nx-text)",
         },
         "& .MuiSelect-select": {
-          color: "#ffffff",
+          color: "var(--nx-text)",
           fontWeight: 800,
           py: 1.1,
         },
         "& fieldset": {
-          borderColor: "rgba(124,92,255,0.35)",
+          borderColor: "var(--nx-border)",
         },
         "&:hover fieldset": {
-          borderColor: "rgba(124,92,255,0.75)",
+          borderColor: "var(--nx-border-strong)",
         },
       }}
     >
@@ -634,15 +630,16 @@ function formatDate(value) {
 
 const headCell = {
   fontWeight: 900,
-  color: "#cbd5e1",
-  borderBottom: "1px solid rgba(255,255,255,0.08)",
+  color: "var(--nx-muted)",
+  borderBottom: "1px solid var(--nx-border)",
   whiteSpace: "nowrap",
 };
 
 const tableCellBase = {
-  background: "#0f1b2f",
+  background: "var(--nx-panel-2)",
   borderBottom: "none",
   whiteSpace: "nowrap",
+  color: "var(--nx-text)",
 };
 
 const tableCellLeft = {
@@ -663,7 +660,7 @@ const tableCellRight = {
 };
 
 const tableEmptyCell = {
-  color: "#94a3b8",
+  color: "var(--nx-muted)",
   borderBottom: "none",
   py: 4,
 };

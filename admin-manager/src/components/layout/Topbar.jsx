@@ -17,10 +17,13 @@ import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useThemeMode } from "../../context/ThemeContext.jsx";
 import { layoutGaps } from "../../theme/layoutGaps.js";
 import { getActiveRole } from "../../utils/roleRouting";
 import { getUserRoles } from "../../utils/roleRouting";
 import NLQNav from "./NLQNav.jsx";
+import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 
 function roleFromPathname(pathname) {
   const path = String(pathname || "");
@@ -34,6 +37,7 @@ function roleFromPathname(pathname) {
 
 export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth();
+  const { mode, toggleColorScheme } = useThemeMode();
   const navigate = useNavigate();
   const location = useLocation();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -63,18 +67,18 @@ export default function Topbar({ onMenuClick }) {
         width: `calc(100% - ${layoutGaps.topbar.sideInset * 2}px)`,
         height: layoutGaps.topbar.height,
         justifyContent: "center",
-        borderRadius: "0 0 20px 20px",
-        background: "rgba(11,17,32,0.94)",
-        border: "1px solid rgba(148,163,184,0.12)",
-        boxShadow: "0 10px 28px rgba(0,0,0,0.18)",
-        backdropFilter: "blur(14px)",
-        zIndex: 1400,
+        borderRadius: 'var(--nx-radius-section, 22px)',
+        background: "var(--nx-panel)",
+        border: "1px solid var(--nx-border)",
+        boxShadow: "var(--nx-shadow)",
+        color: "var(--nx-text)",
+        zIndex: 1600,
       }}
     >
       <Toolbar
         sx={{
           minHeight: `${layoutGaps.topbar.toolbarMinHeight}px !important`,
-          px: { xs: 2, md: 4 },
+          px: { xs: 2, md: 3 },
           display: "flex",
           alignItems: "center",
           gap: 1.4,
@@ -88,13 +92,13 @@ export default function Topbar({ onMenuClick }) {
           sx={{
             width: 42,
             height: 42,
-            color: "#e5e7eb",
-            border: "1px solid rgba(255,255,255,0.10)",
-            background: "rgba(255,255,255,0.03)",
+            color: "var(--nx-text)",
+            border: "1px solid var(--nx-border)",
+            background: "var(--nx-panel-2)",
             boxShadow: "none",
             "&:hover": {
-              background: "rgba(255,255,255,0.06)",
-              borderColor: "rgba(148,163,184,0.18)",
+              background: "var(--nx-card)",
+              borderColor: "var(--nx-border-strong)",
             },
           }}
         >
@@ -110,9 +114,8 @@ export default function Topbar({ onMenuClick }) {
             width: 34,
             height: 34,
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #5b6cff, #60a5fa)",
-            boxShadow: "0 10px 24px rgba(91,108,255,0.16)",
-            border: "1px solid rgba(255,255,255,0.10)",
+            background: "var(--nx-purple)",
+            border: "1px solid var(--nx-border)",
             flexShrink: 0,
             cursor: "pointer",
           }}
@@ -125,7 +128,7 @@ export default function Topbar({ onMenuClick }) {
           <Typography
             sx={{
               fontWeight: 900,
-              color: "#f8fafc",
+              color: "var(--nx-text)",
               letterSpacing: -0.2,
               lineHeight: 1.05,
               fontSize: 17,
@@ -149,15 +152,15 @@ export default function Topbar({ onMenuClick }) {
                 px: 1.25,
                 py: 0.7,
                 borderRadius: 999,
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(148,163,184,0.10)",
+                  background: "var(--nx-panel-2)",
+                  border: "1px solid var(--nx-border)",
               }}
             >
               <Typography
                 variant="body2"
                 sx={{
                   fontWeight: 900,
-                  color: "#e5e7eb",
+                    color: "var(--nx-text)",
                   maxWidth: 190,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -172,24 +175,43 @@ export default function Topbar({ onMenuClick }) {
                 label={roleLabel}
                 sx={{
                   height: 23,
-                    color: "#e2e8f0",
+                    color: "var(--nx-text)",
                     fontWeight: 850,
                     fontSize: 10.5,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(148,163,184,0.16)",
+                    background: "var(--nx-card)",
+                    border: "1px solid var(--nx-border)",
                 }}
               />
             </Box>
 
             <IconButton
+              onClick={() => toggleColorScheme(mode === "dark" ? "light" : "dark")}
+              aria-label="Toggle color scheme"
+              title={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               sx={{
                 width: 42,
                 height: 42,
-                color: "#e5e7eb",
-                border: "1px solid rgba(148,163,184,0.12)",
-                background: "rgba(255,255,255,0.03)",
+                color: "var(--nx-text)",
+                border: "1px solid var(--nx-border)",
+                background: "var(--nx-panel-2)",
                 "&:hover": {
-                  background: "rgba(255,255,255,0.06)",
+                  background: "var(--nx-card)",
+                  borderColor: "var(--nx-border-strong)",
+                },
+              }}
+            >
+              {mode === "dark" ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}
+            </IconButton>
+
+            <IconButton
+              sx={{
+                width: 42,
+                height: 42,
+                color: "var(--nx-text)",
+                border: "1px solid var(--nx-border)",
+                background: "var(--nx-panel-2)",
+                "&:hover": {
+                  background: "var(--nx-card)",
                 },
               }}
             >
@@ -201,8 +223,8 @@ export default function Topbar({ onMenuClick }) {
               sx={{
                 p: 0.55,
                 borderRadius: "50%",
-                border: "1px solid rgba(148,163,184,0.16)",
-                background: "rgba(255,255,255,0.03)",
+                border: "1px solid var(--nx-border)",
+                background: "var(--nx-panel-2)",
               }}
             >
               <Avatar
@@ -211,9 +233,9 @@ export default function Topbar({ onMenuClick }) {
                   height: 37,
                   fontSize: 15,
                   fontWeight: 900,
-                  color: "#fff",
-                  background: "linear-gradient(135deg, #5b6cff, #4857d8)",
-                  boxShadow: "0 10px 22px rgba(91,108,255,0.16)",
+                      color: "var(--nx-on-accent)",
+                  background: "var(--nx-purple)",
+                  boxShadow: "var(--nx-shadow)",
                 }}
               >
                 {initials}
@@ -231,11 +253,10 @@ export default function Topbar({ onMenuClick }) {
                   mt: 1.2,
                   minWidth: 240,
                   borderRadius: 3,
-                  background: "rgba(15,23,42,0.98)",
-                  color: "#e5e7eb",
-                  border: "1px solid rgba(148,163,184,0.18)",
-                  boxShadow: "0 24px 70px rgba(0,0,0,0.42)",
-                  backdropFilter: "blur(18px)",
+                  background: "var(--nx-card)",
+                  color: "var(--nx-text)",
+                  border: "1px solid var(--nx-border)",
+                  boxShadow: "var(--nx-shadow)",
                 },
               }}
             >
@@ -243,12 +264,12 @@ export default function Topbar({ onMenuClick }) {
                 <Typography sx={{ fontWeight: 950 }}>
                   {user.name || roleLabel}
                 </Typography>
-                <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                   {user.email}
                 </Typography>
               </Box>
 
-              <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+              <Divider sx={{ borderColor: "var(--nx-border)" }} />
 
               <MenuItem
                 onClick={() => {
@@ -271,7 +292,7 @@ export default function Topbar({ onMenuClick }) {
                 </MenuItem>
               ) : null}
 
-              <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+              <Divider sx={{ borderColor: "var(--nx-border)" }} />
 
               <MenuItem
                 onClick={() => {

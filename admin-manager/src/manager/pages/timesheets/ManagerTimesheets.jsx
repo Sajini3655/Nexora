@@ -47,6 +47,30 @@ export default function ManagerTimesheets() {
   const refreshing = (itemsQuery.isFetching || summaryQuery.isFetching) && !loading && (items.length > 0 || summary !== null);
   const fetchError = itemsQuery.error?.message || summaryQuery.error?.message || "";
 
+  const neutralChipSx = {
+    bgcolor: "var(--nx-panel-2)",
+    color: "var(--nx-text-soft)",
+    borderColor: "var(--nx-border)",
+    fontWeight: 700,
+  };
+
+  const disabledChipSx = {
+    bgcolor: "var(--nx-panel-2)",
+    color: "var(--nx-muted)",
+    borderColor: "var(--nx-border)",
+    opacity: 0.85,
+    fontWeight: 700,
+  };
+
+  const disabledButtonSx = {
+    "&.Mui-disabled": {
+      color: "var(--nx-muted)",
+      borderColor: "var(--nx-border)",
+      backgroundColor: "var(--nx-panel-2)",
+      opacity: 0.85,
+    },
+  };
+
   const summaryCards = useMemo(() => ([
     { label: "Pending Review", value: summary?.submittedCount ?? 0 },
     { label: "Approved", value: summary?.approvedCount ?? 0 },
@@ -143,14 +167,14 @@ export default function ManagerTimesheets() {
       </Stack>
 
       {refreshing ? (
-        <Typography variant="body2" sx={{ color: "#94a3b8", textAlign: "right", mt: -1 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", textAlign: "right", mt: -1 }}>
           Refreshing timesheets...
         </Typography>
       ) : null}
 
       {loading ? (
         <Card sx={{ p: 3 }}>
-          <Typography sx={{ color: "#cbd5e1" }}>Loading team timesheets...</Typography>
+          <Typography sx={{ color: "var(--nx-text-soft)" }}>Loading team timesheets...</Typography>
         </Card>
       ) : items.length === 0 ? (
         <Card sx={{ p: 3, textAlign: "center" }}>
@@ -171,7 +195,7 @@ export default function ManagerTimesheets() {
                       <Typography variant="h6" sx={{ fontWeight: 900 }}>
                         {item.developerName || "Developer"}
                       </Typography>
-                      <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                      <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                         {item.projectName || "Project"} • {item.taskTitle || "No task"} • {formatDate(item.workDate)}
                       </Typography>
                     </Box>
@@ -179,13 +203,13 @@ export default function ManagerTimesheets() {
                   </Stack>
 
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Chip label={`${item.hours} hrs`} variant="outlined" />
-                    <Chip label={item.workLocation} variant="outlined" />
-                    {item.description ? <Chip label={item.description} variant="outlined" /> : null}
+                    <Chip label={`${item.hours} hrs`} variant="outlined" sx={neutralChipSx} />
+                    <Chip label={item.workLocation} variant="outlined" sx={neutralChipSx} />
+                    {item.description ? <Chip label={item.description} variant="outlined" sx={neutralChipSx} /> : null}
                   </Stack>
 
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between" alignItems={{ sm: "center" }}>
-                    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                    <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                       Reviewed status updates stay in the record.
                     </Typography>
 
@@ -197,6 +221,7 @@ export default function ManagerTimesheets() {
                           startIcon={<CheckCircleOutlineRoundedIcon />}
                           onClick={() => handleApprove(item)}
                           disabled={actionKey === `approve-${item.id}`}
+                          sx={disabledButtonSx}
                         >
                           Approve
                         </Button>
@@ -207,12 +232,13 @@ export default function ManagerTimesheets() {
                           startIcon={<CancelOutlinedIcon />}
                           onClick={() => openReject(item)}
                           disabled={actionKey === `reject-${item.id}`}
+                          sx={disabledButtonSx}
                         >
                           Reject
                         </Button>
                       </Stack>
                     ) : (
-                      <Chip label="Read only" variant="outlined" />
+                      <Chip label="Read only" variant="outlined" sx={disabledChipSx} />
                     )}
                   </Stack>
                 </Stack>
@@ -226,7 +252,7 @@ export default function ManagerTimesheets() {
         <DialogTitle>Reject Timesheet</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
               Add a short reason for the rejection.
             </Typography>
             <TextField
@@ -239,7 +265,7 @@ export default function ManagerTimesheets() {
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 2.2,
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  backgroundColor: "var(--nx-input)",
                 },
               }}
             />
@@ -264,7 +290,7 @@ export default function ManagerTimesheets() {
 function SummaryCard({ label, value }) {
   return (
     <Card sx={{ p: 2.5, height: "100%" }}>
-      <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>
+      <Typography variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", letterSpacing: 1 }}>
         {label}
       </Typography>
       <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>

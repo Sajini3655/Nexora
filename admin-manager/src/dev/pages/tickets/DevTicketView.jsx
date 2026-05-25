@@ -14,8 +14,8 @@ function calcSubtaskPct(list) {
 
 function ProgressBar({ pct }) {
   return (
-    <Box sx={{ height: 8, bgcolor: "rgba(255,255,255,0.08)", borderRadius: 999, mt: 1 }}>
-      <Box sx={{ height: 8, borderRadius: 999, width: `${pct}%`, background: "linear-gradient(135deg, rgba(139,92,246,0.95), rgba(99,102,241,0.9))" }} />
+    <Box sx={{ height: 8, bgcolor: "var(--nx-input)", borderRadius: 999, mt: 1 }}>
+      <Box sx={{ height: 8, borderRadius: 999, width: `${pct}%`, background: "var(--nx-purple)" }} />
     </Box>
   );
 }
@@ -35,7 +35,7 @@ export default function DevTicketView() {
   if (loading) {
     return (
       <Box sx={{ display: "grid", placeItems: "center", minHeight: 320 }}>
-        <CircularProgress sx={{ color: "#6b51ff" }} />
+        <CircularProgress sx={{ color: "var(--nx-purple)" }} />
       </Box>
     );
   }
@@ -46,7 +46,7 @@ export default function DevTicketView() {
         {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
         <Card sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 900 }}>Ticket not found</Typography>
-          <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.72)" }}>
+          <Typography variant="body2" sx={{ mt: 1, color: "var(--nx-muted)" }}>
             No backend ticket matched <strong>{id}</strong>.
           </Typography>
           <Box sx={{ mt: 2 }}>
@@ -61,9 +61,9 @@ export default function DevTicketView() {
     <>
       <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mb: 3 }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>Ticket</Typography>
+          <Typography variant="overline" sx={{ color: "var(--nx-muted)" }}>Ticket</Typography>
           <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>{ticket.title}</Typography>
-          <Typography variant="body2" sx={{ mt: 0.75, color: "rgba(231,233,238,0.72)" }}>
+          <Typography variant="body2" sx={{ mt: 0.75, color: "var(--nx-muted)" }}>
             <Chip label={ticket.id} size="small" sx={{ mr: 1 }} />
             <Chip label={ticket.status} size="small" sx={{ mr: 1 }} />
             <Chip label={ticket.severity} size="small" />
@@ -79,7 +79,7 @@ export default function DevTicketView() {
         <Grid item xs={12} md={8}>
           <Card sx={{ p: 3, height: "100%" }}>
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Details</Typography>
-            <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.84)", whiteSpace: "pre-wrap" }}>{ticket.description}</Typography>
+            <Typography variant="body2" sx={{ color: "var(--nx-text)", whiteSpace: "pre-wrap" }}>{ticket.description}</Typography>
 
             <Box sx={{ mt: 3, display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, gap: 2 }}>
               <Metric label="Created via" value={ticket.createdVia} />
@@ -93,23 +93,23 @@ export default function DevTicketView() {
         <Grid item xs={12} md={4}>
           <Card sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>Breakdown</Typography>
-            <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+            <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
               Story points {p.done}/{p.total} ({p.pct}%)
             </Typography>
             <ProgressBar pct={p.pct} />
 
             <Box sx={{ mt: 2, display: "grid", gap: 1.25 }}>
               {(ticket.suggestedSubtasks || []).map((subtask) => (
-                <Box key={subtask.id} sx={{ p: 1.5, borderRadius: 2, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <Box key={subtask.id} sx={{ p: 1.5, borderRadius: 2, background: "var(--nx-surface)", border: "1px solid var(--nx-border)" }}>
                   <Typography variant="body2" sx={{ fontWeight: 800 }}>
                     {subtask.done ? "✓" : "•"} {subtask.title}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{subtask.points} pts</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>{subtask.points} pts</Typography>
                 </Box>
               ))}
 
               {(!ticket.suggestedSubtasks || ticket.suggestedSubtasks.length === 0) ? (
-                <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)" }}>No subtasks available.</Typography>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>No subtasks available.</Typography>
               ) : null}
             </Box>
           </Card>
@@ -121,8 +121,8 @@ export default function DevTicketView() {
 
 function Metric({ label, value }) {
   return (
-    <Box sx={{ p: 2, borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>{label}</Typography>
+    <Box sx={{ p: 2, borderRadius: 3, background: "var(--nx-surface)", border: "1px solid var(--nx-border)" }}>
+      <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>{label}</Typography>
       <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 800 }}>{value}</Typography>
     </Box>
   );

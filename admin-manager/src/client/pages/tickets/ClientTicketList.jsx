@@ -126,9 +126,6 @@ export default function ClientTicketList() {
           <Typography variant="h5" sx={{ fontWeight: 900 }}>
             Tickets
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
-            Create support requests and track their status.
-          </Typography>
         </Box>
 
         {error ? <Alert severity="error">{error}</Alert> : null}
@@ -138,8 +135,8 @@ export default function ClientTicketList() {
           sx={{
             p: 2.2,
             borderRadius: 3,
-            bgcolor: "#0b1628",
-            border: "1px solid rgba(255,255,255,0.08)",
+            bgcolor: "var(--nx-panel)",
+            border: "1px solid var(--nx-border)",
             boxShadow: "none",
           }}
         >
@@ -225,8 +222,9 @@ export default function ClientTicketList() {
               sx={{
                 textTransform: "none",
                 fontWeight: 800,
-                bgcolor: "#6d5dfc",
-                "&:hover": { bgcolor: "#5b4ee6" },
+                bgcolor: "var(--nx-purple)",
+                color: "#fff",
+                "&:hover": { bgcolor: "color-mix(in srgb, var(--nx-purple) 88%, #000 12%)" },
               }}
             >
               {creating ? "Creating..." : "Create Ticket"}
@@ -238,8 +236,8 @@ export default function ClientTicketList() {
           sx={{
             p: 2.2,
             borderRadius: 3,
-            bgcolor: "#0b1628",
-            border: "1px solid rgba(255,255,255,0.08)",
+            bgcolor: "var(--nx-panel)",
+            border: "1px solid var(--nx-border)",
             boxShadow: "none",
           }}
         >
@@ -249,10 +247,10 @@ export default function ClientTicketList() {
 
           {loading ? (
             <Box sx={{ display: "grid", placeItems: "center", minHeight: 140 }}>
-              <CircularProgress sx={{ color: "#6d5dfc" }} />
+              <CircularProgress sx={{ color: "var(--nx-purple)" }} />
             </Box>
           ) : visibleTickets.length === 0 ? (
-            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
               {q ? `No tickets match “${q}”.` : "No tickets found."}
             </Typography>
           ) : (
@@ -264,7 +262,7 @@ export default function ClientTicketList() {
                     gridTemplateColumns: "1.4fr 1fr 0.8fr 0.8fr 0.8fr",
                     gap: 1.5,
                     pb: 1,
-                    borderBottom: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid var(--nx-border)",
                   }}
                 >
                   {["Title", "Category", "Status", "Priority", "Updated"].map((h) => (
@@ -272,7 +270,7 @@ export default function ClientTicketList() {
                       key={h}
                       variant="caption"
                       sx={{
-                        color: "#64748b",
+                        color: "var(--nx-muted)",
                         fontWeight: 900,
                         textTransform: "uppercase",
                       }}
@@ -291,7 +289,7 @@ export default function ClientTicketList() {
                       gap: 1.5,
                       py: 1.35,
                       alignItems: "center",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      borderBottom: "1px solid color-mix(in srgb, var(--nx-border) 70%, transparent)",
                     }}
                   >
                     <Box>
@@ -326,14 +324,14 @@ export default function ClientTicketList() {
                       ) : null}
                     </Box>
 
-                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                    <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                       {ticket.category || "-"}
                     </Typography>
                     <StatusChip status={ticket.status} />
-                    <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                    <Typography variant="caption" sx={{ color: "var(--nx-text-soft)" }}>
                       {ticket.priority}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                    <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                       {ticket.updatedAt}
                     </Typography>
                   </Box>

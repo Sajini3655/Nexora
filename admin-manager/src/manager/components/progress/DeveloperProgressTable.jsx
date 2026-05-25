@@ -10,7 +10,7 @@ export default function DeveloperProgressTable({ rows = [] }) {
 
   if (!visibleRows.length) {
     return (
-      <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+      <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
         No developer task progress yet.
       </Typography>
     );
@@ -18,14 +18,17 @@ export default function DeveloperProgressTable({ rows = [] }) {
 
   return (
     <Box sx={{ overflowX: "auto" }}>
-      <Box sx={{ minWidth: 760 }}>
+      <Box sx={{ minWidth: 760, p: 0.5, borderRadius: 'var(--nx-radius-section)', background: 'var(--nx-card)', border: '1px solid var(--nx-border)' }}>
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "1fr 0.8fr 1fr 1fr 0.9fr",
+            gridTemplateColumns: "22% 16% 20% 20% 22%",
             gap: 1,
             pb: 1,
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            alignItems: "center",
+            px: 1,
+            borderBottom: "1px solid var(--nx-border)",
+            background: 'var(--nx-panel-2)'
           }}
         >
           {[
@@ -35,7 +38,11 @@ export default function DeveloperProgressTable({ rows = [] }) {
             "Weighted Points",
             "Average Progress",
           ].map((header) => (
-            <Typography key={header} variant="caption" sx={{ color: "#64748b", fontWeight: 900, textTransform: "uppercase" }}>
+            <Typography
+              key={header}
+              variant="caption"
+              sx={{ fontSize: "0.75rem", color: "var(--nx-muted)", fontWeight: 900, textTransform: "uppercase" }}
+            >
               {header}
             </Typography>
           ))}
@@ -46,35 +53,40 @@ export default function DeveloperProgressTable({ rows = [] }) {
             key={rowKey(row, index)}
             sx={{
               display: "grid",
-              gridTemplateColumns: "1fr 0.8fr 1fr 1fr 0.9fr",
+              gridTemplateColumns: "22% 16% 20% 20% 22%",
               gap: 1,
               alignItems: "center",
-              py: 1.2,
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              height: 52,
+              px: 1,
+              bgcolor: 'transparent',
+              borderBottom: '1px solid var(--nx-border)',
+              '&:hover': { bgcolor: 'var(--nx-panel-2)' },
             }}
           >
-            <Typography sx={{ fontWeight: 800 }}>{row.developerName || row.name || "Unknown"}</Typography>
-            <Typography sx={{ color: "#cbd5e1" }}>{row.assignedTasks || 0}</Typography>
-            <Typography sx={{ color: "#cbd5e1" }}>
+            <Typography sx={{ fontWeight: 800, color: 'var(--nx-text)', fontSize: '0.9rem' }}>{row.developerName || row.name || "Unknown"}</Typography>
+            <Typography sx={{ color: "var(--nx-text)", fontSize: '0.9rem' }}>{row.assignedTasks || 0}</Typography>
+            <Typography sx={{ color: "var(--nx-text)", fontSize: '0.9rem' }}>
               {row.completedStoryPoints || 0} / {row.totalStoryPoints || 0}
             </Typography>
-            <Typography sx={{ color: "#cbd5e1" }}>
+            <Typography sx={{ color: "var(--nx-text)", fontSize: '0.9rem' }}>
               {row.completedPointValue || 0} / {row.totalPointValue || 0}
             </Typography>
-            <Box sx={{ pr: 1 }}>
-              <LinearProgress
-                variant="determinate"
-                value={Number(row.averageProgress || 0)}
-                sx={{
-                  height: 7,
-                  borderRadius: 999,
-                  bgcolor: "rgba(255,255,255,0.08)",
-                  "& .MuiLinearProgress-bar": {
-                    bgcolor: "#60a5fa",
-                  },
-                }}
-              />
-              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+            <Box sx={{ pr: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ maxWidth: 220, width: '100%' }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={Number(row.averageProgress || 0)}
+                  sx={{
+                    height: 'var(--nx-progress-height,7px)',
+                    borderRadius: 'var(--nx-radius-inner)',
+                    bgcolor: 'var(--nx-border)',
+                    '& .MuiLinearProgress-bar': {
+                      bgcolor: 'var(--nx-blue)',
+                    },
+                  }}
+                />
+              </Box>
+              <Typography variant="caption" sx={{ color: "var(--nx-muted)", fontSize: '0.75rem' }}>
                 {Number(row.averageProgress || 0)}%
               </Typography>
             </Box>

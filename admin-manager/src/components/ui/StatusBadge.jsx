@@ -3,34 +3,34 @@ import { Box } from "@mui/material";
 
 const variants = {
   success: {
-    color: "#bbf7d0",
-    bg: "rgba(34,197,94,0.09)",
-    border: "rgba(34,197,94,0.20)",
+    color: "var(--nx-green)",
+    bg: "color-mix(in srgb, var(--nx-green) 12%, transparent)",
+    border: "color-mix(in srgb, var(--nx-green) 22%, transparent)",
   },
   info: {
-    color: "#bfdbfe",
-    bg: "rgba(96,165,250,0.09)",
-    border: "rgba(96,165,250,0.20)",
+    color: "var(--nx-blue)",
+    bg: "color-mix(in srgb, var(--nx-blue) 12%, transparent)",
+    border: "color-mix(in srgb, var(--nx-blue) 22%, transparent)",
   },
   warning: {
-    color: "#fde68a",
-    bg: "rgba(245,158,11,0.09)",
-    border: "rgba(245,158,11,0.20)",
+    color: "var(--nx-yellow)",
+    bg: "color-mix(in srgb, var(--nx-yellow) 12%, transparent)",
+    border: "color-mix(in srgb, var(--nx-yellow) 22%, transparent)",
   },
   danger: {
-    color: "#fecaca",
-    bg: "rgba(239,68,68,0.09)",
-    border: "rgba(239,68,68,0.20)",
+    color: "var(--nx-red)",
+    bg: "color-mix(in srgb, var(--nx-red) 12%, transparent)",
+    border: "color-mix(in srgb, var(--nx-red) 22%, transparent)",
   },
   purple: {
-    color: "#ddd6fe",
-    bg: "rgba(91,108,255,0.10)",
-    border: "rgba(91,108,255,0.22)",
+    color: "var(--nx-purple)",
+    bg: "color-mix(in srgb, var(--nx-purple) 12%, transparent)",
+    border: "color-mix(in srgb, var(--nx-purple) 22%, transparent)",
   },
   neutral: {
-    color: "#cbd5e1",
-    bg: "rgba(148,163,184,0.08)",
-    border: "rgba(148,163,184,0.18)",
+    color: "var(--nx-muted)",
+    bg: "color-mix(in srgb, var(--nx-muted) 10%, transparent)",
+    border: "color-mix(in srgb, var(--nx-muted) 18%, transparent)",
   },
 };
 

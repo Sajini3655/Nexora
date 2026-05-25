@@ -63,6 +63,7 @@ function UnifiedShell({ children, role }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const { openSidebar: adminOpenSidebar, toggleSidebar: adminToggleSidebar } = useLayout();
   const { user } = useAuth();
+  const topbarClearance = layoutGaps.topbar.topInset + layoutGaps.topbar.height;
 
   React.useEffect(() => {
     const nextRole = String(role || "").toUpperCase();
@@ -95,19 +96,16 @@ function UnifiedShell({ children, role }) {
 
   return (
     <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.08), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
-      }}
+      className="nx-app-shell"
+      style={{ display: "flex", minHeight: "100vh" }}
     >
       {renderSidebar()}
       <div style={{ flex: 1, minWidth: 0 }}>
         <Topbar onMenuClick={handleMenuClick} />
         <div
+          className="nx-main-content"
           style={{
-            padding: `${layoutGaps.adminManager.top}px ${layoutGaps.adminManager.side}px ${layoutGaps.adminManager.bottom}px`,
+            padding: `calc(${topbarClearance}px + ${layoutGaps.contentTopGap}) ${layoutGaps.adminManager.side}px ${layoutGaps.adminManager.bottom}px`,
             maxWidth: `${layoutGaps.maxContentWidth}px`,
             margin: "0 auto",
           }}
@@ -138,13 +136,12 @@ export default function App() {
     <React.Suspense
       fallback={
         <div
+          className="nx-app-shell"
           style={{
             minHeight: "100vh",
             display: "grid",
             placeItems: "center",
-            color: "#94a3b8",
-            background:
-              "radial-gradient(circle at top left, rgba(104,81,255,0.12), transparent 22%), radial-gradient(circle at top right, rgba(0,255,170,0.06), transparent 18%), linear-gradient(180deg, #08101f 0%, #050b18 100%)",
+            color: "var(--nx-muted)",
           }}
         >
           Loading...

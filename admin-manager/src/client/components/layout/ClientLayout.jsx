@@ -10,8 +10,8 @@ export default function ClientLayout({ children }) {
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "#07111f",
-        color: "#e5e7eb",
+        bgcolor: "var(--nx-bg)",
+        color: "var(--nx-text)",
       }}
     >
       <ClientTopbar onToggleSidebar={() => setSidebarOpen(true)} />

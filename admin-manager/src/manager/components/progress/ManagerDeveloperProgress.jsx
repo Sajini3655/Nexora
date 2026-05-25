@@ -304,8 +304,8 @@ export default function ManagerDeveloperProgress({
         mt: 4,
         p: 2.5,
         borderRadius: 3,
-        bgcolor: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,255,255,0.11)",
+        bgcolor: "var(--nx-panel)",
+        border: "1px solid var(--nx-border)",
         overflow: "hidden",
       }}
     >
@@ -315,14 +315,14 @@ export default function ManagerDeveloperProgress({
           justifyContent="space-between"
           alignItems={{ xs: "flex-start", md: "center" }}
           spacing={1.2}
-          sx={{ mb: 1.8 }}
+          sx={{ mb: 1 }}
         >
           {!hideHeader ? (
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 850 }}>
                 Developer Work Progress
               </Typography>
-              <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.25 }}>
                 Team-level story point completion and workload summary.
               </Typography>
             </Box>
@@ -339,7 +339,7 @@ export default function ManagerDeveloperProgress({
         </Stack>
       ) : null}
 
-      {loading ? <Typography variant="body2" sx={{ color: "#94a3b8" }}>Loading developer progress...</Typography> : null}
+      {loading ? <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>Loading developer progress...</Typography> : null}
       {effectiveErrorText ? (
         <Box sx={{ mb: 1.2 }}>
           <ErrorNotice message={effectiveErrorText} severity={effectiveForbidden ? "info" : "warning"} sx={{ mb: 1 }} dedupeKey="manager-developer-progress-error" />

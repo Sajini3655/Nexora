@@ -139,8 +139,9 @@ const DevChat = () => {
           sx={{
             p: { xs: 2, md: 2.3 },
             borderRadius: 3,
-            background: "linear-gradient(135deg, rgba(15,27,47,0.96), rgba(11,22,40,0.98))",
-            border: "1px solid rgba(148,163,184,0.14)",
+            background: "var(--nx-panel)",
+            border: "1px solid var(--nx-border)",
+            boxShadow: "var(--nx-shadow)",
           }}
         >
           <Stack
@@ -150,13 +151,13 @@ const DevChat = () => {
             justifyContent="space-between"
           >
             <Box>
-              <Typography variant="overline" sx={{ color: "#93c5fd", fontWeight: 900 }}>
+              <Typography variant="overline" sx={{ color: "var(--nx-purple)", fontWeight: 900 }}>
                 Developer / Chat
               </Typography>
               <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.4 }}>
                 Project Collaboration Chat
               </Typography>
-              <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.5 }}>
                 Discuss project issues, capture AI summaries, and create tickets from blockers.
               </Typography>
             </Box>
@@ -170,10 +171,10 @@ const DevChat = () => {
         </Paper>
 
         {authLoading || loadingProject ? (
-          <Paper sx={{ minHeight: 320, display: "grid", placeItems: "center" }}>
+          <Paper sx={{ minHeight: 320, display: "grid", placeItems: "center", background: "var(--nx-panel)", border: "1px solid var(--nx-border)" }}>
             <Stack direction="row" alignItems="center" spacing={1.4}>
-              <CircularProgress size={22} sx={{ color: "#6d5dfc" }} />
-              <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              <CircularProgress size={22} sx={{ color: "var(--nx-purple)" }} />
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                 Preparing project chat...
               </Typography>
             </Stack>
@@ -214,16 +215,18 @@ const DevChat = () => {
                 borderRadius: 3,
                 minHeight: { xs: "auto", xl: 640 },
                 alignSelf: "stretch",
-                background: "linear-gradient(180deg, rgba(15,27,47,0.98), rgba(11,22,40,0.98))",
+                background: "var(--nx-panel)",
+                border: "1px solid var(--nx-border)",
+                boxShadow: "var(--nx-shadow)",
               }}
             >
               <Stack spacing={1.8}>
                 <Box>
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <AutoAwesomeRoundedIcon sx={{ color: "#a78bfa", fontSize: 20 }} />
+                    <AutoAwesomeRoundedIcon sx={{ color: "var(--nx-purple)", fontSize: 20 }} />
                     <Typography sx={{ fontWeight: 950 }}>AI Summary</Typography>
                   </Stack>
-                  <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+                  <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.5 }}>
                     End the chat to generate a summary and detect blockers.
                   </Typography>
                 </Box>
@@ -238,29 +241,29 @@ const DevChat = () => {
                 ) : (
                   <Stack spacing={1.5}>
                     <Box sx={sideBoxStyle}>
-                      <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 900 }}>
+                      <Typography variant="caption" sx={{ color: "var(--nx-muted)", fontWeight: 900 }}>
                         SUMMARY
                       </Typography>
-                      <Typography variant="body2" sx={{ color: "#e2e8f0", whiteSpace: "pre-wrap", mt: 0.8 }}>
+                      <Typography variant="body2" sx={{ color: "var(--nx-text)", whiteSpace: "pre-wrap", mt: 0.8 }}>
                         {summary.summary || "No summary generated."}
                       </Typography>
                     </Box>
 
                     <Box sx={sideBoxStyle}>
-                      <Typography variant="caption" sx={{ color: hasBlockers ? "#fca5a5" : "#86efac", fontWeight: 900 }}>
+                      <Typography variant="caption" sx={{ color: hasBlockers ? "var(--nx-red)" : "var(--nx-green)", fontWeight: 900 }}>
                         BLOCKERS
                       </Typography>
 
                       {hasBlockers ? (
                         <Stack spacing={0.8} sx={{ mt: 1 }}>
                           {blockers.map((blocker, index) => (
-                            <Typography key={`${blocker}-${index}`} variant="body2" sx={{ color: "#fecaca" }}>
+                            <Typography key={`${blocker}-${index}`} variant="body2" sx={{ color: "var(--nx-red)" }}>
                               • {blocker}
                             </Typography>
                           ))}
                         </Stack>
                       ) : (
-                        <Typography variant="body2" sx={{ color: "#86efac", mt: 0.8 }}>
+                        <Typography variant="body2" sx={{ color: "var(--nx-green)", mt: 0.8 }}>
                           No blockers detected.
                         </Typography>
                       )}
@@ -268,12 +271,12 @@ const DevChat = () => {
 
                     {Array.isArray(summary.tickets_created) && summary.tickets_created.length > 0 ? (
                       <Box sx={sideBoxStyle}>
-                        <Typography variant="caption" sx={{ color: "#93c5fd", fontWeight: 900 }}>
+                        <Typography variant="caption" sx={{ color: "var(--nx-blue)", fontWeight: 900 }}>
                           TICKETS CREATED
                         </Typography>
                         <Stack spacing={0.8} sx={{ mt: 1 }}>
                           {summary.tickets_created.map((ticket) => (
-                            <Typography key={ticket.ticket_id} variant="body2" sx={{ color: "#dbeafe" }}>
+                            <Typography key={ticket.ticket_id} variant="body2" sx={{ color: "var(--nx-text-soft)" }}>
                               #{ticket.ticket_id}: {ticket.blocker}
                             </Typography>
                           ))}
@@ -286,16 +289,16 @@ const DevChat = () => {
                         sx={{
                           p: 1.5,
                           borderRadius: 2.5,
-                          border: "1px solid rgba(109,93,252,0.28)",
-                          background: "rgba(109,93,252,0.12)",
+                          border: "1px solid var(--nx-border)",
+                          background: "var(--nx-panel-2)",
                         }}
                       >
                         <Stack direction="row" spacing={1} alignItems="center">
-                          <ConfirmationNumberRoundedIcon sx={{ color: "#c4b5fd", fontSize: 20 }} />
+                          <ConfirmationNumberRoundedIcon sx={{ color: "var(--nx-purple)", fontSize: 20 }} />
                           <Typography sx={{ fontWeight: 900 }}>Create a ticket?</Typography>
                         </Stack>
 
-                        <Typography variant="body2" sx={{ color: "#cbd5e1", mt: 0.8 }}>
+                        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.8 }}>
                           This creates a high-priority ticket for the manager.
                         </Typography>
 
@@ -324,7 +327,7 @@ const DevChat = () => {
                       <Typography
                         variant="body2"
                         sx={{
-                          color: ticketStatus.toLowerCase().includes("failed") ? "#fca5a5" : "#86efac",
+                          color: ticketStatus.toLowerCase().includes("failed") ? "var(--nx-red)" : "var(--nx-green)",
                           fontWeight: 800,
                         }}
                       >
@@ -349,20 +352,20 @@ function InfoPill({ icon, label, value }) {
         px: 1.4,
         py: 1,
         borderRadius: 2,
-        background: "rgba(255,255,255,0.045)",
-        border: "1px solid rgba(148,163,184,0.12)",
+        background: "var(--nx-panel-2)",
+        border: "1px solid var(--nx-border)",
         minWidth: 120,
       }}
     >
       <Stack direction="row" spacing={0.8} alignItems="center">
-        <Box sx={{ color: "#a78bfa", display: "grid", placeItems: "center", "& svg": { fontSize: 18 } }}>
+        <Box sx={{ color: "var(--nx-purple)", display: "grid", placeItems: "center", "& svg": { fontSize: 18 } }}>
           {icon}
         </Box>
         <Box>
-          <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", lineHeight: 1.1 }}>
+          <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block", lineHeight: 1.1 }}>
             {label}
           </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 900, color: "#f8fafc", lineHeight: 1.25 }} noWrap>
+          <Typography variant="body2" sx={{ fontWeight: 900, color: "var(--nx-text)", lineHeight: 1.25 }} noWrap>
             {value}
           </Typography>
         </Box>
@@ -377,12 +380,12 @@ function EmptyPanel({ title, text }) {
       sx={{
         p: 2,
         borderRadius: 2.5,
-        border: "1px dashed rgba(148,163,184,0.24)",
-        background: "rgba(255,255,255,0.025)",
+        border: "1px dashed var(--nx-border)",
+        background: "var(--nx-panel-2)",
       }}
     >
       <Typography sx={{ fontWeight: 900 }}>{title}</Typography>
-      <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
+      <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.5 }}>
         {text}
       </Typography>
     </Box>
@@ -392,8 +395,8 @@ function EmptyPanel({ title, text }) {
 const sideBoxStyle = {
   p: 1.5,
   borderRadius: 2.5,
-  background: "rgba(255,255,255,0.035)",
-  border: "1px solid rgba(148,163,184,0.11)",
+  background: "var(--nx-panel-2)",
+  border: "1px solid var(--nx-border)",
 };
 
 export default DevChat;

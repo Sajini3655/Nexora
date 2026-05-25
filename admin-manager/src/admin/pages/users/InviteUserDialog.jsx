@@ -150,9 +150,9 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
       PaperProps={{
         sx: {
           borderRadius: 4,
-          border: "1px solid rgba(255,255,255,0.12)",
-          background: "rgba(15,18,35,0.92)",
-          backdropFilter: "blur(14px)",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-card)",
+          color: "var(--nx-text)",
         },
       }}
     >
@@ -160,7 +160,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
         <Typography sx={{ fontWeight: 950, letterSpacing: -0.4 }}>
           Invite User
         </Typography>
-        <Typography variant="body2" sx={{ opacity: 0.7 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
           Send an invitation to a new user.
         </Typography>
       </DialogTitle>

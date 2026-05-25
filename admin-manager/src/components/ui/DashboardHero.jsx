@@ -13,7 +13,7 @@ export default function DashboardHero({
   const buttonProps = component && actionTo ? { component, to: actionTo } : {};
 
   return (
-    <Box sx={{ mb: 2.4 }}>
+    <Box sx={{ mb: 2.4, color: "var(--nx-text)" }}>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
@@ -29,10 +29,10 @@ export default function DashboardHero({
                 borderRadius: "50%",
                 display: "grid",
                 placeItems: "center",
-                color: "#e2e8f0",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(148,163,184,0.12)",
-                boxShadow: "none",
+                color: "var(--nx-text)",
+                background: "var(--nx-panel-2)",
+                border: "1px solid var(--nx-border)",
+                boxShadow: "var(--nx-shadow)",
                 flex: "0 0 auto",
                 "& svg": {
                   fontSize: 22,
@@ -47,7 +47,7 @@ export default function DashboardHero({
               sx={{
                 fontWeight: 900,
                 letterSpacing: -0.35,
-                color: "#f8fafc",
+                color: "var(--nx-text)",
                 lineHeight: 1.08,
               }}
             >
@@ -70,13 +70,13 @@ export default function DashboardHero({
               borderRadius: 2,
               textTransform: "none",
               fontWeight: 850,
-              color: "#f8fafc",
-              borderColor: "rgba(148,163,184,0.14)",
-              background: "rgba(255,255,255,0.025)",
+                color: "var(--nx-text)",
+                borderColor: "var(--nx-border)",
+                background: "var(--nx-panel)",
               boxShadow: "none",
               "&:hover": {
-                borderColor: "rgba(148,163,184,0.20)",
-                background: "rgba(255,255,255,0.05)",
+                  borderColor: "var(--nx-border-strong)",
+                  background: "var(--nx-panel-2)",
                 boxShadow: "none",
               },
             }}
@@ -91,7 +91,7 @@ export default function DashboardHero({
           mt: 1.2,
           height: 1,
           borderRadius: 999,
-          background: "linear-gradient(90deg, rgba(148,163,184,0.20) 0%, rgba(148,163,184,0.06) 100%)",
+          background: "var(--nx-border)",
         }}
       />
     </Box>

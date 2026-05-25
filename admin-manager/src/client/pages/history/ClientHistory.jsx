@@ -9,24 +9,22 @@ export default function ClientHistory() {
           <Typography variant="h4" sx={{ fontWeight: 900 }}>
             History
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.5 }}>
-            View completed projects and resolved tickets.
-          </Typography>
         </Box>
 
         <Paper
           sx={{
             p: 3,
             borderRadius: 3,
-            bgcolor: "rgba(15,23,42,0.72)",
-            border: "1px solid rgba(148,163,184,0.16)",
-            color: "#e5e7eb",
+            bgcolor: "var(--nx-card)",
+            border: "1px solid var(--nx-border)",
+            color: "var(--nx-text)",
+            boxShadow: "var(--nx-shadow)",
           }}
         >
           <Typography sx={{ fontWeight: 800, mb: 1 }}>
             No history records yet
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
             Completed projects and resolved tickets will appear here.
           </Typography>
         </Paper>

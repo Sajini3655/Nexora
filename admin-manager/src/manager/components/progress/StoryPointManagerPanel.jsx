@@ -210,19 +210,19 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
       {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 1.2 }} dedupeKey="storypoint-manager-success" /> : null}
 
       {selectedTask ? (
-        <Typography variant="body2" sx={{ color: "#94a3b8", mb: 1.2 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mb: 1.2 }}>
           Managing story points for: {selectedTask.title}
         </Typography>
       ) : null}
 
       {loading ? (
-        <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
           Loading story points...
         </Typography>
       ) : null}
 
       {!loading && storyPoints.length === 0 ? (
-        <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
           No story points yet.
         </Typography>
       ) : null}
@@ -234,8 +234,8 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
             sx={{
               p: 1.2,
               borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "#0f1b2f",
+              border: "1px solid var(--nx-border)",
+              background: "var(--nx-panel)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -244,7 +244,7 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
           >
             <Box>
               <Typography sx={{ fontWeight: 800 }}>{storyPoint.title}</Typography>
-              <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+              <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                 {storyPoint.status || "TODO"} • {storyPoint.pointValue || 1} pt
               </Typography>
             </Box>

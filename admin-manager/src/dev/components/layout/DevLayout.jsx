@@ -10,9 +10,8 @@ export default function DevLayout({ children }) {
     <Box
       sx={{
         minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(104,81,255,0.18), transparent 24%), radial-gradient(circle at top right, rgba(0,255,170,0.10), transparent 22%), linear-gradient(180deg, #07101f 0%, #040a15 100%)",
-        color: "#e7e9ee",
+        background: "var(--nx-app)",
+        color: "var(--nx-text)",
       }}
     >
       <Topbar
@@ -21,7 +20,7 @@ export default function DevLayout({ children }) {
       />
 
       {/* Real spacer for fixed topbar */}
-      <Box sx={{ height: { xs: "116px", md: "122px" } }} />
+      <Box sx={{ height: { xs: "112px", md: "116px" } }} />
 
       <DevSidebar
         open={sidebarOpen}

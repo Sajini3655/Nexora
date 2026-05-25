@@ -12,10 +12,10 @@ function Badge({ children }) {
       sx={{
         height: 26,
         borderRadius: 999,
-        bgcolor: "rgba(255,255,255,0.06)",
-        color: "rgba(231,233,238,0.9)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        fontWeight: 800
+        bgcolor: "var(--nx-panel-2)",
+        color: "var(--nx-text)",
+        border: "1px solid var(--nx-border)",
+        fontWeight: 800,
       }}
     />
   );
@@ -86,14 +86,14 @@ export default function TicketWidget({ title, hint, tickets }) {
     <Card sx={{ p: 2.5 }}>
       <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
         <Box>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: "0.12em" }}>
+          <Typography variant="overline" sx={{ color: "var(--nx-muted)", letterSpacing: "0.12em" }}>
             Tickets
           </Typography>
           <Typography variant="h6" sx={{ fontWeight: 900, lineHeight: 1.1, letterSpacing: -0.3 }}>
             {title}
           </Typography>
           {hint ? (
-            <Typography variant="body2" sx={{ mt: 0.75, color: "rgba(231,233,238,0.68)" }}>
+            <Typography variant="body2" sx={{ mt: 0.75, color: "var(--nx-muted)" }}>
               {hint}
             </Typography>
           ) : null}
@@ -136,21 +136,29 @@ export default function TicketWidget({ title, hint, tickets }) {
 
       <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
         {visible.map((t) => (
-          <Link
-            key={t.id}
+          <Box
+            component={Link}
             to={`/dev/tickets/${t.id}`}
-            className="block rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition p-4"
+            key={t.id}
+            sx={{
+              display: "block",
+              borderRadius: "16px",
+              border: "1px solid var(--nx-border)",
+              background: "var(--nx-panel)",
+              p: 2,
+              transition: "background-color 160ms ease, border-color 160ms ease",
+              '&:hover': { background: 'var(--nx-panel-2)' },
+            }}
           >
             <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
               <Box sx={{ minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 800 }} noWrap>
                   {t.title}
                 </Typography>
-                <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)", mt: 0.5, display: "block" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)", mt: 0.5, display: "block" }}>
                   {t.id} • {t.status} • {t.createdAt}
                 </Typography>
-
-                <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.86)", mt: 1.25 }}>
+                <Typography variant="body2" sx={{ color: "var(--nx-text)", mt: 1.25 }}>
                   {t.description}
                 </Typography>
 
@@ -160,17 +168,16 @@ export default function TicketWidget({ title, hint, tickets }) {
                   {t.detectedFrom?.reason ? <Badge>AI Blocker</Badge> : null}
                 </Stack>
               </Box>
-
               <Box sx={{ shrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
                 <SeverityPill severity={t.severity} />
-                <Chip size="small" label="View" sx={{ bgcolor: "rgba(124,92,255,0.16)", border: "1px solid rgba(124,92,255,0.25)", color: "#e7e9ee", fontWeight: 900 }} />
+                <Chip size="small" label="View" sx={{ bgcolor: "var(--nx-panel-2)", border: "1px solid var(--nx-border)", color: "var(--nx-text)", fontWeight: 900 }} />
               </Box>
             </Box>
           </Link>
         ))}
 
         {filtered.length === 0 && (
-          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)" }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
             No tickets found.
           </Typography>
         )}

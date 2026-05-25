@@ -238,8 +238,8 @@ export default function DevDashboardHome() {
             mb: 3,
             height: 4,
             borderRadius: 999,
-            bgcolor: "rgba(255,255,255,0.08)",
-            "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+            bgcolor: "var(--nx-input)",
+            "& .MuiLinearProgress-bar": { bgcolor: "var(--nx-purple)" },
           }}
         />
       ) : null}
@@ -247,8 +247,8 @@ export default function DevDashboardHome() {
       {loading ? (
         <Box sx={{ display: "grid", placeItems: "center", minHeight: 360, borderRadius: 3 }}>
           <Stack alignItems="center" spacing={2}>
-            <CircularProgress sx={{ color: "#6d5dfc" }} />
-            <Typography sx={{ color: "#94a3b8", fontSize: 14 }}>
+            <CircularProgress sx={{ color: "var(--nx-purple)" }} />
+            <Typography sx={{ color: "var(--nx-muted)", fontSize: 14 }}>
               Loading your dashboard...
             </Typography>
           </Stack>
@@ -308,7 +308,6 @@ export default function DevDashboardHome() {
             <ScrollPanel
               title="Project Tasks"
               count={activeProjectTasks.length}
-              subtitle="Active project work"
             >
               {activeProjectTasks.length === 0 ? (
                 <EmptyState icon="📭" message="No active project tasks." />
@@ -334,7 +333,6 @@ export default function DevDashboardHome() {
             <ScrollPanel
               title="Ticket Tasks"
               count={activeTicketTasks.length}
-              subtitle="Active ticket work"
             >
               {activeTicketTasks.length === 0 ? (
                 <EmptyState icon="📭" message="No active ticket tasks." />
@@ -360,7 +358,6 @@ export default function DevDashboardHome() {
             <ScrollPanel
               title="My Projects"
               count={projectSummaries.length}
-              subtitle="Your assigned project work"
             >
               {projectSummaries.length === 0 ? (
                 <EmptyState icon="📁" message="No assigned projects yet." />
@@ -389,58 +386,21 @@ function StatCard({ title, value, hint, icon }) {
       sx={{
         p: 1.6,
         borderRadius: 2,
-        bgcolor: "#0f1b2f",
-        border: "1px solid rgba(255,255,255,0.07)",
+        bgcolor: "var(--nx-panel)",
+        border: "1px solid var(--nx-border)",
       }}
     >
       <Stack spacing={1.2}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Box
-            sx={{
-              width: 34,
-              height: 34,
-              borderRadius: 2,
-              display: "grid",
-              placeItems: "center",
-              bgcolor: "rgba(124,92,255,0.14)",
-              color: "#c4b5fd",
-            }}
-          >
-            {icon}
-          </Box>
-          <Typography
-            sx={{
-              color: "#94a3b8",
-              fontWeight: 700,
-              fontSize: "0.85rem",
-            }}
-          >
-            {title}
-          </Typography>
+          <Box sx={{ width: 34, height: 34, borderRadius: 2, display: "grid", placeItems: "center", bgcolor: "var(--nx-panel-2)", color: "var(--nx-purple)" }}>{icon}</Box>
+          <Typography sx={{ color: "var(--nx-muted)", fontWeight: 700, fontSize: "0.85rem" }}>{title}</Typography>
         </Box>
 
         <Box>
-          <Typography
-            sx={{
-              fontWeight: 950,
-              color: "#f8fafc",
-              fontSize: "1.75rem",
-              lineHeight: 1.1,
-            }}
-          >
-            {value}
-          </Typography>
+          <Typography sx={{ fontWeight: 950, color: "var(--nx-text)", fontSize: "1.75rem", lineHeight: 1.1 }}>{value}</Typography>
         </Box>
 
-        <Typography
-          variant="caption"
-          sx={{
-            color: "#cbd5e1",
-            fontSize: "0.8rem",
-          }}
-        >
-          {hint}
-        </Typography>
+        <Typography variant="caption" sx={{ color: "var(--nx-muted)", fontSize: "0.8rem" }}>{hint}</Typography>
       </Stack>
     </Paper>
   );
@@ -453,11 +413,11 @@ function ScrollPanel({ title, subtitle, count, children }) {
     overflowX: "hidden",
     pr: 1,
     "&::-webkit-scrollbar": { width: 8 },
-    "&::-webkit-scrollbar-track": { backgroundColor: "rgba(15,23,42,0.35)" },
+    "&::-webkit-scrollbar-track": { backgroundColor: "var(--nx-panel)" },
     "&::-webkit-scrollbar-thumb": {
-      backgroundColor: "rgba(148,163,184,0.28)",
+      backgroundColor: "var(--nx-border)",
       borderRadius: 999,
-      "&:hover": { backgroundColor: "rgba(148,163,184,0.4)" },
+      "&:hover": { backgroundColor: "color-mix(in srgb, var(--nx-muted) 45%, transparent)" },
     },
   };
 
@@ -467,16 +427,15 @@ function ScrollPanel({ title, subtitle, count, children }) {
       sx={{
         p: 2,
         borderRadius: 3,
-        background:
-          "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.035))",
-        border: "1px solid rgba(148,163,184,0.14)",
-        boxShadow: "0 20px 55px rgba(0,0,0,0.24)",
+        background: "var(--nx-card)",
+        border: "1px solid var(--nx-border)",
+        boxShadow: "var(--nx-shadow)",
         display: "flex",
         flexDirection: "column",
         height: 540,
       }}
     >
-      <Box sx={{ pb: 1.5, borderBottom: "1px solid rgba(148,163,184,0.12)" }}>
+      <Box sx={{ pb: 1.5, borderBottom: "1px solid var(--nx-border)" }}>
         <Box
           sx={{
             display: "flex",
@@ -489,7 +448,7 @@ function ScrollPanel({ title, subtitle, count, children }) {
             sx={{
               fontWeight: 950,
               fontSize: 18,
-              color: "#f8fafc",
+              color: "var(--nx-text)",
             }}
           >
             {title}
@@ -501,21 +460,15 @@ function ScrollPanel({ title, subtitle, count, children }) {
               fontWeight: 900,
               fontSize: 11.5,
               height: 24,
-              color: "#a78bfa",
-              bgcolor: "rgba(124,92,255,0.15)",
-              border: "1px solid rgba(124,92,255,0.32)",
+              color: "var(--nx-purple)",
+              bgcolor: "var(--nx-panel-2)",
+              border: "1px solid var(--nx-border)",
             }}
           />
         </Box>
 
         {subtitle ? (
-          <Typography
-            variant="body2"
-            sx={{
-              color: "#94a3b8",
-              fontSize: 12.5,
-            }}
-          >
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)", fontSize: 12.5 }}>
             {subtitle}
           </Typography>
         ) : null}
@@ -534,14 +487,10 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
         p: 1.5,
         mb: 1,
         borderRadius: 2.5,
-        bgcolor: "rgba(15,23,42,0.62)",
-        border: "1px solid rgba(148,163,184,0.12)",
+        bgcolor: "var(--nx-panel)",
+        border: "1px solid var(--nx-border)",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        "&:hover": {
-          borderColor: "rgba(148,163,184,0.22)",
-          bgcolor: "rgba(15,23,42,0.75)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-        },
+        "&:hover": { borderColor: "var(--nx-border)", bgcolor: "var(--nx-panel-2)", boxShadow: "var(--nx-shadow)" },
       }}
     >
       <Stack spacing={0.8}>
@@ -559,7 +508,7 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
               sx={{
                 fontWeight: 900,
                 fontSize: 14,
-                color: "#f8fafc",
+                color: "var(--nx-text)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -578,30 +527,9 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
                 flexWrap: "wrap",
               }}
             >
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "#94a3b8",
-                  fontSize: 12,
-                }}
-              >
-                {getProjectName(task)}
-              </Typography>
-
-              <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "#94a3b8" }} />
-
-              <Chip
-                label={task.priority || "Medium"}
-                size="small"
-                sx={{
-                  height: 18,
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  color: "#cbd5e1",
-                  bgcolor: "rgba(148,163,184,0.1)",
-                  border: "1px solid rgba(148,163,184,0.15)",
-                }}
-              />
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)", fontSize: 12 }}>{getProjectName(task)}</Typography>
+              <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "var(--nx-muted)" }} />
+              <Chip label={task.priority || "Medium"} size="small" sx={{ height: 18, fontSize: 10.5, fontWeight: 700, color: "var(--nx-muted)", bgcolor: "var(--nx-panel-2)", border: "1px solid var(--nx-border)" }} />
             </Box>
           </Box>
 
@@ -621,7 +549,7 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
             <Typography
               variant="body2"
               sx={{
-                color: "#94a3b8",
+                color: "var(--nx-muted)",
                 fontSize: 12,
                 fontWeight: 600,
               }}
@@ -632,7 +560,7 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
             <Typography
               variant="body2"
               sx={{
-                color: "#a78bfa",
+                color: "var(--nx-purple)",
                 fontSize: 12,
                 fontWeight: 700,
               }}
@@ -647,32 +575,19 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
             sx={{
               height: 6,
               borderRadius: 999,
-              bgcolor: "rgba(255,255,255,0.08)",
-              "& .MuiLinearProgress-bar": {
-                bgcolor: "#6d5dfc",
-                borderRadius: 999,
-              },
+              bgcolor: "var(--nx-input)",
+              "& .MuiLinearProgress-bar": { bgcolor: "var(--nx-purple)", borderRadius: 999 },
             }}
           />
         </Box>
 
         {/* Story Points */}
         {totalPoints > 0 && (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              fontSize: 12,
-              color: "#cbd5e1",
-            }}
-          >
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, color: "var(--nx-muted)" }}>
             <span>Points</span>
             <span>
-              <span style={{ color: "#a78bfa", fontWeight: 700 }}>
-                {completedPoints}
-              </span>
-              <span style={{ color: "#94a3b8" }}>/{totalPoints}</span>
+              <span style={{ color: "var(--nx-purple)", fontWeight: 700 }}>{completedPoints}</span>
+              <span style={{ color: "var(--nx-muted)" }}>/{totalPoints}</span>
             </span>
           </Box>
         )}
@@ -689,14 +604,10 @@ function ProjectProgressCard({ project }) {
         p: 1.5,
         mb: 1,
         borderRadius: 2.5,
-        bgcolor: "rgba(15,23,42,0.62)",
-        border: "1px solid rgba(148,163,184,0.12)",
+        bgcolor: "var(--nx-panel)",
+        border: "1px solid var(--nx-border)",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        "&:hover": {
-          borderColor: "rgba(148,163,184,0.22)",
-          bgcolor: "rgba(15,23,42,0.75)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-        },
+        "&:hover": { borderColor: "var(--nx-border)", bgcolor: "var(--nx-panel-2)", boxShadow: "var(--nx-shadow)" },
       }}
     >
       <Stack spacing={0.8}>
@@ -714,7 +625,7 @@ function ProjectProgressCard({ project }) {
               sx={{
                 fontWeight: 900,
                 fontSize: 14,
-                color: "#f8fafc",
+                color: "var(--nx-text)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -724,22 +635,13 @@ function ProjectProgressCard({ project }) {
               {project.name}
             </Typography>
 
-            <Typography
-              variant="body2"
-              sx={{
-                color: "#94a3b8",
-                mt: 0.2,
-                fontSize: 12,
-              }}
-            >
-              {project.tasks} task{project.tasks !== 1 ? "s" : ""} • {project.active} active • {project.completed} done
-            </Typography>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.2, fontSize: 12 }}>{project.tasks} task{project.tasks !== 1 ? "s" : ""} • {project.active} active • {project.completed} done</Typography>
           </Box>
 
           <Typography
             sx={{
               fontWeight: 950,
-              color: "#a78bfa",
+              color: "var(--nx-purple)",
               fontSize: 17,
               whiteSpace: "nowrap",
             }}
@@ -755,11 +657,8 @@ function ProjectProgressCard({ project }) {
           sx={{
             height: 6,
             borderRadius: 999,
-            bgcolor: "rgba(255,255,255,0.08)",
-            "& .MuiLinearProgress-bar": {
-              background: "linear-gradient(90deg, #a78bfa 0%, #c4b5fd 100%)",
-              borderRadius: 999,
-            },
+            bgcolor: "var(--nx-input)",
+            "& .MuiLinearProgress-bar": { bgcolor: "var(--nx-purple)", borderRadius: 999 },
           }}
         />
       </Stack>
@@ -777,7 +676,7 @@ function EmptyState({ icon, message }) {
         justifyContent: "center",
         minHeight: 200,
         textAlign: "center",
-        color: "#94a3b8",
+        color: "var(--nx-muted)",
       }}
     >
       <Box sx={{ fontSize: 48, mb: 1 }}>{icon}</Box>

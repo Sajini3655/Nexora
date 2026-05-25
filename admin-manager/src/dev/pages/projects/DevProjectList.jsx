@@ -66,7 +66,7 @@ function buildProjects(tasks) {
       totalPointValue,
       completedPointValue,
       status: progress === 100 ? "Completed" : progress > 0 ? "Active" : "Planning",
-      description: "Projects containing your assigned tasks.",
+      description: "",
     };
   });
 }
@@ -120,16 +120,12 @@ export default function DevProjectList() {
           mb: 3,
           p: { xs: 2.5, md: 3 },
           borderRadius: 4,
-          border: "1px solid rgba(148,163,184,0.14)",
-          background:
-            "linear-gradient(135deg, rgba(20,184,166,0.16) 0%, rgba(11,22,40,0.94) 100%)",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-panel-2)",
         }}
       >
         <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.5 }}>
           My Projects
-        </Typography>
-        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.75 }}>
-          Projects containing your assigned tasks.
         </Typography>
       </Box>
 
@@ -144,15 +140,15 @@ export default function DevProjectList() {
           mb: 3,
           "& .MuiOutlinedInput-root": {
             borderRadius: 3,
-            bgcolor: "rgba(15,23,42,0.72)",
+            bgcolor: "var(--nx-input)",
           },
         }}
-        InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, opacity: 0.7 }} /> }}
+        InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, opacity: 0.7, color: "var(--nx-muted)" }} /> }}
       />
 
       {loading ? (
         <Box sx={{ display: "grid", placeItems: "center", minHeight: 240 }}>
-          <CircularProgress sx={{ color: "#6b51ff" }} />
+          <CircularProgress sx={{ color: "var(--nx-purple)" }} />
         </Box>
       ) : (
         <Grid container spacing={2}>
@@ -168,7 +164,7 @@ export default function DevProjectList() {
                   {project.name}
                 </Typography>
 
-                <Typography variant="body2" sx={{ mt: 1, color: "rgba(231,233,238,0.76)" }}>
+                <Typography variant="body2" sx={{ mt: 1, color: "var(--nx-muted)" }}>
                   {project.description}
                 </Typography>
 
@@ -184,12 +180,12 @@ export default function DevProjectList() {
                     sx={{
                       height: 7,
                       borderRadius: 999,
-                      bgcolor: "rgba(255,255,255,0.08)",
-                      "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+                      bgcolor: "var(--nx-input)",
+                      "& .MuiLinearProgress-bar": { bgcolor: "var(--nx-purple)" },
                     }}
                   />
 
-                  <Typography variant="caption" sx={{ display: "block", mt: 0.8, color: "#94a3b8" }}>
+                  <Typography variant="caption" sx={{ display: "block", mt: 0.8, color: "var(--nx-muted)" }}>
                     Weighted Points: {project.completedPointValue} / {project.totalPointValue}
                   </Typography>
                 </Box>

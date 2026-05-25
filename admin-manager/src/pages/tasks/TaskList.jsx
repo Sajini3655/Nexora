@@ -125,9 +125,9 @@ export default function TaskList() {
           sx: {
             width: { xs: "100%", sm: 460 },
             p: 2.5,
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
-            borderLeft: "1px solid rgba(255,255,255,0.10)"
+            background: "var(--nx-card)",
+            borderLeft: "1px solid var(--nx-border)",
+            color: "var(--nx-text)",
           }
         }}
       >

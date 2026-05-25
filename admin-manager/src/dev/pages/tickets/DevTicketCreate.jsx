@@ -60,9 +60,9 @@ export default function DevTicketCreate() {
     <>
       <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mb: 3 }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)" }}>Ticket</Typography>
+          <Typography variant="overline" sx={{ color: "var(--nx-muted)" }}>Ticket</Typography>
           <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.4 }}>Create Ticket</Typography>
-          <Typography variant="body2" sx={{ mt: 0.75, color: "rgba(231,233,238,0.72)" }}>
+          <Typography variant="body2" sx={{ mt: 0.75, color: "var(--nx-text-soft)" }}>
             {thread ? `From chat: ${thread.title}` : "Manual ticket creation backed by the API"}
           </Typography>
         </Box>
@@ -111,7 +111,7 @@ export default function DevTicketCreate() {
               <Button onClick={create} disabled={loading} variant="contained" sx={{ borderRadius: 999, textTransform: "none", px: 3 }}>
                 {loading ? "Creating..." : "Create Ticket"}
               </Button>
-              <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.56)" }}>
+              <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                 Tickets are posted directly to the backend API.
               </Typography>
             </Box>

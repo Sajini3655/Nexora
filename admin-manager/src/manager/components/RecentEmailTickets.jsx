@@ -295,10 +295,9 @@ export default function RecentEmailTickets() {
         mb: 2,
         p: 1.8,
         borderRadius: 2.5,
-        bgcolor: "rgba(255,255,255,0.05)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(255,255,255,0.11)",
-        boxShadow: "0 10px 28px rgba(0,0,0,0.2)",
+        bgcolor: "var(--nx-card)",
+        border: "1px solid var(--nx-border)",
+        boxShadow: "var(--nx-shadow)",
       }}
     >
       <Stack
@@ -309,10 +308,10 @@ export default function RecentEmailTickets() {
         sx={{ mb: 2 }}
       >
         <Box>
-          <Typography sx={{ fontWeight: 900, color: "#f8fafc" }}>
+          <Typography sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
             Recent Inbound Tickets
           </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
             OPEN tickets only. Convert them into tasks from a modal.
           </Typography>
         </Box>
@@ -321,27 +320,27 @@ export default function RecentEmailTickets() {
           label={`OPEN: ${openCount}`}
           size="small"
           sx={{
-            bgcolor: "rgba(59,130,246,0.25)",
-            color: "#93c5fd",
+            bgcolor: "var(--nx-panel-2)",
+            color: "var(--nx-blue)",
             fontWeight: 800,
           }}
         />
       </Stack>
 
       {loading && (
-        <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
           Loading email tickets...
         </Typography>
       )}
 
       {!loading && (actionError || fetchError) && (
-        <Typography variant="body2" sx={{ color: "#ef5350" }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-red)" }}>
           {actionError || fetchError}
         </Typography>
       )}
 
       {!loading && !fetchError && !actionError && tickets.length === 0 && (
-        <Typography variant="body2" sx={{ opacity: 0.72, color: "#cbd5e1" }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
           No open inbound tickets.
         </Typography>
       )}
@@ -354,8 +353,8 @@ export default function RecentEmailTickets() {
               sx={{
                 p: 1.2,
                 borderRadius: 2,
-                bgcolor: "rgba(255,255,255,0.045)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                bgcolor: "var(--nx-panel-2)",
+                border: "1px solid var(--nx-border)",
               }}
             >
               <Stack
@@ -367,7 +366,7 @@ export default function RecentEmailTickets() {
   <Typography
     sx={{
       fontWeight: 900,
-      color: "#f8fafc",
+      color: "var(--nx-text)",
       fontSize: 16,
       lineHeight: 1.25,
       mb: 0.7,
@@ -388,22 +387,22 @@ export default function RecentEmailTickets() {
       label={getTicketSourceLabel(ticket)}
       size="small"
       sx={{
-        bgcolor: "rgba(124,92,255,0.18)",
-        color: "#ddd6fe",
-        border: "1px solid rgba(124,92,255,0.34)",
+        bgcolor: "var(--nx-panel-2)",
+        color: "var(--nx-purple)",
+        border: "1px solid var(--nx-border)",
         fontWeight: 900,
       }}
     />
 
-    <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
+    <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
       {getTicketProjectLabel(ticket)}
     </Typography>
 
-    <Typography variant="body2" sx={{ color: "#64748b" }}>
+    <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
       •
     </Typography>
 
-    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+    <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
       {getTicketSenderLabel(ticket)}
     </Typography>
   </Stack>
@@ -422,8 +421,9 @@ export default function RecentEmailTickets() {
                     sx={{
                       textTransform: "none",
                       fontWeight: 700,
-                      bgcolor: "#2563eb",
-                      "&:hover": { bgcolor: "#1d4ed8" },
+                      bgcolor: "var(--nx-blue)",
+                      color: "var(--nx-text)",
+                      "&:hover": { bgcolor: "var(--nx-purple)" },
                     }}
                   >
                     Convert to Task
@@ -441,25 +441,25 @@ export default function RecentEmailTickets() {
           <IconButton
             onClick={closeConvertModal}
             disabled={submitting}
-            sx={{ position: "absolute", right: 12, top: 10, color: "#cbd5e1" }}
+            sx={{ position: "absolute", right: 12, top: 10, color: "var(--nx-muted)" }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers sx={{ bgcolor: "#09111f" }}>
+        <DialogContent dividers sx={{ bgcolor: "var(--nx-card)" }}>
           <Stack spacing={2}>
             <Box>
-              <Typography variant="subtitle2" sx={{ color: "#94a3b8" }}>
+              <Typography variant="subtitle2" sx={{ color: "var(--nx-muted)" }}>
                 Ticket
               </Typography>
-              <Typography sx={{ fontWeight: 900, color: "#f8fafc" }}>
+              <Typography sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
                 {selectedTicket?.title || "Untitled ticket"}
               </Typography>
-              <Typography variant="body2" sx={{ color: "#cbd5e1", mt: 0.4, whiteSpace: "pre-wrap" }}>
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.4, whiteSpace: "pre-wrap" }}>
                 {selectedTicket?.description || "No description provided."}
               </Typography>
-              <Typography variant="caption" sx={{ color: "#94a3b8", mt: 0.7, display: "block" }}>
+              <Typography variant="caption" sx={{ color: "var(--nx-muted)", mt: 0.7, display: "block" }}>
                 Source: {selectedTicket?.sourceChannel || "EMAIL"} • Priority: {selectedTicket?.priority || "MEDIUM"}
               </Typography>
             </Box>
@@ -470,10 +470,10 @@ export default function RecentEmailTickets() {
                   value={selectedProjectId}
                   onChange={(event) => setSelectedProjectId(event.target.value)}
                   displayEmpty
-                  sx={{ color: "#f8fafc", bgcolor: "#0f172a", borderRadius: 2 }}
+                  sx={{ color: "var(--nx-text)", bgcolor: "var(--nx-panel-2)", borderRadius: 2 }}
                 >
                   <MenuItem value="">
-                    <span style={{ color: "#cbd5e1" }}>Select project</span>
+                    <span style={{ color: "var(--nx-muted)" }}>Select project</span>
                   </MenuItem>
                   {projects.map((project) => (
                     <MenuItem key={project.id} value={String(project.id)}>
@@ -488,10 +488,10 @@ export default function RecentEmailTickets() {
                   value={selectedDeveloperId}
                   onChange={(event) => setSelectedDeveloperId(event.target.value)}
                   displayEmpty
-                  sx={{ color: "#f8fafc", bgcolor: "#0f172a", borderRadius: 2 }}
+                  sx={{ color: "var(--nx-text)", bgcolor: "var(--nx-panel-2)", borderRadius: 2 }}
                 >
                   <MenuItem value="">
-                    <span style={{ color: "#cbd5e1" }}>Select developer</span>
+                    <span style={{ color: "var(--nx-muted)" }}>Select developer</span>
                   </MenuItem>
                   {developers.map((developer) => (
                     <MenuItem key={developer.id} value={String(developer.id)}>
@@ -512,11 +512,11 @@ export default function RecentEmailTickets() {
                       textTransform: "none",
                       whiteSpace: "nowrap",
                       borderRadius: 6,
-                      bgcolor: suggestingDeveloper ? 'rgba(99,102,241,0.9)' : 'linear-gradient(90deg,#7c3aed,#4f46e5)',
-                      color: '#fff',
+                      bgcolor: "var(--nx-purple)",
+                      color: "var(--nx-text)",
                       fontWeight: 800,
                       px: 2,
-                      '&:hover': { opacity: 0.92 },
+                      '&:hover': { bgcolor: "var(--nx-blue)" },
                     }}
                   >
                     {suggestingDeveloper ? 'Suggesting...' : 'Suggest developer'}
@@ -526,19 +526,19 @@ export default function RecentEmailTickets() {
             </Stack>
 
             {suggestion?.recommendedDeveloper ? (
-              <Box sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(59,130,246,0.35)", background: "rgba(59,130,246,0.12)" }}>
-                <Typography sx={{ fontWeight: 800, color: "#e2e8f0" }}>
+              <Box sx={{ p: 1, borderRadius: 1.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel-2)" }}>
+                <Typography sx={{ fontWeight: 800, color: "var(--nx-text)" }}>
                   Suggested: {suggestion.recommendedDeveloper.name}
                 </Typography>
-                <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                   Confidence: {suggestion.confidence ?? "-"}% {suggestion.explanation ? `• ${suggestion.explanation}` : ""}
                 </Typography>
               </Box>
             ) : null}
 
-            <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: "#0f1b2f", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: "var(--nx-card)", border: "1px solid var(--nx-border)" }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                <Typography sx={{ color: "#e2e8f0", fontWeight: 800 }}>
+                <Typography sx={{ color: "var(--nx-text)", fontWeight: 800 }}>
                   Story points
                 </Typography>
                 <Button size="small" onClick={addStoryPoint} sx={{ textTransform: "none" }}>
@@ -550,7 +550,7 @@ export default function RecentEmailTickets() {
                 {storyPoints.map((row, rowIndex) => (
                   <Box
                     key={`${selectedTicket?.id || "ticket"}-sp-${rowIndex}`}
-                    sx={{ p: 1.2, borderRadius: 2, bgcolor: "#0f1b2f", border: "1px solid rgba(255,255,255,0.06)" }}
+                    sx={{ p: 1.2, borderRadius: 2, bgcolor: "var(--nx-panel-2)", border: "1px solid var(--nx-border)" }}
                   >
                     <Stack spacing={1}>
                       <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
@@ -580,7 +580,7 @@ export default function RecentEmailTickets() {
                         onChange={(event) => updateStoryPoint(rowIndex, "description", event.target.value)}
                       />
                       <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                        <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                           Row {rowIndex + 1}
                         </Typography>
                         <Button
@@ -601,7 +601,7 @@ export default function RecentEmailTickets() {
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2, bgcolor: "#09111f" }}>
+        <DialogActions sx={{ p: 2, bgcolor: "var(--nx-card)" }}>
           <Button onClick={closeConvertModal} disabled={submitting} sx={{ textTransform: "none" }}>
             Cancel
           </Button>
@@ -609,7 +609,7 @@ export default function RecentEmailTickets() {
             variant="contained"
             onClick={handleConvert}
             disabled={submitting}
-            sx={{ textTransform: "none", fontWeight: 800, bgcolor: "#2563eb", "&:hover": { bgcolor: "#1d4ed8" } }}
+            sx={{ textTransform: "none", fontWeight: 800, bgcolor: "var(--nx-blue)", color: "var(--nx-text)", "&:hover": { bgcolor: "var(--nx-purple)" } }}
           >
             {submitting ? "Converting..." : "Convert and Assign"}
           </Button>

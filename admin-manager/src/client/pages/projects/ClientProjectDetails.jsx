@@ -29,10 +29,10 @@ function getDateLabel(value) {
 function SummaryRow({ label, value }) {
   return (
     <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, py: 0.8 }}>
-      <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+      <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ fontWeight: 700, color: "#ffffff" }}>
+      <Typography variant="body2" sx={{ fontWeight: 700, color: "var(--nx-text)" }}>
         {value}
       </Typography>
     </Box>
@@ -78,7 +78,7 @@ export default function ClientProjectDetails() {
   if (loading || projectsLoading) {
     return (
       <Box sx={{ display: "grid", placeItems: "center", minHeight: 280 }}>
-        <CircularProgress sx={{ color: "#6d5dfc" }} />
+        <CircularProgress sx={{ color: "var(--nx-purple)" }} />
       </Box>
     );
   }
@@ -89,8 +89,8 @@ export default function ClientProjectDetails() {
         sx={{
           p: 3,
           borderRadius: 3,
-          bgcolor: "#0b1628",
-          border: "1px solid rgba(255,255,255,0.08)",
+          bgcolor: "var(--nx-panel)",
+          border: "1px solid var(--nx-border)",
           boxShadow: "none",
         }}
       >
@@ -98,14 +98,14 @@ export default function ClientProjectDetails() {
         <Typography variant="h5" sx={{ fontWeight: 900, mb: 1 }}>
           Project not found
         </Typography>
-        <Typography variant="body2" sx={{ color: "#94a3b8", mb: 2 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mb: 2 }}>
           The project you are looking for does not exist or is not assigned to your account.
         </Typography>
         <Button
           component={Link}
           to="/client/projects"
           variant="outlined"
-          sx={{ textTransform: "none", borderColor: "rgba(255,255,255,0.14)", color: "#cbd5e1" }}
+          sx={{ textTransform: "none", borderColor: "var(--nx-border)", color: "var(--nx-text-soft)" }}
         >
           Back to projects
         </Button>
@@ -117,13 +117,13 @@ export default function ClientProjectDetails() {
     <Stack spacing={3}>
       <Box sx={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Box>
-          <Typography variant="overline" sx={{ color: "rgba(231,233,238,0.56)", letterSpacing: 1 }}>
+          <Typography variant="overline" sx={{ color: "var(--nx-muted)", letterSpacing: 1 }}>
             Project details
           </Typography>
           <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>
             {project.name}
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 1, maxWidth: 680 }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 1, maxWidth: 680 }}>
             A client-facing project assigned to your account. Track progress, recent requests, and status for the current project.
           </Typography>
         </Box>
@@ -134,7 +134,7 @@ export default function ClientProjectDetails() {
             component={Link}
             to="/client/projects"
             variant="outlined"
-            sx={{ textTransform: "none", borderColor: "rgba(255,255,255,0.14)", color: "#cbd5e1" }}
+            sx={{ textTransform: "none", borderColor: "var(--nx-border)", color: "var(--nx-text-soft)" }}
           >
             Back to projects
           </Button>
@@ -147,8 +147,8 @@ export default function ClientProjectDetails() {
             sx={{
               p: 2.25,
               borderRadius: 3,
-              bgcolor: "#0b1628",
-              border: "1px solid rgba(255,255,255,0.08)",
+              bgcolor: "var(--nx-panel)",
+              border: "1px solid var(--nx-border)",
               boxShadow: "none",
               height: "100%",
             }}
@@ -156,7 +156,7 @@ export default function ClientProjectDetails() {
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
               Overview
             </Typography>
-            <Typography variant="body2" sx={{ color: "#94a3b8", mb: 3 }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)", mb: 3 }}>
               This project is updated automatically from your client support requests. Review latest activity, status, and request details below.
             </Typography>
 
@@ -168,10 +168,10 @@ export default function ClientProjectDetails() {
 
             <Box sx={{ mt: 2.5 }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                   Overall progress
                 </Typography>
-                <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-text-soft)" }}>
                   {project.progress}%
                 </Typography>
               </Box>
@@ -181,8 +181,8 @@ export default function ClientProjectDetails() {
                 sx={{
                   height: 8,
                   borderRadius: 999,
-                  bgcolor: "rgba(255,255,255,0.08)",
-                  "& .MuiLinearProgress-bar": { bgcolor: "#6d5dfc" },
+                  bgcolor: "color-mix(in srgb, var(--nx-border) 80%, transparent)",
+                  "& .MuiLinearProgress-bar": { bgcolor: "var(--nx-purple)" },
                 }}
               />
             </Box>
@@ -194,8 +194,8 @@ export default function ClientProjectDetails() {
             sx={{
               p: 2.25,
               borderRadius: 3,
-              bgcolor: "#0b1628",
-              border: "1px solid rgba(255,255,255,0.08)",
+              bgcolor: "var(--nx-panel)",
+              border: "1px solid var(--nx-border)",
               boxShadow: "none",
               height: "100%",
             }}
@@ -203,7 +203,7 @@ export default function ClientProjectDetails() {
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
               Request status
             </Typography>
-            <Typography variant="body2" sx={{ color: "#94a3b8", mb: 3 }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)", mb: 3 }}>
               See how the active requests for this project are distributed by status.
             </Typography>
 
@@ -212,11 +212,11 @@ export default function ClientProjectDetails() {
                 sx={{
                   p: 1.75,
                   borderRadius: 2,
-                  bgcolor: "#0f1b2f",
-                  border: "1px solid rgba(255,255,255,0.07)",
+                  bgcolor: "var(--nx-panel-2)",
+                  border: "1px solid var(--nx-border)",
                 }}
               >
-                <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                   Open requests
                 </Typography>
                 <Typography sx={{ fontWeight: 900, fontSize: 20, mt: 0.5 }}>{openCount}</Typography>
@@ -226,11 +226,11 @@ export default function ClientProjectDetails() {
                 sx={{
                   p: 1.75,
                   borderRadius: 2,
-                  bgcolor: "#0f1b2f",
-                  border: "1px solid rgba(255,255,255,0.07)",
+                  bgcolor: "var(--nx-panel-2)",
+                  border: "1px solid var(--nx-border)",
                 }}
               >
-                <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                   In progress
                 </Typography>
                 <Typography sx={{ fontWeight: 900, fontSize: 20, mt: 0.5 }}>{inProgressCount}</Typography>
@@ -240,11 +240,11 @@ export default function ClientProjectDetails() {
                 sx={{
                   p: 1.75,
                   borderRadius: 2,
-                  bgcolor: "#0f1b2f",
-                  border: "1px solid rgba(255,255,255,0.07)",
+                  bgcolor: "var(--nx-panel-2)",
+                  border: "1px solid var(--nx-border)",
                 }}
               >
-                <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                   Resolved
                 </Typography>
                 <Typography sx={{ fontWeight: 900, fontSize: 20, mt: 0.5 }}>{resolvedCount}</Typography>
@@ -260,8 +260,8 @@ export default function ClientProjectDetails() {
             sx={{
               p: 2.25,
               borderRadius: 3,
-              bgcolor: "#0b1628",
-              border: "1px solid rgba(255,255,255,0.08)",
+              bgcolor: "var(--nx-panel)",
+              border: "1px solid var(--nx-border)",
               boxShadow: "none",
             }}
           >
@@ -270,7 +270,7 @@ export default function ClientProjectDetails() {
             </Typography>
 
             {projectTickets.length === 0 ? (
-              <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                 No tickets for this project yet.
               </Typography>
             ) : (
@@ -282,7 +282,7 @@ export default function ClientProjectDetails() {
                       gridTemplateColumns: "2.5fr 1fr 1fr 1fr",
                       gap: 1.5,
                       pb: 1,
-                      borderBottom: "1px solid rgba(255,255,255,0.08)",
+                      borderBottom: "1px solid var(--nx-border)",
                     }}
                   >
                     {[
@@ -294,7 +294,7 @@ export default function ClientProjectDetails() {
                       <Typography
                         key={header}
                         variant="caption"
-                        sx={{ color: "#64748b", fontWeight: 900, textTransform: "uppercase" }}
+                        sx={{ color: "var(--nx-muted)", fontWeight: 900, textTransform: "uppercase" }}
                       >
                         {header}
                       </Typography>
@@ -310,13 +310,13 @@ export default function ClientProjectDetails() {
                         gap: 1.5,
                         alignItems: "center",
                         py: 1.5,
-                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                        borderBottom: "1px solid color-mix(in srgb, var(--nx-border) 70%, transparent)",
                       }}
                     >
                       <Typography sx={{ fontWeight: 700, fontSize: 15 }}>{ticket.title}</Typography>
                       <StatusBadge label={ticket.status} />
-                      <Typography sx={{ color: "#94a3b8", fontSize: 14 }}>{ticket.priority || "Medium"}</Typography>
-                      <Typography sx={{ color: "#94a3b8", fontSize: 14 }}>{getDateLabel(ticket.updatedAt)}</Typography>
+                      <Typography sx={{ color: "var(--nx-muted)", fontSize: 14 }}>{ticket.priority || "Medium"}</Typography>
+                      <Typography sx={{ color: "var(--nx-muted)", fontSize: 14 }}>{getDateLabel(ticket.updatedAt)}</Typography>
                     </Box>
                   ))}
                 </Box>
@@ -330,32 +330,32 @@ export default function ClientProjectDetails() {
             sx={{
               p: 2.25,
               borderRadius: 3,
-              bgcolor: "#0b1628",
-              border: "1px solid rgba(255,255,255,0.08)",
+              bgcolor: "var(--nx-panel)",
+              border: "1px solid var(--nx-border)",
               boxShadow: "none",
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 2 }}>
               Project summary
             </Typography>
-            <Typography variant="body2" sx={{ color: "#94a3b8", mb: 2 }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)", mb: 2 }}>
               {project.description || `${projectTickets.length} support request${projectTickets.length === 1 ? "" : "s"} currently grouped into this project.`}
             </Typography>
             <Stack spacing={1.25}>
               <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.8 }}>
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>Open requests</Typography>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>Open requests</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>{openCount}</Typography>
               </Box>
               <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.8 }}>
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>In progress</Typography>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>In progress</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>{inProgressCount}</Typography>
               </Box>
               <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.8 }}>
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>Resolved</Typography>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>Resolved</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>{resolvedCount}</Typography>
               </Box>
               <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.8 }}>
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>Last updated</Typography>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>Last updated</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>{lastUpdated}</Typography>
               </Box>
             </Stack>

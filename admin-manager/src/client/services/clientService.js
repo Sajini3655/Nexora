@@ -447,7 +447,6 @@ export async function createClientTicket(payload) {
     category,
   };
 
-  console.log("[createClientTicket] Sending POST request with:", insertRow);
 
   try {
     const inserted = await apiFetch("/client/tickets", {
@@ -456,14 +455,12 @@ export async function createClientTicket(payload) {
     });
 
     const data = await inserted.json();
-    console.log("[createClientTicket] Response from server:", data);
     
     if (!data) {
       throw new Error("Empty response from server");
     }
 
     const uiTicket = toUiTicket(data, 0);
-    console.log("[createClientTicket] Converted to UI format:", uiTicket);
     
     // Force refresh tickets from server
     writeTicketCache([uiTicket]);

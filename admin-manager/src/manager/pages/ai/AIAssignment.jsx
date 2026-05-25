@@ -120,18 +120,18 @@ export default function AIAssignment() {
     PaperProps: {
       sx: {
         mt: 1,
-        bgcolor: "#0f172a",
-        color: "#e5e7eb",
-        border: "1px solid rgba(255,255,255,0.12)",
+        bgcolor: "var(--nx-panel)",
+        color: "var(--nx-text)",
+        border: "1px solid var(--nx-border)",
         borderRadius: 2,
         maxHeight: 320,
-        boxShadow: "0 18px 60px rgba(0,0,0,0.45)",
+        boxShadow: "var(--nx-shadow)",
         "& .MuiMenuItem-root": {
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid var(--nx-border)",
           py: 1.2,
         },
-        "& .MuiMenuItem-root.Mui-selected": { bgcolor: "rgba(124,92,255,0.20)" },
-        "& .MuiMenuItem-root:hover": { bgcolor: "rgba(124,92,255,0.14)" },
+        "& .MuiMenuItem-root.Mui-selected": { bgcolor: "color-mix(in srgb, var(--nx-purple) 18%, transparent)" },
+        "& .MuiMenuItem-root:hover": { bgcolor: "color-mix(in srgb, var(--nx-purple) 12%, transparent)" },
       },
     },
   };
@@ -141,10 +141,10 @@ export default function AIAssignment() {
       <PageHeader
         title="AI Task Assignment"
         subtitle="Work only with unassigned tasks. Assigned work stays in the queue below for review."
-        right={<Chip label={`Unassigned: ${unassignedTasks.length}`} sx={{ fontWeight: 700, color: "#a7f3d0", border: "1px solid rgba(16,185,129,0.28)", backgroundColor: "rgba(16,185,129,0.12)" }} />}
+        right={<Chip label={`Unassigned: ${unassignedTasks.length}`} sx={{ fontWeight: 700, color: "var(--nx-green)", border: "1px solid color-mix(in srgb, var(--nx-green) 35%, transparent)", backgroundColor: "color-mix(in srgb, var(--nx-green) 12%, transparent)" }} />}
       />
 
-      <Card sx={{ p: 2.4, borderRadius: 3, border: "1px solid rgba(255,255,255,0.09)", background: "#0b1628", boxShadow: "none" }}>
+      <Card sx={{ p: 2.4 }}>
         <Typography sx={{ fontWeight: 950, mb: 1.6, fontSize: 20 }}>Assign Unassigned Task</Typography>
 
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1.5 }}>
@@ -162,12 +162,12 @@ export default function AIAssignment() {
               },
             }}
           >
-            <MenuItem value=""><Typography sx={{ color: "#94a3b8" }}>Select unassigned task</Typography></MenuItem>
+            <MenuItem value=""><Typography sx={{ color: "var(--nx-muted)" }}>Select unassigned task</Typography></MenuItem>
             {unassignedTasks.map((task) => (
               <MenuItem key={task.id} value={String(task.id)}>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 900, fontSize: 14 }}>{task.title || "Untitled Task"}</Typography>
-                  <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.2 }}>
+                  <Typography sx={{ color: "var(--nx-muted)", fontSize: 12, mt: 0.2 }}>
                     Project: {getProjectName(task)} • Priority: {getPriority(task)}
                   </Typography>
                 </Box>
@@ -189,12 +189,12 @@ export default function AIAssignment() {
               },
             }}
           >
-            <MenuItem value=""><Typography sx={{ color: "#94a3b8" }}>Select developer</Typography></MenuItem>
+            <MenuItem value=""><Typography sx={{ color: "var(--nx-muted)" }}>Select developer</Typography></MenuItem>
             {developers.map((dev) => (
               <MenuItem key={dev.id} value={String(dev.id)}>
                 <Box>
                   <Typography sx={{ fontWeight: 900, fontSize: 14 }}>{dev.name}</Typography>
-                  {dev.email ? <Typography sx={{ color: "#94a3b8", fontSize: 12, mt: 0.2 }}>{dev.email}</Typography> : null}
+                  {dev.email ? <Typography sx={{ color: "var(--nx-muted)", fontSize: 12, mt: 0.2 }}>{dev.email}</Typography> : null}
                 </Box>
               </MenuItem>
             ))}
@@ -202,7 +202,7 @@ export default function AIAssignment() {
         </Box>
 
         {selectedTask ? (
-          <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, border: "1px solid rgba(255,255,255,0.08)", background: "#0f1b2f" }}>
+          <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, border: "1px solid var(--nx-border)", background: "var(--nx-panel-2)" }}>
             <Typography sx={{ fontWeight: 900, fontSize: 14 }}>Selected Task</Typography>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
               <InfoPill label="Task" value={selectedTask.title || "Untitled Task"} />
@@ -223,25 +223,25 @@ export default function AIAssignment() {
         </Box>
 
         {queryError ? (
-          <Box sx={{ mt: 1.6, px: 1.4, py: 0.9, borderRadius: 2, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.1)" }}>
-            <Typography variant="body2" sx={{ color: "#ef5350" }}>{queryError}</Typography>
+          <Box sx={{ mt: 1.6, px: 1.4, py: 0.9, borderRadius: 2, border: "1px solid color-mix(in srgb, var(--nx-red) 30%, transparent)", background: "color-mix(in srgb, var(--nx-red) 12%, transparent)" }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-red)" }}>{queryError}</Typography>
           </Box>
         ) : null}
 
         {actionMsg ? (
-          <Box sx={{ mt: 1.6, px: 1.4, py: 0.9, borderRadius: 2, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)" }}>
+          <Box sx={{ mt: 1.6, px: 1.4, py: 0.9, borderRadius: 2, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>{actionMsg}</Typography>
           </Box>
         ) : null}
 
         {suggestion?.recommendedDeveloper ? (
-          <Box sx={{ mt: 1.6, p: 1.4, borderRadius: 2, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)" }}>
+          <Box sx={{ mt: 1.6, p: 1.4, borderRadius: 2, border: "1px solid color-mix(in srgb, var(--nx-blue) 30%, transparent)", background: "color-mix(in srgb, var(--nx-blue) 12%, transparent)" }}>
             <Typography sx={{ fontWeight: 900 }}>AI recommendation: {suggestion.recommendedDeveloper.name}</Typography>
             <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.4 }}>Confidence {suggestion.confidence}% • {suggestion.explanation}</Typography>
           </Box>
         ) : null}
 
-        <Divider sx={{ my: 2.2, borderColor: "rgba(255,255,255,0.08)" }} />
+        <Divider sx={{ my: 2.2, borderColor: "var(--nx-border)" }} />
 
         <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Task Queue</Typography>
 
@@ -263,11 +263,11 @@ function QueueSection({ title, tasks, accent }) {
       </Stack>
       <Stack spacing={1}>
         {tasks.length === 0 ? (
-          <Typography variant="body2" sx={{ color: "#94a3b8" }}>No tasks in this section.</Typography>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>No tasks in this section.</Typography>
         ) : tasks.slice(0, 12).map((task) => (
-          <Paper key={task.id} elevation={0} sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.035)" }}>
+          <Paper key={task.id} elevation={0} sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
             <Typography sx={{ fontWeight: 900, fontSize: 15 }}>{task.title || "Untitled Task"}</Typography>
-            <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.25 }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.25 }}>
               {task.projectName || "No project"} • {task.status || "Unknown"} • {task.priority || "Medium"}
               {task.assignedToName ? ` • Assigned: ${task.assignedToName}` : ""}
             </Typography>
@@ -280,9 +280,9 @@ function QueueSection({ title, tasks, accent }) {
 
 function InfoPill({ label, value }) {
   return (
-    <Box sx={{ px: 1.2, py: 0.7, borderRadius: 999, bgcolor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <Typography component="span" sx={{ color: "#94a3b8", fontSize: 12, fontWeight: 700 }}>{label}: </Typography>
-      <Typography component="span" sx={{ color: "#e5e7eb", fontSize: 12, fontWeight: 900 }}>{value}</Typography>
+    <Box sx={{ px: 1.2, py: 0.7, borderRadius: 999, bgcolor: "var(--nx-panel)", border: "1px solid var(--nx-border)" }}>
+      <Typography component="span" sx={{ color: "var(--nx-muted)", fontSize: 12, fontWeight: 700 }}>{label}: </Typography>
+      <Typography component="span" sx={{ color: "var(--nx-text)", fontSize: 12, fontWeight: 900 }}>{value}</Typography>
     </Box>
   );
 }
