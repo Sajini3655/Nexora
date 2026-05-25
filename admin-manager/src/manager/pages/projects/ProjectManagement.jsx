@@ -159,38 +159,51 @@ export default function ProjectManagement() {
   };
   const getStatusChipStyle = (status) => {
     const normalized = String(status || "").toLowerCase();
-    if (normalized === "completed") return { bgcolor: "rgba(34,197,94,0.16)", color: "#86efac" };
-    if (normalized === "planning") return { bgcolor: "rgba(245,158,11,0.16)", color: "#fcd34d" };
-    return { bgcolor: "rgba(59,130,246,0.18)", color: "#93c5fd" };
+    if (normalized === "completed") {
+      return {
+        bgcolor: "color-mix(in srgb, var(--nx-green) 18%, transparent)",
+        color: "var(--nx-green)",
+      };
+    }
+    if (normalized === "planning") {
+      return {
+        bgcolor: "color-mix(in srgb, var(--nx-yellow) 18%, transparent)",
+        color: "var(--nx-yellow)",
+      };
+    }
+    return {
+      bgcolor: "color-mix(in srgb, var(--nx-blue) 18%, transparent)",
+      color: "var(--nx-blue)",
+    };
   };
 
   if (loading) {
     return (
       <Box sx={{ p: 3, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <CircularProgress size={24} />
-        <Typography>Loading projects...</Typography>
+        <CircularProgress size={24} sx={{ color: "var(--nx-purple)" }} />
+        <Typography sx={{ color: "var(--nx-text)" }}>Loading projects...</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
       <Paper
         sx={{
           mb: 2,
-          p: 1.8,
+          p: { xs: 1.5, sm: 1.8 },
           borderRadius: 2.5,
-          border: "1px solid rgba(148,163,184,0.16)",
-          background: "rgba(15,23,42,0.68)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-panel)",
+          boxShadow: "var(--nx-shadow)",
         }}
       >
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }} spacing={1.2}>
           <Box>
-            <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.4 }}>
+            <Typography variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.4 }}>
               Manager / Projects
             </Typography>
-            <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
+            <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3, color: "var(--nx-text)" }}>
               Project Management
             </Typography>
             {/* Subtitle removed per request */}
@@ -203,33 +216,33 @@ export default function ProjectManagement() {
 
       {/* Create New Project widget removed per request */}
 
-      <Paper sx={{ p: 1.5, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 340px)" }}>
-        <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Your Projects</Typography>
+      <Paper sx={{ p: { xs: 1.25, sm: 1.5 }, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 340px)" }}>
+        <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Your Projects</Typography>
         {visibleProjectRows.length === 0 ? (
-          <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
             {q ? `No projects match “${q}”.` : "No projects found for this manager."}
           </Typography>
         ) : (
           <Box sx={{ overflow: "auto", flex: 1, minHeight: 0 }}>
             <Box sx={{ minWidth: 860 }}>
-              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)", position: "sticky", top: 0, zIndex: 1, background: "rgba(15,23,42,0.96)" }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid var(--nx-border)", position: "sticky", top: 0, zIndex: 1, background: "var(--nx-panel)" }}>
                 {["Project", "Status", "Tasks", "Completed", "Weighted", "Progress"].map((header) => (
-                  <Typography key={header} variant="caption" sx={{ color: "#64748b", textTransform: "uppercase", fontWeight: 800 }}>
+                  <Typography key={header} variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", fontWeight: 800 }}>
                     {header}
                   </Typography>
                 ))}
               </Box>
 
               {visibleProjectRows.map((project) => (
-                <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid rgba(148,163,184,0.12)" }}>
+                <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid var(--nx-border)" }}>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: 14 }} noWrap>
+                    <Typography sx={{ fontWeight: 800, fontSize: 14, color: "var(--nx-text)" }} noWrap>
                       {project.name}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: "#94a3b8" }} noWrap>
+                    <Typography variant="caption" sx={{ color: "var(--nx-muted)" }} noWrap>
                       {project.description}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mt: 0.4 }} noWrap>
+                    <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block", mt: 0.4 }} noWrap>
                       Client: {project.clientName || "No client assigned"}
                     </Typography>
                     <Box sx={{ mt: 0.7 }}>
@@ -240,7 +253,14 @@ export default function ProjectManagement() {
                         onClick={() => {
                           if (project.id) navigate(`/manager/project-management/${project.id}`);
                         }} 
-                        sx={{ textTransform: "none", fontWeight: 700 }}
+                        sx={{
+                          textTransform: "none",
+                          fontWeight: 700,
+                          color: "var(--nx-text)",
+                          borderColor: "var(--nx-border)",
+                          '&:hover': { backgroundColor: "var(--nx-panel-2)" },
+                          width: { xs: "100%", sm: "auto" },
+                        }}
                       >
                         Manage Project
                       </Button>
@@ -249,13 +269,13 @@ export default function ProjectManagement() {
 
                   <Chip size="small" label={project.status} sx={{ width: "fit-content", fontWeight: 800, ...getStatusChipStyle(project.status) }} />
 
-                  <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{project.taskCount}</Typography>
-                  <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{project.completedTaskCount}</Typography>
-                  <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{project.completedPointValue}/{project.totalPointValue}</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{project.taskCount}</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{project.completedTaskCount}</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{project.completedPointValue}/{project.totalPointValue}</Typography>
 
                   <Box>
-                    <Typography variant="caption" sx={{ color: "#cbd5e1" }}>{project.weightedProgress}%</Typography>
-                    <LinearProgress variant="determinate" value={project.weightedProgress} sx={{ mt: 0.4, height: 6, borderRadius: 999, bgcolor: "rgba(255,255,255,0.08)" }} />
+                    <Typography variant="caption" sx={{ color: "var(--nx-text-soft)" }}>{project.weightedProgress}%</Typography>
+                    <LinearProgress variant="determinate" value={project.weightedProgress} sx={{ mt: 0.4, height: 6, borderRadius: 999, bgcolor: "var(--nx-panel-2)", '& .MuiLinearProgress-bar': { bgcolor: "var(--nx-purple)" } }} />
                   </Box>
                 </Box>
               ))}

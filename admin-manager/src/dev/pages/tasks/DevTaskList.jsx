@@ -159,18 +159,14 @@ export default function DevTaskList() {
       <Box
         sx={{
           mb: 3,
-          p: { xs: 2.5, md: 3 },
+          p: { xs: 1.5, sm: 2.25, md: 3 },
           borderRadius: 4,
-          border: "1px solid rgba(148,163,184,0.14)",
-          background:
-            "linear-gradient(135deg, rgba(124,92,255,0.18) 0%, rgba(11,22,40,0.94) 100%)",
+          border: "1px solid var(--nx-border)",
+          background: "var(--nx-panel-2)",
         }}
       >
         <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: -0.5 }}>
           My Tasks
-        </Typography>
-        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.75 }}>
-          Tasks assigned to your developer account. Progress is calculated using weighted story points.
         </Typography>
       </Box>
 
@@ -200,7 +196,7 @@ export default function DevTaskList() {
           mb: 3,
           "& .MuiOutlinedInput-root": {
             borderRadius: 3,
-            bgcolor: "rgba(15,23,42,0.72)",
+              bgcolor: "var(--nx-input)",
           },
         }}
         InputProps={{
@@ -214,7 +210,7 @@ export default function DevTaskList() {
 
       {loading ? (
         <Box sx={{ display: "grid", placeItems: "center", minHeight: 240 }}>
-          <CircularProgress sx={{ color: "#6b51ff" }} />
+          <CircularProgress sx={{ color: "var(--nx-purple)" }} />
         </Box>
       ) : (
         <Box sx={{ display: "grid", gap: 2.5 }}>
@@ -247,14 +243,14 @@ export default function DevTaskList() {
 function StatCard({ label, value, hint }) {
   return (
     <Card sx={{ p: 2.5 }}>
-      <Typography variant="caption" sx={{ opacity: 0.7 }}>
+      <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
         {label}
       </Typography>
       <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>
         {value}
       </Typography>
       {hint ? (
-        <Typography variant="caption" sx={{ opacity: 0.6 }}>
+        <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
           {hint}
         </Typography>
       ) : null}
@@ -273,18 +269,18 @@ function TaskTableSection({
   onOpenTask,
 }) {
   return (
-    <Card sx={{ p: 2.5 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: "flex-start", mb: 1.5 }}>
+    <Card sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, alignItems: { xs: "flex-start", sm: "flex-start" }, flexWrap: "wrap", mb: 1.5 }}>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 950, letterSpacing: -0.25 }}>
             {title}
           </Typography>
-          <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.72)", mt: 0.4 }}>
+          <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.4 }}>
             {subtitle}
           </Typography>
         </Box>
 
-        <Chip label={count} size="small" sx={{ fontWeight: 900 }} />
+        <Chip label={count} size="small" sx={{ fontWeight: 900, width: { xs: "100%", sm: "auto" } }} />
       </Box>
 
       {showSource && sourceSummary ? (
@@ -296,7 +292,7 @@ function TaskTableSection({
       ) : null}
 
       {rows.length === 0 ? (
-        <Card sx={{ p: 3, textAlign: "center", bgcolor: "rgba(15,23,42,0.55)" }}>
+        <Card sx={{ p: 3, textAlign: "center", bgcolor: "var(--nx-card)" }}>
           <Typography variant="body1">{emptyMessage}</Typography>
         </Card>
       ) : (
@@ -333,14 +329,14 @@ function TaskTableSection({
                     sx={{
                       cursor: "pointer",
                       transition: "background-color 140ms ease",
-                      "&:hover": { backgroundColor: "rgba(255,255,255,0.03)" },
+                      "&:hover": { backgroundColor: "color-mix(in srgb, var(--nx-border) 14%, transparent)" },
                     }}
                   >
                     <TableBodyCell>
                       <Typography sx={{ fontWeight: 850 }} noWrap>
                         {task.title}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.62)" }}>
+                      <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                         {task.id}
                       </Typography>
                     </TableBodyCell>
@@ -352,7 +348,7 @@ function TaskTableSection({
                     ) : null}
 
                     <TableBodyCell>
-                      <Typography variant="body2" sx={{ color: "rgba(231,233,238,0.8)" }} noWrap>
+                      <Typography variant="body2" sx={{ color: "var(--nx-text)" }} noWrap>
                         {task.projectName || "Backend Project"}
                       </Typography>
                     </TableBodyCell>
@@ -369,13 +365,13 @@ function TaskTableSection({
                           sx={{
                             height: 7,
                             borderRadius: 999,
-                            bgcolor: "rgba(255,255,255,0.08)",
+                            bgcolor: "var(--nx-input)",
                             "& .MuiLinearProgress-bar": {
-                              bgcolor: progressData.progress >= 80 ? "#22c55e" : "#6d5dfc",
+                              bgcolor: progressData.progress >= 80 ? "#22c55e" : "var(--nx-purple)",
                             },
                           }}
                         />
-                        <Typography variant="caption" sx={{ color: "rgba(231,233,238,0.62)", mt: 0.35, display: "block" }}>
+                        <Typography variant="caption" sx={{ color: "var(--nx-muted)", mt: 0.35, display: "block" }}>
                           {progressData.progress}%
                         </Typography>
                       </Box>
@@ -403,12 +399,12 @@ function TableHeadCell({ children, align = "left" }) {
       component="th"
       sx={{
         textAlign: align,
-        px: 1.5,
+        px: { xs: 1.1, sm: 1.5 },
         py: 1.1,
-        color: "rgba(255,255,255,0.7)",
+        color: "var(--nx-muted)",
         fontSize: 12,
         fontWeight: 800,
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        borderBottom: "1px solid var(--nx-border)",
       }}
     >
       {children}
@@ -421,11 +417,11 @@ function TableBodyCell({ children, align = "left" }) {
     <Box
       component="td"
       sx={{
-        px: 1.5,
+        px: { xs: 1.1, sm: 1.5 },
         py: 1.1,
         verticalAlign: "middle",
         textAlign: align,
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        borderBottom: "1px solid var(--nx-border)",
       }}
     >
       {children}

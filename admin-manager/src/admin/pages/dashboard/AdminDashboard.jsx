@@ -220,8 +220,8 @@ export default function AdminDashboard() {
     return (
       <Box sx={{ minHeight: "60vh", display: "grid", placeItems: "center" }}>
         <Stack spacing={2} alignItems="center">
-          <CircularProgress sx={{ color: "#6d5dfc" }} />
-          <Typography sx={{ color: "#94a3b8" }}>
+          <CircularProgress sx={{ color: "var(--nx-purple)" }} />
+          <Typography sx={{ color: "var(--nx-muted)" }}>
             Loading dashboard...
           </Typography>
         </Stack>
@@ -235,8 +235,9 @@ export default function AdminDashboard() {
         severity="error"
         sx={{
           borderRadius: 3,
-          backgroundColor: "rgba(239,68,68,0.10)",
-          border: "1px solid rgba(239,68,68,0.20)",
+          backgroundColor: "var(--nx-card)",
+          border: "1px solid var(--nx-red)",
+          color: "var(--nx-text)",
         }}
       >
         {error}
@@ -298,7 +299,7 @@ export default function AdminDashboard() {
           gap: 2,
         }}
       >
-        <SectionCard title="User Roles" subtitle="Current backend role counts">
+        <SectionCard title="User Roles">
           <Box
             sx={{
               display: "grid",
@@ -317,10 +318,7 @@ export default function AdminDashboard() {
           </Box>
         </SectionCard>
 
-        <SectionCard
-          title="System Health"
-          subtitle={`Overall status: ${systemHealth?.overallStatus ?? "-"}`}
-        >
+        <SectionCard title="System Health">
           <Box
             sx={{
               display: "grid",
@@ -345,11 +343,7 @@ export default function AdminDashboard() {
                   badge={item.badge}
                   badgeTone={item.badgeTone}
                   sx={{
-                    transition: "all 0.2s ease-in-out",
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow: 4,
-                    },
+                    transition: "border-color 0.2s ease-in-out, background-color 0.2s ease-in-out",
                   }}
                 />
               </Box>
@@ -358,7 +352,7 @@ export default function AdminDashboard() {
         </SectionCard>
       </Box>
 
-      <SectionCard title="Recent Users" subtitle="Latest registered users">
+      <SectionCard title="Recent Users">
         <Box sx={{ overflowX: "auto" }}>
           <Table
             sx={{
@@ -380,7 +374,7 @@ export default function AdminDashboard() {
             <TableBody>
               {recentUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ color: "#94a3b8" }}>
+                  <TableCell colSpan={5} sx={{ color: "var(--nx-muted)" }}>
                     No recent users found.
                   </TableCell>
                 </TableRow>
@@ -432,18 +426,19 @@ function SummaryCard({ title, value, icon, badge, badgeTone = "neutral" }) {
     <Paper
       elevation={0}
       sx={{
-        p: 2,
-        borderRadius: 3,
-        bgcolor: "#0b1628",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "none",
+        p: { xs: 1.5, sm: 2 },
+        borderRadius: "22px",
+        bgcolor: "var(--nx-card)",
+        border: "1px solid var(--nx-border)",
+        boxShadow: "var(--nx-shadow)",
+        color: "var(--nx-text)",
       }}
     >
       <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
         <Box>
           <Typography
             variant="caption"
-            sx={{ color: "#94a3b8", fontWeight: 700 }}
+            sx={{ color: "var(--nx-muted)", fontWeight: 700 }}
           >
             {title}
           </Typography>
@@ -460,9 +455,9 @@ function SummaryCard({ title, value, icon, badge, badgeTone = "neutral" }) {
             borderRadius: 2,
             display: "grid",
             placeItems: "center",
-            bgcolor: "rgba(124,92,255,0.14)",
-            color: "#c4b5fd",
-            border: "1px solid rgba(255,255,255,0.08)",
+            bgcolor: "var(--nx-panel-2)",
+            color: "var(--nx-purple)",
+            border: "1px solid var(--nx-border)",
           }}
         >
           {icon}
@@ -481,19 +476,20 @@ function SectionCard({ title, subtitle, children }) {
     <Paper
       elevation={0}
       sx={{
-        p: 2.2,
+        p: { xs: 1.5, sm: 2.2 },
         borderRadius: 3,
-        bgcolor: "#0b1628",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "none",
+        bgcolor: "var(--nx-card)",
+        border: "1px solid var(--nx-border)",
+        boxShadow: "var(--nx-shadow)",
+        color: "var(--nx-text)",
       }}
     >
-      <Box sx={{ mb: 1.8 }}>
+      <Box sx={{ mb: { xs: 1.25, sm: 1.8 } }}>
         <Typography variant="h6" sx={{ fontWeight: 900 }}>
           {title}
         </Typography>
 
-        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.4 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.4 }}>
           {subtitle}
         </Typography>
       </Box>
@@ -509,8 +505,8 @@ function SmallInfoCard({ title, value, icon, badge, badgeTone = "neutral" }) {
       sx={{
         p: 1.6,
         borderRadius: 2,
-        bgcolor: "#0f1b2f",
-        border: "1px solid rgba(255,255,255,0.07)",
+        bgcolor: "var(--nx-panel-2)",
+        border: "1px solid var(--nx-border)",
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
@@ -521,8 +517,9 @@ function SmallInfoCard({ title, value, icon, badge, badgeTone = "neutral" }) {
             borderRadius: 2,
             display: "grid",
             placeItems: "center",
-            bgcolor: "rgba(124,92,255,0.14)",
-            color: "#c4b5fd",
+            bgcolor: "var(--nx-card)",
+            color: "var(--nx-purple)",
+            border: "1px solid var(--nx-border)",
           }}
         >
           {icon}
@@ -531,7 +528,7 @@ function SmallInfoCard({ title, value, icon, badge, badgeTone = "neutral" }) {
         <Box sx={{ minWidth: 0 }}>
           <Typography
             variant="caption"
-            sx={{ color: "#94a3b8", fontWeight: 700 }}
+            sx={{ color: "var(--nx-muted)", fontWeight: 700 }}
           >
             {title}
           </Typography>
@@ -581,51 +578,51 @@ function getBadgeStyles(tone) {
   switch (tone) {
     case "success":
       return {
-        backgroundColor: "rgba(34,197,94,0.20)",
-        color: "#86efac",
-        border: "1px solid rgba(34,197,94,0.42)",
+        backgroundColor: "color-mix(in srgb, var(--nx-green) 16%, transparent)",
+        color: "var(--nx-green)",
+        border: "1px solid color-mix(in srgb, var(--nx-green) 38%, transparent)",
       };
 
     case "warning":
       return {
-        backgroundColor: "rgba(245,158,11,0.22)",
-        color: "#fcd34d",
-        border: "1px solid rgba(245,158,11,0.45)",
+        backgroundColor: "color-mix(in srgb, var(--nx-yellow) 18%, transparent)",
+        color: "var(--nx-yellow)",
+        border: "1px solid color-mix(in srgb, var(--nx-yellow) 40%, transparent)",
       };
 
     case "danger":
       return {
-        backgroundColor: "rgba(239,68,68,0.22)",
-        color: "#fca5a5",
-        border: "1px solid rgba(239,68,68,0.45)",
+        backgroundColor: "color-mix(in srgb, var(--nx-red) 18%, transparent)",
+        color: "var(--nx-red)",
+        border: "1px solid color-mix(in srgb, var(--nx-red) 40%, transparent)",
       };
 
     case "purple":
       return {
-        backgroundColor: "rgba(124,92,255,0.24)",
-        color: "#ddd6fe",
-        border: "1px solid rgba(124,92,255,0.45)",
+        backgroundColor: "color-mix(in srgb, var(--nx-purple) 18%, transparent)",
+        color: "var(--nx-purple)",
+        border: "1px solid color-mix(in srgb, var(--nx-purple) 40%, transparent)",
       };
 
     case "blue":
       return {
-        backgroundColor: "rgba(59,130,246,0.22)",
-        color: "#93c5fd",
-        border: "1px solid rgba(59,130,246,0.45)",
+        backgroundColor: "color-mix(in srgb, var(--nx-blue) 18%, transparent)",
+        color: "var(--nx-blue)",
+        border: "1px solid color-mix(in srgb, var(--nx-blue) 40%, transparent)",
       };
 
     case "info":
       return {
-        backgroundColor: "rgba(6,182,212,0.20)",
-        color: "#67e8f9",
-        border: "1px solid rgba(6,182,212,0.42)",
+        backgroundColor: "color-mix(in srgb, var(--nx-blue) 14%, transparent)",
+        color: "var(--nx-blue)",
+        border: "1px solid color-mix(in srgb, var(--nx-blue) 34%, transparent)",
       };
 
     default:
       return {
-        backgroundColor: "rgba(148,163,184,0.18)",
-        color: "#e5e7eb",
-        border: "1px solid rgba(148,163,184,0.32)",
+        backgroundColor: "color-mix(in srgb, var(--nx-muted) 18%, transparent)",
+        color: "var(--nx-text)",
+        border: "1px solid var(--nx-border)",
       };
   }
 }
@@ -664,17 +661,17 @@ function formatDatabaseValue(status, latencyMs) {
 }
 
 const headCell = {
-  color: "#94a3b8",
+  color: "var(--nx-muted)",
   fontSize: 12,
   fontWeight: 900,
   textTransform: "uppercase",
-  borderBottom: "1px solid rgba(255,255,255,0.08)",
+  borderBottom: "1px solid var(--nx-border)",
 };
 
 const tableCellBase = {
-  background: "#0f1b2f",
+  background: "var(--nx-panel-2)",
   borderBottom: "none",
-  color: "#e5e7eb",
+  color: "var(--nx-text)",
 };
 
 const tableCellLeft = {
@@ -692,7 +689,7 @@ const tableCellRight = {
   ...tableCellBase,
   borderTopRightRadius: 14,
   borderBottomRightRadius: 14,
-  color: "#94a3b8",
+  color: "var(--nx-muted)",
 };
 
 function HealthDetailDialog({ item, open, onClose, onRefresh }) {
@@ -702,6 +699,9 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
     if (status === "OK" || status === "LIVE" || status === "UP") return "#10b981";
     if (status === "DOWN" || status === "ERROR") return "#ef4444";
     return "#f59e0b";
+    if (status === "OK" || status === "LIVE" || status === "UP") return "var(--nx-green)";
+    if (status === "DOWN" || status === "ERROR") return "var(--nx-red)";
+    return "var(--nx-yellow)";
   };
 
   const handleRefresh = async () => {
@@ -718,9 +718,9 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
       PaperProps={{
         sx: {
           borderRadius: 3,
-          bgcolor: "#0b1628",
-          border: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+          bgcolor: "var(--nx-card)",
+          border: "1px solid var(--nx-border)",
+          boxShadow: "var(--nx-shadow)",
           width: { xs: "90%", sm: "420px" },
           maxHeight: "75vh",
           mt: 8,
@@ -733,7 +733,7 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           alignItems: "center",
           gap: 1.5,
           pb: 1.5,
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          borderBottom: "1px solid var(--nx-border)",
         }}
       >
         <Box
@@ -743,8 +743,8 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
             borderRadius: 2,
             display: "grid",
             placeItems: "center",
-            bgcolor: "rgba(124,92,255,0.14)",
-            color: "#c4b5fd",
+            bgcolor: "var(--nx-panel-2)",
+            color: "var(--nx-purple)",
             flexShrink: 0,
           }}
         >
@@ -760,8 +760,8 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
             px: 1.2,
             py: 0.4,
             borderRadius: 999,
-            bgcolor: `${getStatusColor(item.value)}20`,
-            border: `1px solid ${getStatusColor(item.value)}40`,
+            bgcolor: `color-mix(in srgb, ${getStatusColor(item.value)} 18%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${getStatusColor(item.value)} 42%, transparent)`,
             color: getStatusColor(item.value),
             fontSize: 12,
             fontWeight: 900,
@@ -776,8 +776,8 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           sx={{
             minWidth: "auto",
             p: 0.5,
-            color: "#94a3b8",
-            "&:hover": { color: "#e5e7eb" },
+            color: "var(--nx-muted)",
+            "&:hover": { color: "var(--nx-text)" },
           }}
         >
           <X size={18} />
@@ -789,34 +789,34 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           {/* Service Overview */}
           <Box>
             <Typography
-              sx={{ variant: "caption", fontWeight: 700, color: "#94a3b8", mb: 0.8 }}
+              sx={{ variant: "caption", fontWeight: 700, color: "var(--nx-muted)", mb: 0.8 }}
             >
               SERVICE OVERVIEW
             </Typography>
-            <Typography variant="body2" sx={{ color: "#e5e7eb" }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-text)" }}>
               {item.description}
             </Typography>
           </Box>
 
-          <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+          <Divider sx={{ borderColor: "var(--nx-border)" }} />
 
           {/* Details List */}
           <Box>
             <Typography
-              sx={{ variant: "caption", fontWeight: 700, color: "#94a3b8", mb: 1 }}
+              sx={{ variant: "caption", fontWeight: 700, color: "var(--nx-muted)", mb: 1 }}
             >
               SERVICE DETAILS
             </Typography>
             <Stack spacing={1.2}>
               {item.details && item.details.map((detail, idx) => (
                 <Box key={idx} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                  <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                     {detail.label}
                   </Typography>
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "#e5e7eb",
+                      color: "var(--nx-text)",
                       fontWeight: 600,
                       textAlign: "right",
                       maxWidth: "60%",
@@ -833,19 +833,19 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           {/* Issue Section */}
           {item.issue && (
             <>
-              <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+              <Divider sx={{ borderColor: "var(--nx-border)" }} />
               <Box
                 sx={{
                   p: 1.5,
                   borderRadius: 2,
-                  bgcolor: `${getStatusColor(item.value)}15`,
-                  border: `1px solid ${getStatusColor(item.value)}30`,
+                  bgcolor: `color-mix(in srgb, ${getStatusColor(item.value)} 12%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${getStatusColor(item.value)} 28%, transparent)`,
                 }}
               >
                 <Typography variant="caption" sx={{ fontWeight: 700, color: getStatusColor(item.value), mb: 0.6 }}>
                   ⚠ ISSUE
                 </Typography>
-                <Typography variant="body2" sx={{ color: "#e5e7eb" }}>
+                <Typography variant="body2" sx={{ color: "var(--nx-text)" }}>
                   {item.issue}
                 </Typography>
               </Box>
@@ -855,19 +855,19 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           {/* Action Section */}
           {item.action && (
             <>
-              <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
+              <Divider sx={{ borderColor: "var(--nx-border)" }} />
               <Box
                 sx={{
                   p: 1.5,
                   borderRadius: 2,
-                  bgcolor: "rgba(59,130,246,0.12)",
-                  border: "1px solid rgba(59,130,246,0.25)",
+                  bgcolor: "color-mix(in srgb, var(--nx-blue) 12%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--nx-blue) 26%, transparent)",
                 }}
               >
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "#93c5fd", mb: 0.6 }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "var(--nx-blue)", mb: 0.6 }}>
                   💡 RECOMMENDED ACTION
                 </Typography>
-                <Typography variant="body2" sx={{ color: "#e5e7eb" }}>
+                <Typography variant="body2" sx={{ color: "var(--nx-text)" }}>
                   {item.action}
                 </Typography>
               </Box>
@@ -881,7 +881,7 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           pt: 1.5,
           px: 3,
           pb: 2.5,
-          borderTop: "1px solid rgba(255,255,255,0.08)",
+          borderTop: "1px solid var(--nx-border)",
           gap: 1,
         }}
       >
@@ -890,8 +890,8 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           sx={{
             textTransform: "none",
             fontWeight: 600,
-            color: "#94a3b8",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
+            color: "var(--nx-muted)",
+            "&:hover": { bgcolor: "var(--nx-panel-2)" },
           }}
         >
           Close
@@ -902,12 +902,12 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
           sx={{
             textTransform: "none",
             fontWeight: 600,
-            bgcolor: "rgba(124,92,255,0.16)",
-            color: "#c4b5fd",
-            border: "1px solid rgba(124,92,255,0.3)",
+            bgcolor: "color-mix(in srgb, var(--nx-purple) 16%, transparent)",
+            color: "var(--nx-purple)",
+            border: "1px solid color-mix(in srgb, var(--nx-purple) 32%, transparent)",
             "&:hover": {
-              bgcolor: "rgba(124,92,255,0.25)",
-              borderColor: "rgba(124,92,255,0.5)",
+              bgcolor: "color-mix(in srgb, var(--nx-purple) 22%, transparent)",
+              borderColor: "color-mix(in srgb, var(--nx-purple) 48%, transparent)",
             },
           }}
         >

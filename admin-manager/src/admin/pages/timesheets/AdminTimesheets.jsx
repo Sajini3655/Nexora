@@ -107,13 +107,10 @@ export default function AdminTimesheets() {
           <Typography variant="h4" sx={{ fontWeight: 900, lineHeight: 1.15 }}>
             All Timesheets
           </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.75 }}>
-            View all recorded work hours.
-          </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1.5} sx={{ alignSelf: { xs: "stretch", md: "auto" } }} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
-          <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={() => loadData(filters)}>
+        <Stack direction="row" spacing={1.5} sx={{ alignSelf: { xs: "stretch", md: "auto" }, width: { xs: "100%", md: "auto" } }} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
+          <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={() => loadData(filters)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Refresh
           </Button>
         </Stack>
@@ -129,7 +126,7 @@ export default function AdminTimesheets() {
         ))}
       </Grid>
 
-      <Paper elevation={0} sx={{ p: 2.5, borderRadius: 4, background: "#0b1628", border: "1px solid rgba(255,255,255,0.10)" }}>
+      <Paper elevation={0} sx={{ p: { xs: 1.5, sm: 2.5 }, borderRadius: 4, background: "var(--nx-panel)", border: "1px solid var(--nx-border)" }}>
         <Stack spacing={2}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <Input
@@ -173,14 +170,14 @@ export default function AdminTimesheets() {
             />
           </Stack>
 
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end">
-            <Button variant="contained" onClick={handleSearch}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end" sx={{ width: { xs: "100%", md: "auto" } }}>
+            <Button variant="contained" onClick={handleSearch} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Search
             </Button>
-            <Button variant="outlined" onClick={handleClear}>
+            <Button variant="outlined" onClick={handleClear} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Clear
             </Button>
-            <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={() => loadData(filters)}>
+            <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={() => loadData(filters)} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Refresh
             </Button>
           </Stack>
@@ -236,7 +233,7 @@ export default function AdminTimesheets() {
 function SummaryCard({ label, value }) {
   return (
     <Card sx={{ p: 2.5, height: "100%" }}>
-      <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>
+      <Typography variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", letterSpacing: 1 }}>
         {label}
       </Typography>
       <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>
@@ -274,19 +271,19 @@ function chipColor(status) {
 }
 
 const headCell = {
-  color: "#cbd5e1",
+  color: "var(--nx-text-soft)",
   fontWeight: 800,
-  borderBottomColor: "rgba(148,163,184,0.14)",
+  borderBottomColor: "var(--nx-border)",
 };
 
 const tableCell = {
-  color: "#e5e7eb",
-  borderBottomColor: "rgba(148,163,184,0.10)",
+  color: "var(--nx-text)",
+  borderBottomColor: "var(--nx-border)",
 };
 
 const tableCellEmpty = {
-  color: "#94a3b8",
+  color: "var(--nx-muted)",
   textAlign: "center",
   py: 4,
-  borderBottomColor: "rgba(148,163,184,0.10)",
+  borderBottomColor: "var(--nx-border)",
 };

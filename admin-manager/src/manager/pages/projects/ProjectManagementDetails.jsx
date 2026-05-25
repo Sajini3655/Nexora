@@ -967,15 +967,15 @@ export default function ProjectManagementDetails() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Paper sx={{ mb: 2, p: 1.8, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)", boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}>
-        <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.4 }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+      <Paper sx={{ mb: 2, p: { xs: 1.5, sm: 1.8 }, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)", boxShadow: "var(--nx-shadow)" }}>
+        <Typography variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.4 }}>
           Manager / Projects
         </Typography>
-        <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
+        <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3, color: "var(--nx-text)" }}>
           Manage Project
         </Typography>
-        <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
+        <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.35 }}>
           Main workflow for task management, story points, and developer assignment.
         </Typography>
       </Paper>
@@ -984,8 +984,8 @@ export default function ProjectManagementDetails() {
       {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="project-management-success" /> : null}
 
       <Stack spacing={2}>
-        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
-          <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Project Overview</Typography>
+        <Paper sx={{ p: { xs: 1.25, sm: 1.6 }, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
+          <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Project Overview</Typography>
 
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" }, gap: 1, mb: 1.2 }}>
             <Metric label="Project" value={getProjectName(project)} />
@@ -1017,8 +1017,8 @@ export default function ProjectManagementDetails() {
           </Box>
         </Paper>
 
-        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
-          <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Add New Task</Typography>
+        <Paper sx={{ p: { xs: 1.25, sm: 1.6 }, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
+          <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Add New Task</Typography>
 
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.05fr 1.2fr 0.55fr 0.7fr 0.7fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
             <TextField size="small" label="Task title" value={newTask.title} onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))} />
@@ -1037,8 +1037,6 @@ export default function ProjectManagementDetails() {
               InputLabelProps={{ shrink: true }}
             />
 
-            
-
             <TextField
               size="small"
               label="Story points estimate"
@@ -1047,14 +1045,14 @@ export default function ProjectManagementDetails() {
               value={newTask.estimatedPoints}
               onChange={(e) => setNewTask((prev) => ({ ...prev, estimatedPoints: Math.max(0, Number(e.target.value) || 0) }))}
             />
-<Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
+            <Button variant="contained" disabled={!canAddTask || addingTask} onClick={handleAddTask}>
               {addingTask ? "Adding..." : "Add Task"}
             </Button>
           </Box>
         </Paper>
 
-        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
-          <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Project Files</Typography>
+        <Paper sx={{ p: { xs: 1.25, sm: 1.6 }, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
+          <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Project Files</Typography>
 
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr auto" }, gap: 1, alignItems: "center", mb: 1.2 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -1077,7 +1075,7 @@ export default function ProjectManagementDetails() {
                 </Button>
               </label>
               {selectedProjectFiles.length > 0 && (
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                   {selectedProjectFiles.length} file{selectedProjectFiles.length === 1 ? "" : "s"} selected
                 </Typography>
               )}
@@ -1086,14 +1084,14 @@ export default function ProjectManagementDetails() {
               variant="contained"
               disabled={selectedProjectFiles.length === 0}
               onClick={handleAddProjectFiles}
-              sx={{ fontWeight: 900, textTransform: "none" }}
+              sx={{ fontWeight: 900, textTransform: "none", width: { xs: "100%", sm: "auto" } }}
             >
               Add Files
             </Button>
           </Box>
 
           {projectFiles.length === 0 ? (
-            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
               No files attached to this project yet.
             </Typography>
           ) : (
@@ -1107,15 +1105,15 @@ export default function ProjectManagementDetails() {
                     justifyContent: "space-between",
                     p: 1,
                     borderRadius: 1,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "var(--nx-panel-2)",
+                    border: "1px solid var(--nx-border)",
                   }}
                 >
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: 14 }} noWrap>
+                    <Typography sx={{ fontWeight: 700, fontSize: 14, color: "var(--nx-text)" }} noWrap>
                       {file.name}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                    <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                       {formatFileSize(file.size)} • {file.type}
                     </Typography>
                   </Box>
@@ -1134,10 +1132,10 @@ export default function ProjectManagementDetails() {
 
         <Paper
           sx={{
-            p: 1.8,
+            p: { xs: 1.25, sm: 1.8 },
             borderRadius: 2.5,
-            border: "1px solid rgba(148,163,184,0.16)",
-            background: "rgba(15,23,42,0.68)",
+            border: "1px solid var(--nx-border)",
+            background: "var(--nx-panel)",
           }}
         >
           <Stack spacing={2}>
@@ -1148,17 +1146,17 @@ export default function ProjectManagementDetails() {
               spacing={1.2}
             >
               <Box>
-                <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+                <Typography sx={{ fontWeight: 900, fontSize: 18, color: "var(--nx-text)" }}>
                   Team Chat
                 </Typography>
-                <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.35 }}>
                   {activeSessions.length > 0
                     ? `${activeSessions.length} active thread${activeSessions.length !== 1 ? "s" : ""}`
                     : "No active chat threads."}
                 </Typography>
               </Box>
 
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ width: { xs: "100%", sm: "auto" } }}>
                 <Chip
                   icon={<ChatBubbleRoundedIcon />}
                   label={`Active: ${activeSessions.length}`}
@@ -1177,7 +1175,7 @@ export default function ProjectManagementDetails() {
                   startIcon={<AddRoundedIcon />}
                   onClick={handleOpenNewChat}
                   disabled={!currentUserId || authLoading}
-                  sx={{ fontWeight: 900, textTransform: "none" }}
+                  sx={{ fontWeight: 900, textTransform: "none", bgcolor: "var(--nx-purple)", color: "var(--nx-card)", width: { xs: "100%", sm: "auto" } }}
                 >
                   New Chat
                 </Button>
@@ -1189,13 +1187,13 @@ export default function ProjectManagementDetails() {
                 sx={{
                   p: 2,
                   borderRadius: 3,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "var(--nx-panel-2)",
+                  border: "1px solid var(--nx-border)",
                 }}
               >
                 <Stack direction="row" spacing={1.2} alignItems="center">
-                  <CircularProgress size={18} sx={{ color: "#6b51ff" }} />
-                  <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                  <CircularProgress size={18} sx={{ color: "var(--nx-purple)" }} />
+                  <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                     Loading chat sessions...
                   </Typography>
                 </Stack>
@@ -1207,15 +1205,14 @@ export default function ProjectManagementDetails() {
                 sx={{
                   p: 2,
                   borderRadius: 3,
-                  background:
-                    "linear-gradient(180deg, rgba(18,31,54,0.88), rgba(10,18,34,0.96))",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "var(--nx-panel-2)",
+                  border: "1px solid var(--nx-border)",
                 }}
               >
-                <Typography sx={{ fontWeight: 900, color: "#f8fafc", mb: 0.5 }}>
+                <Typography sx={{ fontWeight: 900, color: "var(--nx-text)", mb: 0.5 }}>
                   No chat threads yet.
                 </Typography>
-                <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                   Start a project discussion with assigned developers.
                 </Typography>
               </Paper>
@@ -1226,7 +1223,7 @@ export default function ProjectManagementDetails() {
                     <Typography
                       variant="caption"
                       sx={{
-                        color: "#93c5fd",
+                        color: "var(--nx-purple)",
                         fontWeight: 900,
                         textTransform: "uppercase",
                       }}
@@ -1253,17 +1250,16 @@ export default function ProjectManagementDetails() {
               sx={{
                 p: 2,
                 borderRadius: 3,
-                background:
-                  "linear-gradient(180deg, rgba(18,31,54,0.88), rgba(10,18,34,0.96))",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "var(--nx-panel-2)",
+                border: "1px solid var(--nx-border)",
               }}
             >
               <Stack spacing={1.4}>
                 <Box>
-                  <Typography sx={{ fontWeight: 900, fontSize: 17 }}>
+                  <Typography sx={{ fontWeight: 900, fontSize: 17, color: "var(--nx-text)" }}>
                     Recent Chat Summaries
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "#94a3b8", mt: 0.35 }}>
+                  <Typography variant="body2" sx={{ color: "var(--nx-muted)", mt: 0.35 }}>
                     Last five ended chats for this project.
                   </Typography>
                 </Box>
@@ -1276,8 +1272,8 @@ export default function ProjectManagementDetails() {
                         sx={{
                           p: 1.5,
                           borderRadius: 3,
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
+                          background: "var(--nx-panel)",
+                          border: "1px solid var(--nx-border)",
                         }}
                       >
                         <Stack spacing={1}>
@@ -1288,12 +1284,12 @@ export default function ProjectManagementDetails() {
                             spacing={1}
                           >
                             <Box sx={{ minWidth: 0 }}>
-                              <Typography sx={{ fontWeight: 900, color: "#f8fafc" }}>
+                              <Typography sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
                                 {session.startedByName || "Unknown"}
                               </Typography>
                               <Typography
                                 variant="caption"
-                                sx={{ color: "rgba(231,233,238,0.58)" }}
+                                sx={{ color: "var(--nx-muted)" }}
                               >
                                 {formatChatTime(session.endedAt || session.startedAt)}
                               </Typography>
@@ -1310,7 +1306,7 @@ export default function ProjectManagementDetails() {
                             />
                           </Stack>
 
-                          <Typography variant="body2" sx={{ color: "#cbd5e1" }}>
+                          <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>
                             {buildSummaryPreview(session)}
                           </Typography>
 
@@ -1343,11 +1339,11 @@ export default function ProjectManagementDetails() {
                     sx={{
                       p: 1.5,
                       borderRadius: 3,
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "var(--nx-panel)",
+                      border: "1px solid var(--nx-border)",
                     }}
                   >
-                    <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+                    <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                       No ended chat summaries yet.
                     </Typography>
                   </Paper>
@@ -1357,19 +1353,19 @@ export default function ProjectManagementDetails() {
           </Stack>
         </Paper>
 
-        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.68)" }}>
-          <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Task List</Typography>
+        <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
+          <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Task List</Typography>
 
           {tasks.length === 0 ? (
-            <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+            <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
               No tasks found in this project.
             </Typography>
           ) : (
             <Box sx={{ overflowX: "auto" }}>
               <Box sx={{ minWidth: 960 }}>
-                <Box sx={{ display: "grid", gridTemplateColumns: "1.2fr 1.15fr 0.55fr 0.55fr 0.85fr 0.7fr 0.85fr 0.65fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid rgba(148,163,184,0.16)" }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "1.2fr 1.15fr 0.55fr 0.55fr 0.85fr 0.7fr 0.85fr 0.65fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid var(--nx-border)" }}>
                   {["Task", "Description", "Priority", "Status", "Assigned", "Estimate", "Weighted", "Progress", "Action"].map((header) => (
-                    <Typography key={header} variant="caption" sx={{ color: "#64748b", textTransform: "uppercase", fontWeight: 800 }}>
+                    <Typography key={header} variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", fontWeight: 800 }}>
                       {header}
                     </Typography>
                   ))}
@@ -1378,17 +1374,17 @@ export default function ProjectManagementDetails() {
                 {tasks.map((task) => {
                   const totals = getTaskPointTotals(task);
                   return (
-                    <Box key={task.id} sx={{ display: "grid", gridTemplateColumns: "1.2fr 1.15fr 0.55fr 0.55fr 0.85fr 0.7fr 0.85fr 0.65fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid rgba(148,163,184,0.12)", alignItems: "center" }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: 14 }} noWrap>{getTaskTitle(task)}</Typography>
-                      <Typography variant="caption" sx={{ color: "#94a3b8" }} noWrap>{getTaskDescription(task) || "-"}</Typography>
-                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskPriority(task)}</Typography>
-                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskStatus(task)}</Typography>
-                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskAssignee(task) || "Unassigned"}</Typography>
-                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{getTaskEstimatePoints(task)} pts</Typography>
-                      <Typography variant="body2" sx={{ color: "#cbd5e1" }}>{totals.completedPointValue}/{totals.totalPointValue}</Typography>
+                    <Box key={task.id} sx={{ display: "grid", gridTemplateColumns: "1.2fr 1.15fr 0.55fr 0.55fr 0.85fr 0.7fr 0.85fr 0.65fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid var(--nx-border)", alignItems: "center" }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: 14, color: "var(--nx-text)" }} noWrap>{getTaskTitle(task)}</Typography>
+                      <Typography variant="caption" sx={{ color: "var(--nx-muted)" }} noWrap>{getTaskDescription(task) || "-"}</Typography>
+                      <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{getTaskPriority(task)}</Typography>
+                      <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{getTaskStatus(task)}</Typography>
+                      <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{getTaskAssignee(task) || "Unassigned"}</Typography>
+                      <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{getTaskEstimatePoints(task)} pts</Typography>
+                      <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{totals.completedPointValue}/{totals.totalPointValue}</Typography>
                       <Box>
-                        <Typography variant="caption" sx={{ color: "#cbd5e1" }}>{totals.progressPercentage}%</Typography>
-                        <LinearProgress variant="determinate" value={totals.progressPercentage} sx={{ mt: 0.35, height: 6, borderRadius: 999, bgcolor: "rgba(255,255,255,0.08)" }} />
+                        <Typography variant="caption" sx={{ color: "var(--nx-text-soft)" }}>{totals.progressPercentage}%</Typography>
+                        <LinearProgress variant="determinate" value={totals.progressPercentage} sx={{ mt: 0.35, height: 6, borderRadius: 999, bgcolor: "var(--nx-panel-2)" }} />
                       </Box>
                       <Button size="small" variant="outlined" onClick={() => openTaskModal(task)}>
                         Manage Task
@@ -1403,9 +1399,9 @@ export default function ProjectManagementDetails() {
       </Stack>
 
       {backgroundLoading && (
-        <Box sx={{ position: "fixed", top: 16, right: 16, display: "flex", alignItems: "center", gap: 1, bgcolor: "rgba(15,23,42,0.9)", p: 1, borderRadius: 1, border: "1px solid rgba(148,163,184,0.16)" }}>
-          <CircularProgress size={16} />
-          <Typography variant="caption" sx={{ color: "#94a3b8" }}>Updating...</Typography>
+        <Box sx={{ position: "fixed", top: 16, right: 16, display: "flex", alignItems: "center", gap: 1, bgcolor: "var(--nx-panel)", p: 1, borderRadius: 1, border: "1px solid var(--nx-border)", boxShadow: "var(--nx-shadow)" }}>
+          <CircularProgress size={16} sx={{ color: "var(--nx-purple)" }} />
+          <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>Updating...</Typography>
         </Box>
       )}
 
@@ -1420,10 +1416,9 @@ export default function ProjectManagementDetails() {
             width: { xs: "94vw", sm: "94vw", md: "760px", lg: "820px" },
             maxHeight: "82vh",
             maxWidth: "none",
-            background:
-              "linear-gradient(180deg, rgba(8,15,28,0.98), rgba(6,11,21,0.99))",
-            border: "1px solid rgba(148,163,184,0.14)",
-            backdropFilter: "blur(18px)",
+            background: "var(--nx-card)",
+            border: "1px solid var(--nx-border)",
+            boxShadow: "var(--nx-shadow)",
             borderRadius: 4,
             display: "flex",
             flexDirection: "column",
@@ -1431,8 +1426,7 @@ export default function ProjectManagementDetails() {
         }}
         BackdropProps={{
           sx: {
-            background: "rgba(0, 0, 0, 0.6)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(0, 0, 0, 0.35)",
           },
         }}
       >
@@ -1443,7 +1437,7 @@ export default function ProjectManagementDetails() {
             flexDirection: "column",
             height: "100%",
             minHeight: 0,
-            background: "#0b1628",
+            background: "var(--nx-card)",
             borderRadius: 4,
           }}
         >
@@ -1471,24 +1465,24 @@ export default function ProjectManagementDetails() {
       </Dialog>
 
       <Dialog open={taskModalOpen} onClose={closeTaskModal} fullWidth maxWidth="lg" container={() => document.body}>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <DialogTitle sx={{ display: "flex", alignItems: { xs: "flex-start", sm: "center" }, justifyContent: "space-between", gap: 1.5, flexWrap: "wrap", bgcolor: "var(--nx-panel)", color: "var(--nx-text)" }}>
           <Box>
-            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+            <Typography sx={{ fontWeight: 900, fontSize: 18, color: "var(--nx-text)" }}>
               Manage Task: {taskDraft?.title || "Task"}
             </Typography>
-            <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+            <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
               Task details and story points
             </Typography>
           </Box>
-          <IconButton onClick={closeTaskModal}>
+          <IconButton onClick={closeTaskModal} sx={{ mt: { xs: -0.5, sm: 0 } }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ bgcolor: "var(--nx-card)" }}>
           <Stack spacing={2}>
-            <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
-              <Typography sx={{ fontWeight: 900, mb: 1 }}>Task Details</Typography>
+            <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
+              <Typography sx={{ fontWeight: 900, mb: 1, color: "var(--nx-text)" }}>Task Details</Typography>
               <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1 }}>
                 <TextField size="small" label="Title" value={taskDraft?.title || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, title: e.target.value }))} />
                 <TextField size="small" label="Due date" type="date" InputLabelProps={{ shrink: true }} value={taskDraft?.dueDate || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, dueDate: e.target.value }))} />
@@ -1502,7 +1496,7 @@ export default function ProjectManagementDetails() {
                   <MenuItem value="IN_PROGRESS">IN_PROGRESS</MenuItem>
                   <MenuItem value="COMPLETED">COMPLETED</MenuItem>
                 </TextField>
-                
+
                 <TextField
                   size="small"
                   label="Story points estimate"
@@ -1511,7 +1505,7 @@ export default function ProjectManagementDetails() {
                   value={taskDraft?.estimatedPoints || 0}
                   onChange={(e) => setTaskDraft((prev) => ({ ...prev, estimatedPoints: Math.max(0, Number(e.target.value) || 0) }))}
                 />
-<TextField size="small" label="Description" value={taskDraft?.description || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: "1", md: "1 / -1" } }} />
+                <TextField size="small" label="Description" value={taskDraft?.description || ""} onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: "1", md: "1 / -1" } }} />
               </Box>
 
               <Box sx={{ mt: 1, display: "flex", justifyContent: "flex-end" }}>
@@ -1519,8 +1513,8 @@ export default function ProjectManagementDetails() {
               </Box>
             </Paper>
 
-            <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
-              <Typography sx={{ fontWeight: 900, mb: 1 }}>Developer Assignment</Typography>
+            <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
+              <Typography sx={{ fontWeight: 900, mb: 1, color: "var(--nx-text)" }}>Developer Assignment</Typography>
               <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr auto auto" }, gap: 1, alignItems: "center" }}>
                 <TextField
                   size="small"
@@ -1545,21 +1539,21 @@ export default function ProjectManagementDetails() {
               </Box>
 
               {suggestion?.recommendedDeveloper ? (
-                <Box sx={{ mt: 1.2, p: 1, borderRadius: 1.5, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)" }}>
-                  <Typography sx={{ fontWeight: 800 }}>
+                <Box sx={{ mt: 1.2, p: 1, borderRadius: 1.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel-2)" }}>
+                  <Typography sx={{ fontWeight: 800, color: "var(--nx-text)" }}>
                     Suggested: {suggestion.recommendedDeveloper.name}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                  <Typography variant="caption" sx={{ color: "var(--nx-text-soft)" }}>
                     Confidence: {suggestion.confidence ?? "-"}% {suggestion.explanation ? `- ${suggestion.explanation}` : ""}
                   </Typography>
                 </Box>
               ) : null}
             </Paper>
 
-                        <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid rgba(148,163,184,0.16)", background: "rgba(15,23,42,0.64)" }}>
-              <Typography sx={{ fontWeight: 900, mb: 1 }}>Story Points</Typography>
+            <Paper sx={{ p: 1.4, borderRadius: 2, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
+              <Typography sx={{ fontWeight: 900, mb: 1, color: "var(--nx-text)" }}>Story Points</Typography>
 
-              <Typography variant="body2" sx={{ color: "#94a3b8" }}>
+              <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
                 Manager should only set the task story point estimate in Task Details above.
                 The assigned developer will split that estimate into subtasks from the developer dashboard.
               </Typography>
@@ -1567,7 +1561,7 @@ export default function ProjectManagementDetails() {
           </Stack>
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 }, flexDirection: { xs: "column-reverse", sm: "row" }, alignItems: { xs: "stretch", sm: "center" }, gap: 1, "& .MuiButton-root": { width: { xs: "100%", sm: "auto" } } }}>
           <Button onClick={closeTaskModal} disabled={hasUnsavedChanges() || savingAllChanges}>
             Close
           </Button>
@@ -1586,8 +1580,8 @@ export default function ProjectManagementDetails() {
 
 function Metric({ label, value }) {
   return (
-    <Box sx={{ p: 1, borderRadius: 1.5, border: "1px solid rgba(148,163,184,0.14)", background: "#0f1b2f" }}>
-      <Typography variant="caption" sx={{ color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>
+    <Box sx={{ p: 1, borderRadius: 1.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel-2)" }}>
+      <Typography variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", fontWeight: 700 }}>
         {label}
       </Typography>
       <Typography
@@ -1595,7 +1589,7 @@ function Metric({ label, value }) {
         sx={{
           mt: 0.3,
           fontWeight: 800,
-          color: "#e5e7eb",
+          color: "var(--nx-text)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           display: "-webkit-box",
@@ -1624,15 +1618,13 @@ function ManagerChatThreadCard({ session, onClick, currentUserId }) {
       sx={{
         p: 1.5,
         borderRadius: 3,
-        background:
-          "linear-gradient(135deg, rgba(30,58,138,0.24), rgba(15,23,42,0.28))",
-        border: "1px solid rgba(59,130,246,0.2)",
+        background: "var(--nx-panel-2)",
+        border: "1px solid var(--nx-border)",
         cursor: "pointer",
         transition: "all 200ms ease",
         "&:hover": {
-          background:
-            "linear-gradient(135deg, rgba(30,58,138,0.32), rgba(15,23,42,0.36))",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+          background: "var(--nx-panel)",
+          borderColor: "var(--nx-border-strong)",
         },
       }}
     >
@@ -1668,7 +1660,7 @@ function ManagerChatThreadCard({ session, onClick, currentUserId }) {
             size="small"
             variant="outlined"
             startIcon={<OpenInNewRoundedIcon />}
-            sx={{ whiteSpace: "nowrap", fontWeight: 900 }}
+            sx={{ whiteSpace: "nowrap", fontWeight: 900, borderColor: "var(--nx-border)", color: "var(--nx-text)" }}
           >
             Open
           </Button>
@@ -1702,7 +1694,7 @@ function ManagerChatRow({ label, value }) {
       <Typography
         variant="caption"
         sx={{
-          color: "rgba(231,233,238,0.52)",
+          color: "var(--nx-muted)",
           fontWeight: 700,
           textTransform: "uppercase",
           whiteSpace: "nowrap",
@@ -1714,7 +1706,7 @@ function ManagerChatRow({ label, value }) {
       <Typography
         variant="body2"
         sx={{
-          color: "#e2e8f0",
+          color: "var(--nx-text)",
           fontWeight: 700,
           textAlign: "right",
           wordBreak: "break-word",
