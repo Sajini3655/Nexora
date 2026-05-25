@@ -1,5 +1,6 @@
 package com.admin.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -10,9 +11,15 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 import com.admin.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Value("${app.frontend.base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
 
     @Autowired
     private JwtService jwtService;
@@ -28,10 +35,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        List<String> allowedOrigins = new ArrayList<>();
+        if (frontendBaseUrl != null && !frontendBaseUrl.isBlank()) {
+            allowedOrigins.add(frontendBaseUrl.trim());
+        }
+        allowedOrigins.add("http://localhost:5173");
+        allowedOrigins.add("http://127.0.0.1:5173");
+
         // Use a custom handshake handler and interceptor to authenticate SockJS connections
         registry.addEndpoint("/ws")
             .setHandshakeHandler(new CustomHandshakeHandler())
-            .setAllowedOriginPatterns("*")
+            .setAllowedOrigins(allowedOrigins.toArray(new String[0]))
             .addInterceptors(new JwtHandshakeInterceptor(jwtService, userDetailsService))
             .withSockJS();
     }
