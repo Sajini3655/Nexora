@@ -16,6 +16,7 @@ import { createProject, getErrorMessage, fetchManagerClients } from "../../../se
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import { useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { getLocalDateInputValue, isBeforeDate } from "../../../utils/dateInput";
 
 const emptyTask = {
   title: "",
@@ -44,6 +45,7 @@ export default function AddProject() {
   const queryClient = useQueryClient();
   const { user, moduleAccess } = useAuth();
   const scope = getManagerQueryScope(user);
+  const todayDate = useMemo(() => getLocalDateInputValue(), []);
   const canCreate = useMemo(() => {
     if (!projectName.trim()) return false;
     if (!projectDescription.trim()) return false;
@@ -114,6 +116,11 @@ export default function AddProject() {
     }
 
     for (const task of tasks) {
+      if (task.dueDate && isBeforeDate(task.dueDate, todayDate)) {
+        setError("Task due dates must be today or later.");
+        return;
+      }
+
       for (const sp of task.storyPoints) {
         if (!sp.title.trim()) {
           setError("Story point title is required if story point is added.");
@@ -313,6 +320,7 @@ export default function AddProject() {
                       label="Due date (optional)"
                       value={task.dueDate}
                       onChange={(e) => handleTaskChange(taskIndex, "dueDate", e.target.value)}
+                      inputProps={{ min: todayDate }}
                       InputLabelProps={{ shrink: true }}
                     />
                   </Box>

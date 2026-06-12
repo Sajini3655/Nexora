@@ -48,6 +48,7 @@ import {
 } from "../../data/useManager";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import { getLocalDateInputValue, isBeforeDate } from "../../../utils/dateInput";
 
 const emptyTaskForm = {
   title: "",
@@ -204,6 +205,7 @@ export default function ProjectManagementDetails() {
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const managerScope = getManagerQueryScope(user);
+  const todayDate = useMemo(() => getLocalDateInputValue(), []);
   const currentUserId = user?.id != null ? String(user.id) : "";
   const currentUserName = user?.name || user?.email || "Manager";
 
@@ -657,6 +659,12 @@ export default function ProjectManagementDetails() {
     setActionError("");
     setSuccess("");
 
+    if (newTask.dueDate && isBeforeDate(newTask.dueDate, todayDate)) {
+      setActionError("Task due dates must be today or later.");
+      setAddingTask(false);
+      return;
+    }
+
     try {
       const createdTask = await createManagerTask({
         projectId: numericProjectId,
@@ -1025,6 +1033,7 @@ export default function ProjectManagementDetails() {
               type="date"
               value={newTask.dueDate}
               onChange={(e) => setNewTask((prev) => ({ ...prev, dueDate: e.target.value }))}
+              inputProps={{ min: todayDate }}
               InputLabelProps={{ shrink: true }}
             />
 
