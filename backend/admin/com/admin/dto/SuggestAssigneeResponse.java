@@ -11,7 +11,7 @@ import java.util.List;
 @Builder
 public class SuggestAssigneeResponse {
     private DeveloperSummaryDto recommendedDeveloper;
-    private Integer confidence; // 0..100
+    private Integer confidence;
     private String explanation;
 
     private List<String> requiredSkills;
@@ -20,3 +20,4 @@ public class SuggestAssigneeResponse {
 
     private ScoreBreakdownDto breakdown;
 }
+

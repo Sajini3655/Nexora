@@ -51,7 +51,6 @@ public class DemoSeeder implements CommandLineRunner {
         userRepository.save(admin);
         System.out.println("✅ Bootstrapped ADMIN user: " + normalizedEmail);
 
-        // Create demo MANAGER user
         String managerEmail = "manager@nexora.com";
         if (!userRepository.existsByEmail(managerEmail)) {
             User manager = User.builder()
@@ -65,7 +64,6 @@ public class DemoSeeder implements CommandLineRunner {
             System.out.println("✅ Bootstrapped MANAGER user: " + managerEmail);
         }
 
-        // Create demo DEVELOPER user
         String developerEmail = "developer@nexora.com";
         if (!userRepository.existsByEmail(developerEmail)) {
             User developer = User.builder()
@@ -79,7 +77,6 @@ public class DemoSeeder implements CommandLineRunner {
             System.out.println("✅ Bootstrapped DEVELOPER user: " + developerEmail);
         }
 
-        // Create demo CLIENT user
         String clientEmail = "client@nexora.com";
         if (!userRepository.existsByEmail(clientEmail)) {
             User client = User.builder()

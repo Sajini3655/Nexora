@@ -12,9 +12,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class NlqResolveResponse {
-    // NAVIGATE | SWITCH_ROLE | MESSAGE
     private String action;
     private String path;
     private String targetRole;
     private String message;
 }
+

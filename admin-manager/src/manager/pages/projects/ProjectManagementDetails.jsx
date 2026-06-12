@@ -48,6 +48,7 @@ import {
 } from "../../data/useManager";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
+import { getLocalDateInputValue, isBeforeDate } from "../../../utils/dateInput";
 
 const emptyTaskForm = {
   title: "",
@@ -204,6 +205,7 @@ export default function ProjectManagementDetails() {
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const managerScope = getManagerQueryScope(user);
+  const todayDate = useMemo(() => getLocalDateInputValue(), []);
   const currentUserId = user?.id != null ? String(user.id) : "";
   const currentUserName = user?.name || user?.email || "Manager";
 
@@ -283,7 +285,6 @@ export default function ProjectManagementDetails() {
         const list = await fetchManagerClients();
         if (mounted) setClients(list);
       } catch (err) {
-        // ignore
       }
     })();
     return () => { mounted = false; };
@@ -488,7 +489,6 @@ export default function ProjectManagementDetails() {
     setStoryPoints([]);
     setStoryPointForm(emptyStoryPointForm);
     setEditingStoryPointId(null);
-    // Reload project to ensure developer dashboard reflects latest changes
     projectDetailsQuery.refetch();
     developersQuery.refetch();
   };
@@ -519,7 +519,6 @@ export default function ProjectManagementDetails() {
     try {
       const savePromises = [];
 
-      // Save task details if changed
       const taskDetailsChanged = 
         taskDraft?.title !== originalTaskDraft?.title ||
         taskDraft?.description !== originalTaskDraft?.description ||
@@ -547,7 +546,6 @@ export default function ProjectManagementDetails() {
         savePromises.push(taskUpdatePromise);
       }
 
-      // Save developer assignment if changed
       const developerChanged = selectedDeveloperId !== originalDeveloperId;
       if (developerChanged && selectedDeveloperId) {
         savePromises.push(
@@ -555,7 +553,6 @@ export default function ProjectManagementDetails() {
         );
       }
 
-      // Wait for all saves to complete
       if (savePromises.length > 0) {
         await Promise.all(savePromises);
       }
@@ -581,7 +578,6 @@ export default function ProjectManagementDetails() {
       setSuccess("All changes saved successfully.");
       setOriginalDeveloperId(selectedDeveloperId);
       
-      // Single reload after all saves are done
       await projectDetailsQuery.refetch();
       await developersQuery.refetch();
 
@@ -663,6 +659,12 @@ export default function ProjectManagementDetails() {
     setActionError("");
     setSuccess("");
 
+    if (newTask.dueDate && isBeforeDate(newTask.dueDate, todayDate)) {
+      setActionError("Task due dates must be today or later.");
+      setAddingTask(false);
+      return;
+    }
+
     try {
       const createdTask = await createManagerTask({
         projectId: numericProjectId,
@@ -732,7 +734,7 @@ export default function ProjectManagementDetails() {
       const result = await suggestManagerTaskAssignment({
         title: newTask.title.trim(),
         description: newTask.description.trim() || "",
-        estimatedPoints: 0, // No story points yet for new tasks
+        estimatedPoints: 0,
       });
 
       setAddTaskSuggestion(result || null);
@@ -878,7 +880,6 @@ export default function ProjectManagementDetails() {
       setStoryPointForm(emptyStoryPointForm);
       setSuccess("Story point added.");
       await loadStoryPoints(selectedTask.id);
-      // Don't reload project here - let user save all changes at once
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to add story point."));
     } finally {
@@ -920,7 +921,6 @@ export default function ProjectManagementDetails() {
       setStoryPointForm(emptyStoryPointForm);
       setSuccess("Story point updated.");
       await loadStoryPoints(selectedTask.id);
-      // Don't reload project here - let user save all changes at once
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to update story point."));
     } finally {
@@ -938,7 +938,6 @@ export default function ProjectManagementDetails() {
       await api.delete(`/story-points/${storyPointId}`);
       setSuccess("Story point deleted.");
       await loadStoryPoints(selectedTask.id);
-      // Don't reload project here - let user save all changes at once
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to delete story point."));
     }
@@ -1034,6 +1033,7 @@ export default function ProjectManagementDetails() {
               type="date"
               value={newTask.dueDate}
               onChange={(e) => setNewTask((prev) => ({ ...prev, dueDate: e.target.value }))}
+              inputProps={{ min: todayDate }}
               InputLabelProps={{ shrink: true }}
             />
 
@@ -1718,4 +1718,5 @@ function ManagerChatRow({ label, value }) {
     </Stack>
   );
 }
+
 

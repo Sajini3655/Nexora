@@ -131,7 +131,6 @@ public class ChatService {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Ensure the user can access the chat for this project
         if (!canAccessProjectChat(session.getProject(), user)) {
             throw new AccessDeniedException("You are not a member of this project chat.");
         }
@@ -150,7 +149,6 @@ public class ChatService {
 
         ChatMessage saved = messageRepo.save(message);
 
-        // Broadcast the message to all subscribed WebSocket clients
         ChatMessageResponse response = toResponse(saved);
         Long projectId = session.getProject().getId();
         String destination = String.format("/topic/projects/%d/sessions/%d/chat", projectId, sessionId);
@@ -158,7 +156,6 @@ public class ChatService {
         try {
             messagingTemplate.convertAndSend(destination, response);
         } catch (Exception e) {
-            // Log the error but don't fail the save if broadcasting fails
             System.err.println("Error broadcasting message to " + destination + ": " + e.getMessage());
             e.printStackTrace();
         }
@@ -493,10 +490,7 @@ public class ChatService {
                 .orElse(null);
     }
 
-    /**
-     * Check whether a given user should be allowed to access project chat features.
-     * Does not throw; returns true/false so callers can decide how to respond.
-     */
+    
     public boolean canAccessProjectChat(Project project, User user) {
         if (project == null || user == null) {
             return false;
@@ -551,3 +545,4 @@ public class ChatService {
         return sessionRepo.findByProject_IdAndEndedFalseOrderByStartedAtDesc(projectId);
     }
 }
+

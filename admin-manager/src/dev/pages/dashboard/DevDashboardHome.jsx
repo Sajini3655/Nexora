@@ -218,7 +218,7 @@ export default function DevDashboardHome() {
         "& .MuiTypography-body2": { fontSize: 14.5 },
       }}
     >
-      {/* Header */}
+      {}
       <Box sx={{ mt: { xs: -1.5, md: -1.5 }, mb: { xs: 3, md: 6 } }}>
         <DashboardHero
           icon={<CodeRoundedIcon />}
@@ -255,7 +255,7 @@ export default function DevDashboardHome() {
         </Box>
       ) : (
         <Stack spacing={4}>
-          {/* Summary Stats */}
+          {}
           <Box
             sx={{
               display: "grid",
@@ -296,7 +296,7 @@ export default function DevDashboardHome() {
             />
           </Box>
 
-          {/* Main Content Grid */}
+          {}
           <Box
             sx={{
               display: "grid",
@@ -304,7 +304,7 @@ export default function DevDashboardHome() {
               gap: 3,
             }}
           >
-            {/* Active Project Tasks */}
+            {}
             <ScrollPanel
               title="Project Tasks"
               count={activeProjectTasks.length}
@@ -329,7 +329,7 @@ export default function DevDashboardHome() {
               )}
             </ScrollPanel>
 
-            {/* Active Ticket Tasks */}
+            {}
             <ScrollPanel
               title="Ticket Tasks"
               count={activeTicketTasks.length}
@@ -354,7 +354,7 @@ export default function DevDashboardHome() {
               )}
             </ScrollPanel>
 
-            {/* My Projects */}
+            {}
             <ScrollPanel
               title="My Projects"
               count={projectSummaries.length}
@@ -371,7 +371,7 @@ export default function DevDashboardHome() {
             </ScrollPanel>
           </Box>
 
-          {/* Task Progress Selector */}
+          {}
           <DeveloperTaskProgress />
         </Stack>
       )}
@@ -494,7 +494,7 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
       }}
     >
       <Stack spacing={0.8}>
-        {/* Header Row */}
+        {}
         <Box
           sx={{
             display: "flex",
@@ -536,7 +536,7 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
           <StatusBadge label={task.status || "Assigned"} size="small" />
         </Box>
 
-        {/* Progress Bar */}
+        {}
         <Box>
           <Box
             sx={{
@@ -581,7 +581,7 @@ function TaskRow({ task, totalPoints, completedPoints, progress }) {
           />
         </Box>
 
-        {/* Story Points */}
+        {}
         {totalPoints > 0 && (
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, color: "var(--nx-muted)" }}>
             <span>Points</span>
@@ -611,7 +611,7 @@ function ProjectProgressCard({ project }) {
       }}
     >
       <Stack spacing={0.8}>
-        {/* Header */}
+        {}
         <Box
           sx={{
             display: "flex",
@@ -650,7 +650,7 @@ function ProjectProgressCard({ project }) {
           </Typography>
         </Box>
 
-        {/* Progress Bar */}
+        {}
         <LinearProgress
           variant="determinate"
           value={project.progress}
@@ -686,5 +686,6 @@ function EmptyState({ icon, message }) {
     </Box>
   );
 }
+
 
 

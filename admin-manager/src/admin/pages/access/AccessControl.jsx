@@ -22,14 +22,7 @@ import {
   saveAccessRoleMatrix,
 } from "../../../services/api";
 
-/**
- * Access Control - Role-based permissions
- * Backend endpoints:
- * - GET /api/admin/access/modules
- * - GET /api/admin/access/roles
- * - GET /api/admin/access/role-matrix
- * - PUT /api/admin/access/role-matrix
- */
+
 
 export default function AccessControl() {
   const [modules, setModules] = useState([]);
@@ -252,7 +245,7 @@ function UserOverrides({
 
       <Grid container spacing={2.5}>
         {modules.map((m) => {
-          const overrideVal = overrides[m.key]; // null/true/false
+          const overrideVal = overrides[m.key];
           const eff = selectedUser ? effectiveAccess(selectedUser, m.key) : false;
 
           return (
@@ -306,4 +299,5 @@ function UserOverrides({
     </Box>
   );
 }
+
 

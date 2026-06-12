@@ -55,7 +55,7 @@ export default function DashboardHero({
             </Typography>
           </Stack>
 
-          {/* subtitle removed globally (avoid AI-generated subtitles) */}
+          {}
         </Box>
 
         {actionLabel ? (
@@ -97,3 +97,4 @@ export default function DashboardHero({
     </Box>
   );
 }
+

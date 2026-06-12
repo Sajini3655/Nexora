@@ -69,7 +69,6 @@ export default function ProjectManagement() {
         const list = await fetchManagerClients();
         if (mounted) setClients(list);
       } catch (err) {
-        // ignore
       }
     })();
     return () => { mounted = false; };
@@ -147,7 +146,6 @@ export default function ProjectManagement() {
 
       projectsQuery.refetch();
 
-      // Navigate to the new project after a short delay
       setTimeout(() => {
         navigate(`/manager/project-management/${created.id}`);
       }, 500);
@@ -206,7 +204,7 @@ export default function ProjectManagement() {
             <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3, color: "var(--nx-text)" }}>
               Project Management
             </Typography>
-            {/* Subtitle removed per request */}
+            {}
           </Box>
         </Stack>
       </Paper>
@@ -214,7 +212,7 @@ export default function ProjectManagement() {
       {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="project-management-error" /> : null}
       {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="project-management-success" /> : null}
 
-      {/* Create New Project widget removed per request */}
+      {}
 
       <Paper sx={{ p: { xs: 1.25, sm: 1.5 }, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 340px)" }}>
         <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Your Projects</Typography>
@@ -286,6 +284,7 @@ export default function ProjectManagement() {
     </Box>
   );
 }
+
 
 
 

@@ -786,7 +786,7 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
 
       <DialogContent sx={{ pt: 2 }}>
         <Stack spacing={2.5}>
-          {/* Service Overview */}
+          {}
           <Box>
             <Typography
               sx={{ variant: "caption", fontWeight: 700, color: "var(--nx-muted)", mb: 0.8 }}
@@ -800,7 +800,7 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
 
           <Divider sx={{ borderColor: "var(--nx-border)" }} />
 
-          {/* Details List */}
+          {}
           <Box>
             <Typography
               sx={{ variant: "caption", fontWeight: 700, color: "var(--nx-muted)", mb: 1 }}
@@ -830,7 +830,7 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
             </Stack>
           </Box>
 
-          {/* Issue Section */}
+          {}
           {item.issue && (
             <>
               <Divider sx={{ borderColor: "var(--nx-border)" }} />
@@ -852,7 +852,7 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
             </>
           )}
 
-          {/* Action Section */}
+          {}
           {item.action && (
             <>
               <Divider sx={{ borderColor: "var(--nx-border)" }} />
@@ -917,3 +917,4 @@ function HealthDetailDialog({ item, open, onClose, onRefresh }) {
     </Dialog>
   );
 }
+

@@ -45,7 +45,6 @@ public class DeveloperTaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         if (task.getAssignedTo() == null || task.getAssignedTo().getId() == null || !task.getAssignedTo().getId().equals(dev.getId())) {
-            // Hide tasks not assigned to this developer.
             throw new ResourceNotFoundException("Task not found");
         }
 
@@ -105,3 +104,4 @@ public class DeveloperTaskService {
                 .build();
     }
 }
+

@@ -23,7 +23,6 @@ function ProgressBar({ pct }) {
 export default function DevTicketView() {
   const { id } = useParams();
 
-  // React Query hook
   const { data: ticket, isLoading: loading, error: queryError, refetch } = useDeveloperTicket(id, !!id);
   const error = queryError?.message || "";
 
@@ -127,3 +126,4 @@ function Metric({ label, value }) {
     </Box>
   );
 }
+

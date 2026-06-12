@@ -36,7 +36,6 @@ export function useManagerProjects(enabled = true) {
     queryFn: fetchProjects,
     enabled: canQuery,
     retry: false,
-    // Disable polling - live refresh handles updates, polling adds unnecessary overhead
     refetchInterval: false,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
@@ -129,4 +128,5 @@ export function useProjectDetails(projectId, enabled = true) {
     },
   };
 }
+
 

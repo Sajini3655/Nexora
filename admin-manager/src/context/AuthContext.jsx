@@ -17,7 +17,6 @@ export function AuthProvider({ children }) {
     queryClient.clear();
   }
 
-  // Load current user if token exists
   async function loadMe() {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -79,7 +78,6 @@ export function AuthProvider({ children }) {
     return await loadMe();
   }
 
-  // Register function for normal registration (if needed)
   async function register({ name, email, password, role }) {
     clearAuthCaches();
     const res = await api.post("/auth/register", { name, email, password, role });
@@ -89,13 +87,10 @@ export function AuthProvider({ children }) {
     return await loadMe();
   }
 
-  // ✅ Accept invite function for token-based registration
   async function acceptInvite(token, password) {
     const res = await api.post("/auth/accept-invite", null, {
       params: { token, password },
     });
-    // Optionally, login automatically if your backend returns a token
-    // localStorage.setItem("token", res.data.token);
     return res.data;
   }
 
@@ -137,4 +132,5 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
 

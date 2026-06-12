@@ -5,18 +5,14 @@ import {
   createDeveloperTicketOnBackend,
 } from "./ticketApi";
 
-/**
- * Query key factory for developer ticket queries
- */
+
 export const devTicketKeys = {
   all: ["devTickets"] as const,
   list: () => [...devTicketKeys.all, "list"] as const,
   detail: (id: string) => [...devTicketKeys.all, "detail", id] as const,
 };
 
-/**
- * Fetch all developer tickets with a 5 minute staleTime.
- */
+
 export function useDeveloperTickets(enabled = true) {
   return useQuery({
     queryKey: devTicketKeys.list(),
@@ -28,9 +24,7 @@ export function useDeveloperTickets(enabled = true) {
   });
 }
 
-/**
- * Fetch single developer ticket by ID
- */
+
 export function useDeveloperTicket(ticketId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: devTicketKeys.detail(ticketId || ""),
@@ -40,19 +34,15 @@ export function useDeveloperTicket(ticketId: string | null | undefined, enabled 
   });
 }
 
-/**
- * Create a new developer ticket
- */
+
 export function useCreateDeveloperTicket() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createDeveloperTicketOnBackend,
     onSuccess: (newTicket) => {
-      // Invalidate tickets list to refetch
       queryClient.invalidateQueries({
         queryKey: devTicketKeys.list(),
       });
-      // Optimistically update: prepend new ticket to cache
       queryClient.setQueryData(devTicketKeys.list(), (old: any[]) => {
         if (!Array.isArray(old)) return [newTicket];
         return [newTicket, ...old];
@@ -60,3 +50,4 @@ export function useCreateDeveloperTicket() {
     },
   });
 }
+

@@ -41,7 +41,6 @@ public class MailService {
             System.out.println("✅ MailService: Email SENT to: " + toEmail);
         } catch (MailException ex) {
             System.out.println("❌ MailService: Email FAILED: " + ex.getMessage());
-            // do not throw
         }
     }
 

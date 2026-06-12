@@ -36,7 +36,6 @@ export function ThemeModeProvider({ children, defaultMode = "dark" }) {
     return createTheme({
       palette: {
         mode,
-        // read colors from CSS variables so MUI matches the token system
         primary: { main: getCssVar('--nx-blue', isDark ? '#8b7cff' : '#2563eb') },
         secondary: { main: getCssVar('--nx-green', isDark ? '#22c55e' : '#16a34a') },
         background: {
@@ -73,7 +72,6 @@ export function ThemeModeProvider({ children, defaultMode = "dark" }) {
     try {
       window.localStorage.setItem(STORAGE_KEY, mode);
     } catch {
-      // ignore storage failures
     }
 
     const root = document.documentElement;

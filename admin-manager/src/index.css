@@ -4,7 +4,7 @@
 
 :root,
 html[data-theme="light"]:not(.dark) {
-  /* radius tokens */
+  
   --nx-radius-section: 22px;
   --nx-radius-inner: 16px;
   --nx-bg: #eef8ff;
@@ -28,7 +28,7 @@ html[data-theme="light"]:not(.dark) {
 
 html.dark,
 html[data-theme="dark"] {
-  /* radius tokens */
+  
   --nx-radius-section: 22px;
   --nx-radius-inner: 16px;
   --nx-bg: #020617;

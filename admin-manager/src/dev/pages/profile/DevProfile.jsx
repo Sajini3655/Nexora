@@ -19,7 +19,6 @@ export default function DevProfile() {
   const [showSkillToast, setShowSkillToast] = useState(false);
   const [showPasswordToast, setShowPasswordToast] = useState(false);
 
-  // Try to hydrate from backend (if developer logged in via shared login)
   useEffect(() => {
     (async () => {
       const merged = await loadProfileFromBackendSafe();
@@ -27,11 +26,9 @@ export default function DevProfile() {
     })();
   }, []);
 
-  // skills
   const [newSkill, setNewSkill] = useState("");
   const [newSkillLevel, setNewSkillLevel] = useState(3);
 
-  // password
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
@@ -81,7 +78,6 @@ export default function DevProfile() {
     setNewSkillLevel(3);
     setShowSkillToast(true);
 
-    // fire-and-forget sync
     syncProfileToBackend(saved).catch(() => {});
     
     setTimeout(() => {
@@ -158,7 +154,7 @@ export default function DevProfile() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Basic profile */}
+        {}
         <div className="lg:col-span-2 glass-card p-5">
           <h3 className="text-lg font-bold mb-4">Basic Details</h3>
 
@@ -299,7 +295,7 @@ export default function DevProfile() {
           </button>
         </div>
 
-        {/* Skills */}
+        {}
         <div className="glass-card p-5">
           <h3 className="text-lg font-bold mb-3">Skills</h3>
 
@@ -352,7 +348,7 @@ export default function DevProfile() {
           </div>
         </div>
 
-        {/* Password */}
+        {}
         <div className="lg:col-span-3 glass-card p-5">
           <h3 className="text-lg font-bold mb-3">Change Password</h3>
           <p className="text-xs text-slate-400 mb-4">
@@ -398,7 +394,7 @@ export default function DevProfile() {
         </div>
       </div>
 
-      {/* Toast Notification */}
+      {}
       {showToast && (
         <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 border border-green-400/30">
@@ -413,7 +409,7 @@ export default function DevProfile() {
         </div>
       )}
 
-      {/* Skill Added Toast */}
+      {}
       {showSkillToast && (
         <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 border border-blue-400/30">
@@ -428,7 +424,7 @@ export default function DevProfile() {
         </div>
       )}
 
-      {/* Password Changed Toast */}
+      {}
       {showPasswordToast && (
         <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 border border-purple-400/30">
@@ -445,4 +441,5 @@ export default function DevProfile() {
     </>
   );
 }
+
 

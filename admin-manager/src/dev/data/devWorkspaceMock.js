@@ -1,4 +1,3 @@
-// src/data/devWorkspaceMock.js
 
 export const currentProject = {
   id: "P-001",
@@ -8,7 +7,7 @@ export const currentProject = {
     "AI-enhanced project management system with dashboards, task assignment, chat summaries and tickets.",
   manager: "Manager (Sup)",
   dueDate: "2026-03-20",
-  progress: 58, // %
+  progress: 58,
   members: [
     { name: "You", role: "Developer" },
     { name: "Kavindu", role: "Developer" },
@@ -142,11 +141,7 @@ export const aiSummaries = [
   },
 ];
 
-// --------------------
-// ✅ NEW: Ticket mocks
-// --------------------
 
-// Tickets from clients (created via email or direct message)
 export const clientTickets = [
   {
     id: "TK-201",
@@ -190,7 +185,6 @@ export const clientTickets = [
   },
 ];
 
-// Tickets created by AI blocker detection (from chat summaries)
 export const aiBlockerTickets = [
   {
     id: "TK-301",
@@ -222,6 +216,6 @@ export const aiBlockerTickets = [
   },
 ];
 
-// ✅ Optional: if any file still imports allTickets, this fixes it too
 export const allTickets = [...clientTickets, ...aiBlockerTickets];
+
 

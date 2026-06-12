@@ -1,12 +1,7 @@
 import React from "react";
 import { Button as MUIButton, CircularProgress } from "@mui/material";
 
-/**
- * Props:
- * - tone: "primary" | "soft" | "danger"
- * - loading: boolean
- * - variant: MUI variant (contained | outlined | text)
- */
+
 export default function Button({
   children,
   tone = "primary",
@@ -15,7 +10,6 @@ export default function Button({
   variant,
   ...props
 }) {
-  // Decide default variant based on tone
   const resolvedVariant =
     variant ??
     (tone === "soft" ? "outlined" : "contained");
@@ -61,7 +55,7 @@ export default function Button({
         })
       }}
     >
-      {/* Spinner overlay */}
+      {}
       {loading && (
         <CircularProgress
           size={20}
@@ -72,11 +66,12 @@ export default function Button({
         />
       )}
 
-      {/* Hide text while loading (keeps button size) */}
+      {}
       <span style={{ opacity: loading ? 0 : 1 }}>
         {children}
       </span>
     </MUIButton>
   );
 }
+
 

@@ -34,7 +34,6 @@ export default function ClientTicketList() {
   const [form, setForm] = useState(emptyForm);
 
   const { data: projects = [] } = useClientProjects();
-  // React Query hook - auto-refetch every 30s
   const { data: tickets = [], isLoading: loading, error: queryError, refetch: refetchTickets } = useClientTickets();
   const createMutation = useCreateClientTicket();
 
@@ -57,7 +56,6 @@ export default function ClientTicketList() {
     return Boolean(projects.length > 0 && form.projectId && form.category && form.title.trim() && form.description.trim());
   }, [form, projects.length]);
 
-  // Live refresh via WebSocket - refetch when tickets update
   const liveTopics = useMemo(() => ["/topic/tickets"], []);
   useLiveRefresh(liveTopics, refetchTickets, { debounceMs: 400 });
 
@@ -77,7 +75,6 @@ export default function ClientTicketList() {
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
 
-      // Prefer structured recommendation fields from the AI service
       let text = "";
       if (data?.recommendedName || data?.recommendedEmail) {
         text = `${data.recommendedName || "(unknown)"}${data.recommendedEmail ? ` <${data.recommendedEmail}>` : ""}`;
@@ -112,7 +109,6 @@ export default function ClientTicketList() {
       setForm(emptyForm);
       setSuccess("Ticket created successfully.");
     } catch (err) {
-      // Error is handled by mutation and displayed via error state
       console.error("Failed to create ticket:", err);
     } finally {
       setCreating(false);
@@ -357,5 +353,6 @@ function StatusChip({ status }) {
     <StatusBadge label={status} />
   );
 }
+
 
 

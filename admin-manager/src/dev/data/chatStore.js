@@ -1,6 +1,3 @@
-// src/data/chatStore.js
-// Multi-thread chat (issue-based) stored in localStorage for UI demo.
-// Note: Now uses backend for primary chat data. localStorage as fallback.
 
 const STORAGE_KEY = "nexora_dev_chat_threads_v1";
 
@@ -37,7 +34,6 @@ function makeId(prefix) {
 }
 
 function seedThreads() {
-  // Return empty array - chat threads come from backend now
   return [];
 }
 
@@ -97,4 +93,5 @@ export function closeChatThread(threadId) {
 export function getChatThread(threadId) {
   return loadChatThreads().find((t) => t.id === threadId) || null;
 }
+
 

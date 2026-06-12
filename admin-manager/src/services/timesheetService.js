@@ -1,6 +1,5 @@
 import api from "./api.js";
 
-// Some timesheet endpoints can take longer; use a longer per-request timeout
 const LONG_TIMEOUT = 30000;
 
 function extractApiError(error) {
@@ -63,3 +62,4 @@ function normalizeFilters(filters) {
 
   return params;
 }
+

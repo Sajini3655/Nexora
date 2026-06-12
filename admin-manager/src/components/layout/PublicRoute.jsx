@@ -18,7 +18,6 @@ const PublicRoute = ({ children }) => {
   }
 
   if (user) {
-    // Already logged in → redirect to dashboard
     return <Navigate to="/" />;
   }
 
@@ -26,4 +25,5 @@ const PublicRoute = ({ children }) => {
 };
 
 export default PublicRoute;
+
 

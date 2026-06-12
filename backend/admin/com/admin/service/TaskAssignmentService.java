@@ -29,9 +29,7 @@ public class TaskAssignmentService {
     private final AiSkillExtractionService aiSkillExtractionService;
     private final AiAssigneeService aiAssigneeService;
 
-    /**
-     * Manager view: list developers with skills + workload.
-     */
+    
     @Transactional(readOnly = true)
     public List<DeveloperSummaryDto> listDevelopers() {
         List<User> devUsers = userRepository.findAll().stream()
@@ -50,8 +48,6 @@ public class TaskAssignmentService {
         User actor = userRepository.findByEmail(actorEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
-        // All actors (admin, manager, developer) get the same list of all developers
-        // Query only enabled developers to reduce dataset size
         List<User> devUsers = userRepository.findByRoleAndEnabled(Role.DEVELOPER, true);
 
         return devUsers.stream()
@@ -67,14 +63,11 @@ public class TaskAssignmentService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Suggest best developer for a task using Groq AI-powered skill extraction.
-     */
+    
     @Transactional(readOnly = true)
     public SuggestAssigneeResponse suggest(SuggestAssigneeRequest req) {
         String text = (req.getTitle() + "\n" + (req.getDescription() == null ? "" : req.getDescription())).toLowerCase();
 
-        // Use Groq AI for intelligent skill extraction
         AiSkillExtractionService.SkillExtractionResult aiResult = aiSkillExtractionService.extract(req.getTitle(), req.getDescription());
         SkillExtraction extraction = convertAiResultToSkillExtraction(aiResult);
         List<String> requiredSkills = extraction.requiredSkills;
@@ -92,7 +85,6 @@ public class TaskAssignmentService {
                     .build();
         }
 
-        // Ask AI for final recommendation using candidate summaries
         try {
             List<Map<String, Object>> candPayload = new ArrayList<>();
             for (DeveloperSummaryDto d : candidates) {
@@ -118,7 +110,6 @@ public class TaskAssignmentService {
 
             AiAssigneeService.RecommendResult aiRec = aiAssigneeService.recommend(req.getTitle(), req.getDescription(), candPayload);
             if (aiRec != null && aiRec.isUsedAi() && aiRec.getRecommendedEmail() != null) {
-                // map email back to DeveloperSummaryDto
                 DeveloperSummaryDto chosen = candidates.stream().filter(c -> aiRec.getRecommendedEmail().equalsIgnoreCase(c.getEmail())).findFirst().orElse(null);
                 if (chosen != null) {
                     return SuggestAssigneeResponse.builder()
@@ -133,7 +124,6 @@ public class TaskAssignmentService {
                 }
             }
         } catch (Exception ex) {
-            // ignore AI failure and fallback to local scoring below
         }
 
         SuggestAssigneeResponse best = null;
@@ -160,9 +150,7 @@ public class TaskAssignmentService {
         return best;
     }
 
-    /**
-     * Convert AI skill extraction result to internal SkillExtraction format.
-     */
+    
     private SkillExtraction convertAiResultToSkillExtraction(AiSkillExtractionService.SkillExtractionResult aiResult) {
         List<String> skillNames = new ArrayList<>();
         Map<String, Double> weights = new LinkedHashMap<>();
@@ -313,8 +301,6 @@ public class TaskAssignmentService {
         User manager = userRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
-        // Managers should see all tasks under projects they manage,
-        // including tasks created by admins or other users.
         List<TaskItem> tasks = getManagerVisibleTasks(manager).stream()
                 .sorted(Comparator.comparing(TaskItem::getCreatedAt).reversed())
             .collect(Collectors.toList());
@@ -337,7 +323,6 @@ public class TaskAssignmentService {
                 .collect(Collectors.toList());
     }
 
-    // --------------------- helpers ---------------------
 
     private DeveloperSummaryDto toDeveloperSummary(User devUser) {
         DeveloperProfile profile = profileRepository.findByUserId(devUser.getId())
@@ -565,7 +550,6 @@ public class TaskAssignmentService {
     }
 
     private String buildExplanation(DeveloperSummaryDto dev, List<String> matched, List<String> missing, int active, int cap, double availabilityScore, double specializationScore, double difficulty) {
-        // Return a short, friendly fallback explanation for the UI.
         StringBuilder sb = new StringBuilder();
         sb.append("Good match");
         if (!matched.isEmpty()) {
@@ -582,3 +566,4 @@ public class TaskAssignmentService {
         return Math.max(min, Math.min(max, v));
     }
 }
+

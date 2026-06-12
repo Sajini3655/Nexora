@@ -31,7 +31,7 @@ export default function PageHeader({
             {title}
           </Typography>
 
-          {/* subtitle removed globally (avoid AI-generated subtitles) */}
+          {}
         </Box>
 
         {right ? (
@@ -54,4 +54,5 @@ export default function PageHeader({
     </Box>
   );
 }
+
 

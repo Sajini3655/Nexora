@@ -9,10 +9,8 @@ public interface InviteTokenRepository extends JpaRepository<InviteToken, Long> 
 
     Optional<InviteToken> findByToken(String token);
 
-    // ✅ FIX: Add this method
     long countByUsedFalse();
 
-    // Optional (good to have)
     long countByUsedTrue();
 
     void deleteByUser_Id(Long userId);

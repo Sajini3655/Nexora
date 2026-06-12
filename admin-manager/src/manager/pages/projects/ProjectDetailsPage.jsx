@@ -129,13 +129,10 @@ export default function ProjectDetailsPage() {
     }
   }, [projectId, authLoading]);
 
-  // initial load
   useEffect(() => {
     loadProjectSessions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  // Use websocket live updates instead of polling to refresh sessions
   const liveTopics = useMemo(() => ["/topic/projects", projectId ? `/topic/projects/${projectId}/sessions` : null].filter(Boolean), [projectId]);
   useLiveRefresh(liveTopics, loadProjectSessions, { debounceMs: 800 });
 
@@ -494,3 +491,4 @@ export default function ProjectDetailsPage() {
     </Stack>
   );
 }
+

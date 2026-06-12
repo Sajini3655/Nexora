@@ -69,7 +69,6 @@ public class SystemHealthService {
                 .lastCheckedAt(Instant.now().toString())
                 .refreshIntervalSeconds(refreshIntervalSeconds)
 
-                // Messages
                 .apiMessage(apiStatus.equals("OK")
                         ? "Backend API is responding normally."
                         : "Backend API is not responding. Check if Spring Boot is running.")
@@ -79,7 +78,6 @@ public class SystemHealthService {
                         : "SMTP configuration is missing or invalid.")
                 .aiServiceMessage(getAiServiceMessage(aiServiceStatus))
 
-                // Service details
                 .backendUrl("http://localhost:" + serverPort)
                 .aiServiceUrl(aiServiceHealthUrl)
                 .aiModel(System.getenv("GROQ_MODEL") != null

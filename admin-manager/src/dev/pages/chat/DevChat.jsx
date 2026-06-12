@@ -29,7 +29,6 @@ const DevChat = () => {
   const [ticketChoiceDone, setTicketChoiceDone] = useState(false);
   const [ticketStatus, setTicketStatus] = useState("");
 
-  // React Query hook - auto-refetch every 30s
   const { data: tasks = [], isLoading: loadingProject, error: queryError } = useAssignedTasks();
   const error = queryError?.message || "";
 
@@ -69,7 +68,6 @@ const DevChat = () => {
     resolvedProjectId && currentUserId && !authLoading && !loadingProject
   );
 
-  // Show error if no project available
   const displayError = !loadingProject && !resolvedProjectId && !error
     ? "No backend project is available for chat yet. Sync tasks from the dashboard first."
     : error;
@@ -400,3 +398,4 @@ const sideBoxStyle = {
 };
 
 export default DevChat;
+

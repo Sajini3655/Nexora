@@ -42,7 +42,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         allowedOrigins.add("http://localhost:5173");
         allowedOrigins.add("http://127.0.0.1:5173");
 
-        // Use a custom handshake handler and interceptor to authenticate SockJS connections
         registry.addEndpoint("/ws")
             .setHandshakeHandler(new CustomHandshakeHandler())
             .setAllowedOrigins(allowedOrigins.toArray(new String[0]))

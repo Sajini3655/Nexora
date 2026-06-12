@@ -133,7 +133,7 @@ export default function ManagerTimesheets() {
           <Typography variant="h4" sx={{ fontWeight: 900, lineHeight: 1.15 }}>
             Team Timesheets
           </Typography>
-            {/* Subtitle removed per request */}
+            {}
         </Box>
 
         <Stack direction="row" spacing={1.5} sx={{ alignSelf: { xs: "stretch", md: "auto" } }} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
@@ -320,3 +320,4 @@ function chipColor(status) {
       return "default";
   }
 }
+

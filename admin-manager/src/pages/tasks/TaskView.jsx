@@ -23,7 +23,6 @@ export default function TaskView() {
         setErr(e?.response?.data?.message || "Failed to load task");
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   return (
@@ -51,4 +50,5 @@ export default function TaskView() {
     </>
   );
 }
+
 

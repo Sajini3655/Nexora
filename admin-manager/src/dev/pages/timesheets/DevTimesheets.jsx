@@ -22,6 +22,7 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import Card from "../../../components/ui/Card.jsx";
 import Input from "../../../components/ui/Input.jsx";
 import { formatDate } from "../../../utils/formatDate.js";
+import { getLocalDateInputValue, isAfterDate } from "../../../utils/dateInput";
 import {
   createTimesheet,
   deleteTimesheet,
@@ -82,6 +83,7 @@ export default function DevTimesheets() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const todayDate = getLocalDateInputValue();
 
   const loadData = useCallback(async () => {
     try {
@@ -157,11 +159,22 @@ export default function DevTimesheets() {
       setError("");
       setMessage("");
 
+      const parsedHours = Number(form.hours);
+      if (!Number.isFinite(parsedHours) || parsedHours <= 0 || parsedHours >= 24) {
+        setError("Hours must be greater than 0 and less than 24.");
+        return;
+      }
+
+      if (form.workDate && isAfterDate(form.workDate, todayDate)) {
+        setError("Timesheet date cannot be in the future.");
+        return;
+      }
+
       const payload = {
         projectId: Number(form.projectId),
         taskId: form.taskId ? Number(form.taskId) : null,
         workDate: form.workDate,
-        hours: Number(form.hours),
+        hours: parsedHours,
         description: form.description,
         workLocation: form.workLocation,
         saveAsDraft: true,
@@ -336,9 +349,21 @@ export default function DevTimesheets() {
         </Stack>
       )}
 
-      <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="md">
-        <DialogTitle>{editingId ? "Edit Draft Timesheet" : "Add Draft Timesheet"}</DialogTitle>
-        <DialogContent dividers>
+      <Dialog
+        open={dialogOpen}
+        onClose={closeDialog}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            backgroundColor: "var(--nx-card)",
+            color: "var(--nx-text)",
+            backgroundImage: "none",
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "var(--nx-text)" }}>{editingId ? "Edit Draft Timesheet" : "Add Draft Timesheet"}</DialogTitle>
+        <DialogContent dividers sx={{ backgroundColor: "var(--nx-card)", color: "var(--nx-text)", borderTopColor: "var(--nx-border)", borderBottomColor: "var(--nx-border)" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Input
               select
@@ -376,6 +401,7 @@ export default function DevTimesheets() {
                   label="Date"
                   value={form.workDate}
                   onChange={(event) => setForm((current) => ({ ...current, workDate: event.target.value }))}
+                  inputProps={{ max: todayDate }}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
@@ -383,7 +409,7 @@ export default function DevTimesheets() {
                 <Input
                   type="number"
                   label="Hours"
-                  inputProps={{ step: "0.25", min: "0" }}
+                  inputProps={{ step: "0.25", min: "0", max: "23.75" }}
                   value={form.hours}
                   onChange={(event) => setForm((current) => ({ ...current, hours: event.target.value }))}
                 />
@@ -419,7 +445,7 @@ export default function DevTimesheets() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ backgroundColor: "var(--nx-card)", color: "var(--nx-text)" }}>
           <Button onClick={closeDialog}>Cancel</Button>
           <Button variant="contained" onClick={handleSave} disabled={savingKey === "save"}>
             {editingId ? "Update Draft" : "Save Draft"}

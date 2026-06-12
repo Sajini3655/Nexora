@@ -13,7 +13,6 @@ public interface TaskRepository extends JpaRepository<TaskItem, Long> {
     long countByCreatedBy_Id(Long userId);
     long countByAssignedTo_Id(Long userId);
 
-    // 🔥 ADD THESE
 
     List<TaskItem> findByCreatedById(Long userId);
 

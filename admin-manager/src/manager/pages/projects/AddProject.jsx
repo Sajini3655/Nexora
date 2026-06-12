@@ -16,6 +16,7 @@ import { createProject, getErrorMessage, fetchManagerClients } from "../../../se
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 import { useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { getLocalDateInputValue, isBeforeDate } from "../../../utils/dateInput";
 
 const emptyTask = {
   title: "",
@@ -44,6 +45,7 @@ export default function AddProject() {
   const queryClient = useQueryClient();
   const { user, moduleAccess } = useAuth();
   const scope = getManagerQueryScope(user);
+  const todayDate = useMemo(() => getLocalDateInputValue(), []);
   const canCreate = useMemo(() => {
     if (!projectName.trim()) return false;
     if (!projectDescription.trim()) return false;
@@ -113,8 +115,12 @@ export default function AddProject() {
       return;
     }
 
-    // Validate story points (only if any are added)
     for (const task of tasks) {
+      if (task.dueDate && isBeforeDate(task.dueDate, todayDate)) {
+        setError("Task due dates must be today or later.");
+        return;
+      }
+
       for (const sp of task.storyPoints) {
         if (!sp.title.trim()) {
           setError("Story point title is required if story point is added.");
@@ -159,7 +165,6 @@ export default function AddProject() {
           await queryClient.invalidateQueries({ queryKey: managerKeys.projects(scope) });
           await queryClient.refetchQueries({ queryKey: managerKeys.projects(scope) });
         } catch (e) {
-          // ignore cache operations, navigate anyway
         }
         navigate(`/manager/project-management/${createdProjectId}`);
       }
@@ -177,7 +182,6 @@ export default function AddProject() {
         const list = await fetchManagerClients();
         if (mounted) setClients(list);
       } catch (err) {
-        // ignore client load errors here
       }
     })();
     return () => { mounted = false; };
@@ -201,14 +205,14 @@ export default function AddProject() {
         <Typography sx={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2, mt: 0.3 }}>
           Add Project
         </Typography>
-            {/* Subtitle removed per request */}
+            {}
       </Paper>
 
       {error ? <ErrorNotice message={error} severity="error" sx={{ mb: 2 }} dedupeKey="add-project-error" /> : null}
       {success ? <ErrorNotice message={success} severity="success" sx={{ mb: 2 }} dedupeKey="add-project-success" /> : null}
 
       <Stack spacing={2}>
-        {/* PROJECT DETAILS SECTION */}
+        {}
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-card)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2 }}>Project Details</Typography>
           <Stack spacing={1.2}>
@@ -244,7 +248,7 @@ export default function AddProject() {
           </Stack>
         </Paper>
 
-        {/* TASKS SECTION */}
+        {}
         {Boolean(moduleAccess?.TASKS) && (
           <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-card)" }}>
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} sx={{ mb: 1.5 }}>
@@ -271,7 +275,7 @@ export default function AddProject() {
                 elevation={0}
                 sx={{ p: 1.4, borderRadius: 2, border: "1px solid var(--nx-border)", background: "var(--nx-panel-2)" }}
               >
-                {/* Task header */}
+                {}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.2 }}>
                   <Typography sx={{ fontWeight: 700, color: "var(--nx-text-soft)" }}>
                     Task {taskIndex + 1}
@@ -289,7 +293,7 @@ export default function AddProject() {
                   </Button>
                 </Box>
 
-                {/* Task fields */}
+                {}
                 <Stack spacing={1} sx={{ mb: 1.5 }}>
                   <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.2fr 1fr 0.8fr" }, gap: 1 }}>
                     <TextField
@@ -316,6 +320,7 @@ export default function AddProject() {
                       label="Due date (optional)"
                       value={task.dueDate}
                       onChange={(e) => handleTaskChange(taskIndex, "dueDate", e.target.value)}
+                      inputProps={{ min: todayDate }}
                       InputLabelProps={{ shrink: true }}
                     />
                   </Box>
@@ -331,7 +336,7 @@ export default function AddProject() {
                   />
                 </Stack>
 
-                {/* Story Points subsection */}
+                {}
                 <Box sx={{ mt: 1.5, pt: 1.5, borderTop: "1px solid var(--nx-border)" }}>
                   <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} sx={{ mb: 1 }}>
                     <Box>
@@ -410,7 +415,7 @@ export default function AddProject() {
         )}
         
 
-        {/* ACTION BUTTONS */}
+        {}
         <Stack direction="row" spacing={1}>
           <Button
             type="submit"
@@ -441,4 +446,5 @@ export default function AddProject() {
     </Box>
   );
 }
+
 

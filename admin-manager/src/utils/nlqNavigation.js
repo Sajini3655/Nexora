@@ -1,4 +1,3 @@
-// src/utils/nlqNavigation.js
 
 function normalize(text) {
   return String(text || "")
@@ -19,7 +18,6 @@ function levenshtein(a, b) {
   const m = s.length;
   const n = t.length;
 
-  // two-row DP
   let prev = new Array(n + 1);
   let curr = new Array(n + 1);
 
@@ -69,7 +67,6 @@ function tokenContainScore(query, candidate) {
 }
 
 function scoreCandidate(query, candidate) {
-  // Blend a "contains/tokens" score with edit-distance similarity.
   const contain = tokenContainScore(query, candidate);
   const sim = similarity(query, candidate);
   return Math.max(contain, sim * 0.92);
@@ -95,14 +92,12 @@ export function parseNlqQuery(raw) {
             ? "timesheet"
             : "";
 
-  // Extract entity name: remove leading navigation words and entity type keywords
   let text = stripped
     .replace(/^(the\s+)?project(s)?\b\s*/i, "")
     .replace(/^(the\s+)?ticket(s)?\b\s*/i, "")
     .replace(/^(the\s+)?task(s)?\b\s*/i, "")
     .trim();
 
-  // If text is still empty after removing entity keywords, use the full stripped version
   if (!text && stripped) {
     text = stripped;
   }
@@ -121,7 +116,6 @@ function isAllowedByModule(role, requiredModule, moduleAccess) {
 }
 
 const NAV_ITEMS = [
-  // ADMIN
   {
     role: "ADMIN",
     label: "Admin Dashboard",
@@ -159,7 +153,6 @@ const NAV_ITEMS = [
     keywords: ["profile", "my profile", "account", "me"],
   },
 
-  // MANAGER
   {
     role: "MANAGER",
     label: "Manager Dashboard",
@@ -213,7 +206,6 @@ const NAV_ITEMS = [
     keywords: ["profile", "my profile", "account", "me"],
   },
 
-  // DEVELOPER
   {
     role: "DEVELOPER",
     label: "Developer Dashboard",
@@ -261,7 +253,6 @@ const NAV_ITEMS = [
     keywords: ["timesheets", "time sheets"],
   },
 
-  // CLIENT
   {
     role: "CLIENT",
     label: "Client Dashboard",
@@ -326,7 +317,6 @@ export function resolveNlqRoute(rawQuery, { currentRole, moduleAccess }) {
   const parsed = parseNlqQuery(rawQuery);
   const role = String(currentRole || "").toUpperCase();
 
-  // 1) Try the current role first.
   const bestForRole = bestNavMatch(parsed.text, role, moduleAccess);
   if (bestForRole && bestForRole.score >= 0.72) {
     return {
@@ -337,7 +327,6 @@ export function resolveNlqRoute(rawQuery, { currentRole, moduleAccess }) {
     };
   }
 
-  // 2) If it strongly matches another role, tell user to switch roles.
   const bestAcrossRoles = bestNavMatch(parsed.text, role, moduleAccess, { includeOtherRoles: true });
   if (bestAcrossRoles && bestAcrossRoles.score >= 0.78 && bestAcrossRoles.item.role !== role) {
     return {
@@ -348,8 +337,6 @@ export function resolveNlqRoute(rawQuery, { currentRole, moduleAccess }) {
     };
   }
 
-  // 3) If it matches a current-role item but is blocked by a module, report that.
-  // We do this by re-scoring without module filtering.
   const bestIgnoringModule = (() => {
     const q = String(parsed.text || "").trim();
     if (!q) return null;
@@ -399,3 +386,4 @@ export function bestEntityMatch(query, entities, { getLabel, getId, threshold = 
   if (!best || best.score < threshold) return null;
   return best;
 }
+

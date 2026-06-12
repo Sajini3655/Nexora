@@ -32,10 +32,7 @@ public class DeveloperProfile {
     @Column(nullable = false)
     private AvailabilityStatus availabilityStatus;
 
-    /**
-     * Capacity in story points (or "effort points") for active work.
-     * Used by the matching algorithm as a simple workload cap.
-     */
+    
     @Column(nullable = false)
     private Integer capacityPoints;
 
@@ -45,7 +42,6 @@ public class DeveloperProfile {
     @Column(nullable = false)
     private Integer yearsOfExperience;
 
-    // Extra profile fields (developer UI)
     private String phone;
     private String location;
     private String specialization;
@@ -79,3 +75,4 @@ public class DeveloperProfile {
         updatedAt = LocalDateTime.now();
     }
 }
+

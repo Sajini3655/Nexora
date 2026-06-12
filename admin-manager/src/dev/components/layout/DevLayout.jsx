@@ -19,7 +19,7 @@ export default function DevLayout({ children }) {
         workspace="Developer Workspace"
       />
 
-      {/* Real spacer for fixed topbar */}
+      {}
       <Box sx={{ height: { xs: "112px", md: "116px" } }} />
 
       <DevSidebar
@@ -47,3 +47,4 @@ export default function DevLayout({ children }) {
     </Box>
   );
 }
+

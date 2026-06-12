@@ -9,8 +9,7 @@ public interface DeveloperProfileRepository extends JpaRepository<DeveloperProfi
 
     long countByUser_Id(Long userId);
 
-    // 🔥 ADD THESE
     Optional<DeveloperProfile> findByUser_Id(Long userId);
 
-    Optional<DeveloperProfile> findByUserId(Long userId); // for your services
+    Optional<DeveloperProfile> findByUserId(Long userId);
 }

@@ -25,9 +25,7 @@ public class DeveloperSkill {
     @Column(nullable = false)
     private String name;
 
-    /**
-     * Skill proficiency level (1..5)
-     */
+    
     @Column(nullable = false)
     private Integer level;
 
@@ -40,3 +38,4 @@ public class DeveloperSkill {
         if (level == null) level = 3;
     }
 }
+
