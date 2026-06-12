@@ -21,6 +21,6 @@ export const layoutGaps = {
     toolbarMinHeight: 72,
   },
 
-  // Single value all layouts use for content top gap after topbar spacer
   contentTopGap: "32px",
 };
+

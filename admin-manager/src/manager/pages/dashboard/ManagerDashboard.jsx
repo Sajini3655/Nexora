@@ -362,7 +362,6 @@ export default function ManagerDashboard() {
     totalPointValue: 0,
     delayedTaskCount: 0,
   });
-  // Wait for auth to load before enabling queries to avoid race conditions
   const projectsQuery = useManagerProjects(!authLoading);
   const tasksQuery = useManagerTasks(!authLoading);
   const developersQuery = useManagerDevelopers(!authLoading);
@@ -378,16 +377,12 @@ export default function ManagerDashboard() {
   const queryClient = useQueryClient();
   const managerScope = React.useMemo(() => String(user?.id ?? user?.email ?? ""), [user?.id, user?.email]);
 
-  // Trigger lightweight invalidation when live updates arrive
   const loadDashboard = React.useCallback(() => {
     try {
-      // Invalidate relevant project/task/developer caches only.
-      // Ticket snapshot updates on its own schedule and should not be refreshed by task websocket events.
       queryClient.invalidateQueries({ queryKey: managerKeys.projects(managerScope) });
       queryClient.invalidateQueries({ queryKey: managerKeys.tasks(managerScope) });
       queryClient.invalidateQueries({ queryKey: managerKeys.developers(managerScope) });
     } catch (e) {
-      // swallow — individual queries handle errors
     }
   }, [managerScope, queryClient]);
 
@@ -402,7 +397,6 @@ export default function ManagerDashboard() {
   useLiveRefresh(liveTopics, loadDashboard, { debounceMs: 2500 });
 
   React.useEffect(() => {
-    // Only refresh if tab becomes visible after being hidden (page resume)
     const refreshWhenResumed = () => {
       if (document.visibilityState === "visible") {
         loadDashboard();
@@ -480,7 +474,6 @@ export default function ManagerDashboard() {
   const getProjectDescription = (project) =>
     project?.description ?? project?.projectDescription ?? "No description available.";
 
-  // Helper: Extract assignee ID from a task object
   const getTaskAssigneeId = (task) => {
     if (!task || typeof task !== "object") return "";
     return String(
@@ -501,7 +494,6 @@ export default function ManagerDashboard() {
     ).trim();
   };
 
-  // Helper: Extract assignee name from a task object
   const getTaskAssigneeName = (task) => {
     if (!task || typeof task !== "object") return "";
     return String(
@@ -522,7 +514,6 @@ export default function ManagerDashboard() {
     ).trim();
   };
 
-  // Helper: Check if task has an assignee (by ID or name)
   const hasTaskAssignee = (task) => {
     const assigneeId = getTaskAssigneeId(task);
     const assigneeName = getTaskAssigneeName(task);
@@ -593,8 +584,6 @@ export default function ManagerDashboard() {
     return false;
   };
 
-  // Merge nested objects while preserving non-empty existing values,
-  // but allowing metric fields to be filled when existing numeric values are zero.
   const mergeObjectsPreferExisting = (existingObj, incomingObj) => {
     const merged = { ...existingObj };
 
@@ -621,8 +610,6 @@ export default function ManagerDashboard() {
     return merged;
   };
 
-  // Helper: Merge duplicate task objects where manager-task assignee identity wins,
-  // and project-task metrics fill missing/zero values.
   const mergeTaskObjects = (existingTask, newTask) => {
     if (!newTask || typeof newTask !== "object") return existingTask;
     if (!existingTask || typeof existingTask !== "object") return newTask;
@@ -655,7 +642,6 @@ export default function ManagerDashboard() {
       }
     });
 
-    // Never allow project-task merge to clear assignee identity once present.
     if (hasTaskAssignee(existingTask) && !hasTaskAssignee(merged)) {
       return existingTask;
     }
@@ -666,7 +652,6 @@ export default function ManagerDashboard() {
   const tasks = useMemo(() => {
     const taskMap = new Map();
 
-    // Add manager tasks first (these have the most complete assignee data)
     managerTasks.forEach((task) => {
       if (!task || typeof task !== "object") return;
 
@@ -679,14 +664,12 @@ export default function ManagerDashboard() {
       ).trim();
 
       if (!idKey) {
-        // If no ID, add as-is (edge case)
         taskMap.set(`_no_id_${taskMap.size}`, task);
       } else {
         taskMap.set(idKey, task);
       }
     });
 
-    // Add or merge project tasks
     projects.forEach((project) => {
       const projectTasks = Array.isArray(project?.tasks) ? project.tasks : [];
       projectTasks.forEach((task) => {
@@ -701,14 +684,11 @@ export default function ManagerDashboard() {
         ).trim();
 
         if (!idKey) {
-          // If no ID, add as-is
           taskMap.set(`_no_id_${taskMap.size}`, task);
         } else if (taskMap.has(idKey)) {
-          // Merge with existing, preserving assignee data from manager task
           const existing = taskMap.get(idKey);
           taskMap.set(idKey, mergeTaskObjects(existing, task));
         } else {
-          // New task from project
           taskMap.set(idKey, task);
         }
       });
@@ -717,7 +697,6 @@ export default function ManagerDashboard() {
     return Array.from(taskMap.values());
   }, [managerTasks, projects]);
 
-  // Use the merged manager-scoped task list for progress metrics.
   const dashboardTasks = tasks;
 
   const tasksByProject = useMemo(() => {
@@ -854,13 +833,10 @@ export default function ManagerDashboard() {
   }, [dashboardTasks]);
 
   const visibleTickets = useMemo(() => {
-    // Filter tickets to only show those related to current manager's projects
     const projectIds = new Set(projects.map((p) => getProjectId(p)).filter(Boolean));
     
     return [...tickets]
       .filter((ticket) => {
-        // Only include tickets that belong to current manager's projects
-        // or tickets without projectId (show them as a fallback)
         const ticketProjectId = String(
           ticket?.projectId ??
           ticket?.project_id ??
@@ -869,13 +845,10 @@ export default function ManagerDashboard() {
           ""
         ).trim();
         
-        // If ticket has no project ID, include it (fallback)
         if (!ticketProjectId) return isVisibleSnapshotTicket(ticket);
         
-        // If ticket belongs to a current manager project, include it
         if (projectIds.has(ticketProjectId)) return isVisibleSnapshotTicket(ticket);
         
-        // Otherwise exclude the ticket (belongs to another manager's project)
         return false;
       })
       .sort((a, b) => getTicketTimestamp(b) - getTicketTimestamp(a));
@@ -1009,7 +982,7 @@ export default function ManagerDashboard() {
         title="Manager Dashboard"
       />
 
-      {/* Show errors inline inside their relevant widgets instead of a global banner */}
+      {}
 
       {initialLoading ? (
         <Grid container spacing={1.6} sx={{ mb: 2.4 }}>
@@ -1390,4 +1363,5 @@ export default function ManagerDashboard() {
     </Box>
   );
 }
+
 

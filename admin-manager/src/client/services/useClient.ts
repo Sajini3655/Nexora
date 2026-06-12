@@ -5,18 +5,14 @@ import {
   createClientTicket,
 } from "./clientService";
 
-/**
- * Query key factory for client-side queries
- */
+
 export const clientDataKeys = {
   all: ["clientData"] as const,
   tickets: () => [...clientDataKeys.all, "tickets"] as const,
   projects: () => [...clientDataKeys.all, "projects"] as const,
 };
 
-/**
- * Fetch all client tickets with a 5 minute staleTime.
- */
+
 export function useClientTickets(enabled = true) {
   return useQuery({
     queryKey: clientDataKeys.tickets(),
@@ -28,9 +24,7 @@ export function useClientTickets(enabled = true) {
   });
 }
 
-/**
- * Fetch all client projects with a 5 minute staleTime.
- */
+
 export function useClientProjects(enabled = true) {
   return useQuery({
     queryKey: clientDataKeys.projects(),
@@ -42,19 +36,15 @@ export function useClientProjects(enabled = true) {
   });
 }
 
-/**
- * Create a new client ticket
- */
+
 export function useCreateClientTicket() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createClientTicket,
     onSuccess: (newTicket) => {
-      // Invalidate tickets list to refetch
       queryClient.invalidateQueries({
         queryKey: clientDataKeys.tickets(),
       });
-      // Optimistically update: prepend new ticket to cache
       queryClient.setQueryData(clientDataKeys.tickets(), (old: any[]) => {
         if (!Array.isArray(old)) return [newTicket];
         return [newTicket, ...old];
@@ -62,3 +52,4 @@ export function useCreateClientTicket() {
     },
   });
 }
+

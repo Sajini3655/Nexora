@@ -18,8 +18,6 @@ export default class ErrorBoundary extends React.Component {
         this.props.onError(error, info);
       } catch (_) {}
     }
-    // still log to console for diagnostics
-    // eslint-disable-next-line no-console
     console.error("Captured error in ErrorBoundary:", error, info);
   }
 
@@ -47,3 +45,4 @@ export default class ErrorBoundary extends React.Component {
     );
   }
 }
+

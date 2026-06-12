@@ -16,7 +16,7 @@ export default function ClientLayout({ children }) {
     >
       <ClientTopbar onToggleSidebar={() => setSidebarOpen(true)} />
 
-      {/* Real spacer for fixed topbar */}
+      {}
       <Box sx={{ height: { xs: "116px", md: "122px" } }} />
 
       <ClientSidebar
@@ -44,3 +44,4 @@ export default function ClientLayout({ children }) {
     </Box>
   );
 }
+

@@ -1,8 +1,4 @@
-// src/data/profileStore.js
-// Simple UI-only profile persistence (localStorage)
 
-// In the combined project, we also sync the developer profile (especially skills)
-// to the shared backend so the Manager "AI Task Assignment" can use it.
 import { API_BASE_URL } from "../../utils/constants";
 
 const STORAGE_KEY = "nexora_dev_profile_v1";
@@ -26,7 +22,6 @@ const defaultProfile = {
   capacityPoints: 20,
   weeklyCapacityHours: 40,
   yearsOfExperience: 1,
-  // UI demo only (do NOT store real passwords like this in real apps)
   password: "password",
 };
 
@@ -86,12 +81,10 @@ async function apiFetch(path, options = {}) {
   return res;
 }
 
-// Try to load profile from backend. Falls back to local profile if not available.
 export async function loadProfileFromBackendSafe() {
   try {
     const res = await apiFetch("/developer/profile", { method: "GET" });
     const data = await res.json();
-    // convert backend format -> UI profile format
     const local = loadProfile();
     const skills = Array.isArray(data.skills)
       ? data.skills.map((s, idx) => ({
@@ -124,7 +117,6 @@ export async function loadProfileFromBackendSafe() {
   }
 }
 
-// Sync local profile to backend so manager-side recommendation uses latest skills.
 export async function syncProfileToBackend(profile) {
   const payload = {
     name: profile.name,
@@ -150,7 +142,6 @@ export async function syncProfileToBackend(profile) {
     body: JSON.stringify(payload),
   });
   const data = await res.json();
-  // write back to local storage (keeps consistent)
   const merged = {
     ...profile,
     name: data.name ?? profile.name,
@@ -169,4 +160,5 @@ export async function syncProfileToBackend(profile) {
   saveProfile(merged);
   return merged;
 }
+
 

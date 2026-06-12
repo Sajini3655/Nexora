@@ -265,7 +265,6 @@ function writeTicketCache(data) {
       window.sessionStorage.setItem(CLIENT_TICKET_CACHE_KEY, JSON.stringify(payload));
     }
   } catch {
-    // Ignore storage write errors and keep in-memory cache.
   }
 }
 
@@ -462,7 +461,6 @@ export async function createClientTicket(payload) {
 
     const uiTicket = toUiTicket(data, 0);
     
-    // Force refresh tickets from server
     writeTicketCache([uiTicket]);
     
     return uiTicket;
@@ -471,4 +469,5 @@ export async function createClientTicket(payload) {
     throw error;
   }
 }
+
 

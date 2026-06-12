@@ -167,7 +167,6 @@ function buildSummariesFromTasks(developers, tasks) {
     }
 
     const summary = byId.get(key);
-    // Keep story point math aligned with weighted point math when story-point fields are absent.
     const totalStoryPoints = numberOrZero(task?.totalStoryPoints ?? task?.totalPointValue);
     const completedStoryPoints = numberOrZero(
       task?.completedStoryPoints ?? task?.completedPointValue
@@ -215,32 +214,25 @@ export default function ManagerDeveloperProgress({
   onRetry,
   onTotalsChange,
 }) {
-  // Always call hooks in the same order, regardless of branch
   const developersQuery = useManagerDevelopers();
   const tasksQuery = useManagerTasks();
 
-  // Determine if external data is provided
   const hasExternalData = Array.isArray(developersData) && Array.isArray(tasksData);
 
-  // Resolve effective data sources
   const developers = hasExternalData ? developersData : (Array.isArray(developersQuery?.data) ? developersQuery.data : []);
   const tasks = hasExternalData ? tasksData : (Array.isArray(tasksQuery?.data) ? tasksQuery.data : []);
 
-  // Resolve effective loading and error states
   const loading = hasExternalData ? Boolean(loadingOverride) : (developersQuery?.isLoading || tasksQuery?.isLoading);
   const rawError = hasExternalData ? (errorOverride || null) : (developersQuery?.error || tasksQuery?.error || null);
 
-  // Build rows from provided/fetched data
   const rows = useMemo(() => {
     return buildSummariesFromTasks(developers, tasks);
   }, [developers, tasks]);
 
-  // Filter visible rows (those with assignedTasks > 0)
   const visibleRows = useMemo(() => {
     return (Array.isArray(rows) ? rows : []).filter((row) => Number(row.assignedTasks ?? 0) > 0);
   }, [rows]);
 
-  // Calculate totals from visible rows only
   const totals = useMemo(() => {
     const assignedTasks = visibleRows.reduce((sum, row) => sum + Number(row.assignedTasks || 0), 0);
     const completedPoints = visibleRows.reduce((sum, row) => sum + Number(row.completedStoryPoints || 0), 0);
@@ -251,12 +243,10 @@ export default function ManagerDeveloperProgress({
     return { assignedTasks, completedPoints, totalPoints, completedPointValue, totalPointValue };
   }, [visibleRows]);
 
-  // Count delayed tasks from tasks array
   const delayedTaskCount = useMemo(() => {
     return (Array.isArray(tasks) ? tasks.filter(isDelayedTask).length : 0);
   }, [tasks]);
 
-  // Determine error state - only show error if no usable data
   const hasUsableData = visibleRows.length > 0;
   const effectiveError = hasUsableData ? null : rawError;
   const effectiveForbidden = effectiveError?.response?.status === 403;
@@ -266,7 +256,6 @@ export default function ManagerDeveloperProgress({
       : getErrorMessage(effectiveError, effectiveError?.message || "Failed to load developer progress")
     : "";
 
-  // Track and emit totals changes
   const lastEmittedTotalsRef = useRef(null);
 
   useEffect(() => {
@@ -297,7 +286,6 @@ export default function ManagerDeveloperProgress({
     onTotalsChange(nextTotals);
   }, [onTotalsChange, totals, delayedTaskCount]);
 
-  // Render component
   return (
     <Paper
       sx={{
@@ -361,6 +349,7 @@ export default function ManagerDeveloperProgress({
     </Paper>
   );
 }
+
 
 
 

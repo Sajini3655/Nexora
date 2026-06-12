@@ -1,4 +1,3 @@
-// src/components/layout/ProtectedRoute.jsx
 import React from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
@@ -69,4 +68,5 @@ export default function ProtectedRoute({ allowedRoles, requiredModule }) {
 
   return <Outlet />;
 }
+
 

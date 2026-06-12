@@ -26,7 +26,6 @@ export default function DevWorkspace() {
     }
   }, []);
 
-  // Sync backend tasks on mount, then refresh from live backend events.
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -103,7 +102,7 @@ export default function DevWorkspace() {
         </Box>
       </Box>
 
-      {/* Tasks Grid */}
+      {}
       <Grid container spacing={2.5}>
         <Grid item xs={12} md={8}>
           <Card sx={{ p: 3 }}>
@@ -149,4 +148,5 @@ export default function DevWorkspace() {
     </>
   );
 }
+
 

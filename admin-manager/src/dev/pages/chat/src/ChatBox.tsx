@@ -55,7 +55,7 @@ interface ChatBoxProps {
   onClose?: () => void;
   hideSidebar?: boolean;
   hideNewChatButton?: boolean;
-  selectedSessionId?: string | null; // null = new chat, string = specific thread
+  selectedSessionId?: string | null;
 }
 
 const WS_URL = `${API_BASE_URL}/ws`;
@@ -143,8 +143,6 @@ function normalizeAiResult(data: any, messages: Message[]): ChatEndResult {
         .map((item: string) => item.trim())
     : [];
 
-  // Prefer AI-detected blockers, but if AI returns none and local keyword
-  // detection finds blockers, use those so developer messages trigger tickets.
   const blockers = aiBlockers.length > 0 ? aiBlockers : fallbackBlockers;
 
   return {
@@ -205,7 +203,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   const stompClientRef = useRef<Client | null>(null);
   const wsActivateTimerRef = useRef<number | null>(null);
 
-  // React Query hooks
   const { data: sessionData } = useChatSession(selectedSessionId, !!selectedSessionId);
   const { data: messagesData } = useMessages(selectedSessionId, !!selectedSessionId);
   const sendMessageMutation = useSendMessage();
@@ -288,9 +285,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         setShowTicketPrompt(false);
         setSocketConnected(false);
 
-        // If selectedSessionId is provided, load that specific session (via React Query)
         if (selectedSessionId) {
-          // sessionData and messagesData from React Query hooks
           if (!sessionData || !sessionData.id) {
             throw new Error("Chat session not found.");
           }
@@ -300,7 +295,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           setSessionId(String(sessionData.id));
           setSessionStartedById(sessionData.startedById != null ? String(sessionData.startedById) : null);
 
-          // messagesData already loaded via useMessages hook
           const sessionMessages = Array.isArray(messagesData) ? messagesData : [];
 
           const mappedMessages: Message[] = sessionMessages
@@ -338,8 +332,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             }
           }
         }
-        // If selectedSessionId is null, we're creating a new chat - don't load anything yet
-        // The session will be created on first message
       } catch (error: any) {
         if (!cancelled) {
           setErrorMessage(error?.message || "Failed to initialize chat session.");
@@ -456,7 +448,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       setSending(true);
       setErrorMessage("");
 
-      // If no session exists yet (new chat), create one before sending
       let currentSessionId = sessionId;
       if (!currentSessionId) {
         setLoadingSession(true);
@@ -471,16 +462,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         throw new Error("Failed to create chat session.");
       }
 
-      // Send via HTTP API
 
-       // Send via React Query mutation
        const savedMessage = await sendMessageMutation.mutateAsync({
          sessionId: currentSessionId,
          content: messageText,
        });
  
-       // Optimistic update: add message immediately to chat
-       // The WebSocket will broadcast it back from the server for other users
       setChat((prev) => {
         const exists = prev.some((m) =>
           m.user === "me" &&
@@ -590,7 +577,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       }
 
       const blockerOrReason = ticketReasonFromSummary(summaryData.summary, summaryData.blockers);
-       // Use React Query mutation
        const created = await createTicketMutation.mutateAsync({
          projectId,
          blocker: blockerOrReason,
@@ -626,7 +612,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   );
 
   const styles: { [key: string]: CSSProperties } = {
-    // Modal-optimized container (when used in a Dialog/Modal)
     modalContainer: {
       display: "flex",
       flexDirection: "column",
@@ -634,7 +619,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       minHeight: 0,
       background: "var(--nx-bg)",
     },
-    // Header for modal
     modalHeader: {
       padding: "16px 18px",
       borderBottom: "1px solid var(--nx-border)",
@@ -645,7 +629,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       background: "var(--nx-panel)",
       flexShrink: 0,
     },
-    // Messages container - scrollable
     messageContainer: {
       flex: 1,
       minHeight: 0,
@@ -656,7 +639,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       gap: 12,
       background: "var(--nx-bg)",
     },
-    // Composer section - always visible at bottom
     composerSection: {
       padding: 12,
       borderTop: "1px solid var(--nx-border)",
@@ -782,7 +764,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       letterSpacing: 0.7,
       textTransform: "uppercase",
     },
-    // Old full-page styles preserved for backwards compatibility when hideSidebar is false
     shell: {
       minHeight: 360,
       display: "grid",
@@ -859,10 +840,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
   return (
     <div style={hideSidebar ? styles.modalContainer : styles.shell} className="nx-chat-shell">
-      {/* Modal-optimized render path when hideSidebar is true */}
+      {}
       {hideSidebar ? (
         <>
-          {/* Modal Header */}
+          {}
           <div style={styles.modalHeader}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 900, color: "var(--nx-red)" }}>
@@ -894,7 +875,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             </div>
           </div>
 
-          {/* Messages Area */}
+          {}
           <section style={styles.messageContainer} ref={chatWindowRef}>
             {loadingSession ? (
               <div style={styles.emptyState}>Loading chat session...</div>
@@ -989,7 +970,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             )}
           </section>
 
-          {/* Composer Section - Always visible */}
+          {}
           <div style={styles.composerSection}>
             <div style={styles.composerInputRow}>
               <input
@@ -1033,7 +1014,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
           </div>
         </>
       ) : (
-        /* Full-page render path (original implementation) */
+        
         <>
           {!hideSidebar && (
             <aside style={styles.sidebar} className="nx-chat-sidebar">
@@ -1332,11 +1313,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             }
           }
 
-          /* Improve placeholder visibility and ensure input stays visible when embedded */
+          
           .nx-chat-shell input::placeholder { color: var(--nx-muted); }
           .nx-chat-shell input { caret-color: var(--nx-purple); }
           
-          /* Scrollbar styling for message container */
+          
           .nx-chat-shell section::-webkit-scrollbar {
             width: 8px;
           }
@@ -1357,6 +1338,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 };
 
 export default ChatBox;
+
 
 
 

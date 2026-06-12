@@ -2,7 +2,6 @@ import React from "react";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import FolderIcon from "@mui/icons-material/Folder";
-// AutoAwesomeIcon removed — menu entry eliminated
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import ConfirmationNumberRoundedIcon from "@mui/icons-material/ConfirmationNumberRounded";
 import UnifiedSidebar from "./UnifiedSidebar.jsx";
@@ -44,3 +43,4 @@ export default function ManagerSidebar({ open, onClose }) {
     />
   );
 }
+

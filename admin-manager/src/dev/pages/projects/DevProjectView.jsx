@@ -96,8 +96,6 @@ export default function DevProjectView() {
   const currentUserName = user?.name || user?.email || "Developer";
   const canAccessChat = Boolean(moduleAccess?.CHAT);
 
-  // Fetch chat sessions using React Query with 30s refetch interval
-  // Load project tasks
   useEffect(() => {
     let active = true;
     const loadData = async () => {
@@ -121,7 +119,6 @@ export default function DevProjectView() {
     };
   }, [id]);
 
-  // Calculate project from tasks
   const project = useMemo(() => {
     const found = buildProjects(tasks).find((item) => String(item.id) === String(id));
 
@@ -142,7 +139,6 @@ export default function DevProjectView() {
     return null;
   }, [tasks, id]);
 
-  // Use custom hook for chat sessions
   const { data: sessions = [], isLoading: chatListLoading, error: chatListQueryError, refetch: refetchSessions } = useProjectSessions(project?.id, !authLoading);
 
   const chatListError = chatListQueryError?.message || "";
@@ -202,7 +198,7 @@ export default function DevProjectView() {
 
   const handleOpenNewChat = () => {
     releaseFocusedElement();
-    setSelectedSessionId(null); // null means create new
+    setSelectedSessionId(null);
     setChatDrawerOpen(true);
   };
 
@@ -507,7 +503,7 @@ export default function DevProjectView() {
         }
       </Grid>
 
-      {/* Centered Dialog-based Chat Modal */}
+      {}
       <Dialog
         open={chatDrawerOpen}
         onClose={() => setChatDrawerOpen(false)}
@@ -673,6 +669,7 @@ function InfoRow({ label, value }) {
     </Box>
   );
 }
+
 
 
 

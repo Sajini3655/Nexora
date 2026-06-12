@@ -20,7 +20,6 @@ import AIAssignment from "./manager/pages/ai/AIAssignment.jsx";
 import ManagerTimesheets from "./manager/pages/timesheets/ManagerTimesheets.jsx";
 import ManagerTickets from "./manager/pages/tickets/ManagerTickets.jsx";
 
-// Developer dashboard (merged from /developer)
 import DevDashboardHome from "./dev/pages/dashboard/DevDashboardHome.jsx";
 import DevWorkspace from "./dev/pages/workspace/DevWorkspace.jsx";
 import DevTaskList from "./dev/pages/tasks/DevTaskList.jsx";
@@ -34,7 +33,6 @@ import DevProjectView from "./dev/pages/projects/DevProjectView.jsx";
 import DevSettings from "./dev/pages/settings/DevSettings.jsx";
 import DevTimesheets from "./dev/pages/timesheets/DevTimesheets.jsx";
 
-// Client dashboard
 import ClientDashboardHome from "./client/pages/dashboard/ClientDashboardHome.jsx";
 import ClientProjectList from "./client/pages/projects/ClientProjectList.jsx";
 import ClientProjectDetails from "./client/pages/projects/ClientProjectDetails.jsx";
@@ -55,10 +53,7 @@ import { useAuth } from "./context/AuthContext.jsx";
 import { useLayout } from "./context/LayoutContext.jsx";
 import { getActiveRole, getUserRoles, setActiveRole } from "./utils/roleRouting";
 
-/**
- * Unified shell component for all roles (Admin, Manager, Developer, Client)
- * Uses consistent spacing from layoutGaps for visual alignment
- */
+
 function UnifiedShell({ children, role }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const { openSidebar: adminOpenSidebar, toggleSidebar: adminToggleSidebar } = useLayout();
@@ -75,7 +70,6 @@ function UnifiedShell({ children, role }) {
     }
   }, [role, user]);
 
-  // Determine which sidebar to render
   const renderSidebar = () => {
     switch (role?.toUpperCase()) {
       case "ADMIN":
@@ -91,7 +85,6 @@ function UnifiedShell({ children, role }) {
     }
   };
 
-  // Admin uses context for sidebar, others use state
   const handleMenuClick = role?.toUpperCase() === "ADMIN" ? adminToggleSidebar : () => setSidebarOpen((s) => !s);
 
   return (
@@ -349,6 +342,7 @@ export default function App() {
     </React.Suspense>
   );
 }
+
 
 
 

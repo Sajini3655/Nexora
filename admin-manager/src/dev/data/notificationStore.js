@@ -1,5 +1,3 @@
-// src/data/notificationStore.js
-// UI-only notifications for topbar
 
 const STORAGE_KEY = "nexora_dev_notifications_v1";
 
@@ -80,4 +78,5 @@ export function markRead(id) {
   saveNotifications(next);
   return next;
 }
+
 

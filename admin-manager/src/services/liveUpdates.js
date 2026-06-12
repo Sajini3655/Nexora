@@ -18,9 +18,6 @@ function ensureClient() {
   if (client) return client;
 
   client = new Client({
-    // SockJS websocket transport was causing noisy early-close errors in the browser.
-    // Prefer the SockJS HTTP transports so live updates still work without surfacing
-    // a failed websocket handshake when the backend is still starting up.
     webSocketFactory: () => new SockJS(getWsEndpoint(), undefined, {
       transports: ["xhr-streaming", "xhr-polling"],
     }),
@@ -72,7 +69,6 @@ function subscribeTopicOnClient(topic) {
       try {
         handler(payload);
       } catch {
-        // no-op to isolate handler failures
       }
     });
   });
@@ -87,7 +83,6 @@ function unsubscribeTopicOnClient(topic) {
   try {
     subscription.unsubscribe();
   } catch {
-    // no-op
   }
 
   stompSubscriptions.delete(topic);
@@ -100,7 +95,6 @@ function maybeShutdownClient() {
   try {
     client.deactivate();
   } catch {
-    // no-op
   }
 
   client = null;
@@ -136,4 +130,5 @@ export function subscribeLiveTopic(topic, handler) {
     maybeShutdownClient();
   };
 }
+
 

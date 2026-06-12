@@ -13,9 +13,7 @@ import {
   createProjectTicket,
 } from "./api";
 
-/**
- * Query key factory for chat-related queries
- */
+
 export const chatKeys = {
   all: ["chat"] as const,
   projectSessions: (projectId: string) => [...chatKeys.all, "projectSessions", projectId] as const,
@@ -24,68 +22,53 @@ export const chatKeys = {
   projectMessages: (projectId: string) => [...chatKeys.all, "projectMessages", projectId] as const,
 };
 
-/**
- * Fetch all chat sessions for a project
- * Auto-refetch every 30s, staleTime=0 (always refetch in background)
- */
+
 export function useProjectSessions(projectId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: chatKeys.projectSessions(projectId || ""),
     queryFn: () => getProjectSessions(projectId!),
     enabled: enabled && !!projectId,
-    refetchInterval: 30000, // 30 seconds
-    staleTime: 0, // Always stale, refetch in background
+    refetchInterval: 30000,
+    staleTime: 0,
   });
 }
 
-/**
- * Fetch a single chat session
- * Stale after 5 minutes, cached queries deduplicated
- */
+
 export function useChatSession(sessionId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: chatKeys.session(sessionId || ""),
     queryFn: () => getSession(sessionId!),
     enabled: enabled && !!sessionId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-/**
- * Fetch all messages for a session
- * Stale after 30 seconds, refetch when stale
- */
+
 export function useMessages(sessionId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: chatKeys.messages(sessionId || ""),
     queryFn: () => getMessages(sessionId!),
     enabled: enabled && !!sessionId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 30 * 1000,
   });
 }
 
-/**
- * Fetch all messages for a project
- * Stale after 30 seconds
- */
+
 export function useProjectMessages(projectId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: chatKeys.projectMessages(projectId || ""),
     queryFn: () => getProjectMessages(projectId!),
     enabled: enabled && !!projectId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 30 * 1000,
   });
 }
 
-/**
- * Start a new chat session for a project
- */
+
 export function useStartSession() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (projectId: string) => startSession(projectId),
     onSuccess: (data, projectId) => {
-      // Invalidate project sessions to refetch
       queryClient.invalidateQueries({
         queryKey: chatKeys.projectSessions(projectId),
       });
@@ -93,15 +76,12 @@ export function useStartSession() {
   });
 }
 
-/**
- * Create a new project session with pre-configured settings
- */
+
 export function useCreateProjectSession() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (projectId: string) => createProjectSession(projectId),
     onSuccess: (data, projectId) => {
-      // Invalidate project sessions to refetch
       queryClient.invalidateQueries({
         queryKey: chatKeys.projectSessions(projectId),
       });
@@ -109,17 +89,13 @@ export function useCreateProjectSession() {
   });
 }
 
-/**
- * Send a message to a chat session
- * Automatically invalidates message list after success
- */
+
 export function useSendMessage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ sessionId, content }: { sessionId: string; content: string }) =>
       sendMessage(sessionId, content),
     onSuccess: (data, variables) => {
-      // Invalidate messages for this session to refetch
       queryClient.invalidateQueries({
         queryKey: chatKeys.messages(variables.sessionId),
       });
@@ -127,10 +103,7 @@ export function useSendMessage() {
   });
 }
 
-/**
- * End a chat session with AI summary
- * Invalidates session and project sessions after success
- */
+
 export function useEndChatAI() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -144,7 +117,6 @@ export function useEndChatAI() {
       createTickets?: boolean;
     }) => endChatAI(messages, projectId, createTickets),
     onSuccess: (data, variables) => {
-      // Invalidate relevant queries
       queryClient.invalidateQueries({
         queryKey: chatKeys.projectSessions(variables.projectId),
       });
@@ -152,17 +124,13 @@ export function useEndChatAI() {
   });
 }
 
-/**
- * Save a summary to a chat session
- * Automatically invalidates session after success
- */
+
 export function useSaveSummary() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ sessionId, summary }: { sessionId: string; summary: string }) =>
       saveSummary(sessionId, summary),
     onSuccess: (data, variables) => {
-      // Invalidate this session's data to refetch
       queryClient.invalidateQueries({
         queryKey: chatKeys.session(variables.sessionId),
       });
@@ -170,9 +138,7 @@ export function useSaveSummary() {
   });
 }
 
-/**
- * Create a ticket from a chat blocker
- */
+
 export function useCreateProjectTicket() {
   return useMutation({
     mutationFn: ({
@@ -184,3 +150,4 @@ export function useCreateProjectTicket() {
     }) => createProjectTicket(projectId, blocker),
   });
 }
+

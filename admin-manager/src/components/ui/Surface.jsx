@@ -8,7 +8,7 @@ export default function Surface({ title, subtitle, children, className = "" }) {
       {title ? (
         <div className="relative mb-3 border-b border-[var(--nx-border)] pb-2.5">
           <h2 className="text-[28px] font-extrabold tracking-tight text-[var(--nx-text)] md:text-[34px]">{title}</h2>
-          {/* subtitle removed globally (avoid AI-generated subtitles) */}
+          {}
         </div>
       ) : null}
 
@@ -16,3 +16,4 @@ export default function Surface({ title, subtitle, children, className = "" }) {
     </section>
   );
 }
+
