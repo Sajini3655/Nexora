@@ -9,5 +9,6 @@ import lombok.*;
 @Builder
 public class SkillDto {
     private String name;
-    private Integer level; // 1..5
+    private Integer level;
 }
+

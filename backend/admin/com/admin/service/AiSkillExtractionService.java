@@ -20,10 +20,7 @@ public class AiSkillExtractionService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    /**
-     * Extract required skills from task using Groq AI.
-     * Falls back to keyword extraction if AI service is unavailable.
-     */
+    
     public SkillExtractionResult extract(String title, String description) {
         try {
             Map<String, Object> payload = new HashMap<>();
@@ -77,9 +74,7 @@ public class AiSkillExtractionService {
         }
     }
 
-    /**
-     * Fallback to keyword-based skill extraction when AI service is unavailable.
-     */
+    
     private SkillExtractionResult fallbackExtraction(String title, String description) {
         Map<String, List<String>> keywords = new LinkedHashMap<>();
         keywords.put("React", Arrays.asList("react", "jsx", "component", "frontend", "ui"));
@@ -137,3 +132,4 @@ public class AiSkillExtractionService {
         private final double weight;
     }
 }
+

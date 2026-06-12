@@ -47,7 +47,6 @@ public class ChatController {
         return response;
     }
 
-    // New session-centric endpoints
     @GetMapping("/project/{projectId}/sessions")
     public List<Map<String, Object>> listProjectSessions(@PathVariable Long projectId, Authentication authentication) {
         List<ChatService.ChatSessionSummaryView> sessions = chatService.getAllProjectSessionsWithSummary(projectId, authentication);
@@ -100,7 +99,6 @@ public class ChatController {
             @RequestBody Map<String, Object> body,
             Authentication authentication
     ) {
-        // Basic validation
         Object sessionObj = body.get("sessionId");
         Object contentObj = body.get("content");
         if (sessionObj == null || contentObj == null) {
@@ -120,7 +118,6 @@ public class ChatController {
 
         String content = contentObj.toString();
 
-        // Ensure authenticated
         if (authentication == null || authentication.getPrincipal() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
         }
@@ -128,33 +125,27 @@ public class ChatController {
         Object principal = authentication.getPrincipal();
         Long userId = null;
 
-        // Try common principal shapes: custom principal with getId()/getUserId(), UserDetails, or numeric name
         try {
-            // Try getId()
             try {
                 Method m = principal.getClass().getMethod("getId");
                 Object val = m.invoke(principal);
                 if (val instanceof Number) userId = ((Number) val).longValue();
                 else userId = Long.parseLong(val.toString());
             } catch (NoSuchMethodException ignore) {
-                // try getUserId()
                 try {
                     Method m2 = principal.getClass().getMethod("getUserId");
                     Object val = m2.invoke(principal);
                     if (val instanceof Number) userId = ((Number) val).longValue();
                     else userId = Long.parseLong(val.toString());
                 } catch (NoSuchMethodException ignore2) {
-                    // fallback to UserDetails or authentication name
                     if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
                         String username = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
                         userId = Long.parseLong(username);
                     } else {
-                        // try authentication.getName()
                         String name = authentication.getName();
                         try {
                             userId = Long.parseLong(name);
                         } catch (NumberFormatException nfe) {
-                            // lastly try principal.toString()
                             userId = Long.parseLong(principal.toString());
                         }
                     }

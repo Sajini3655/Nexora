@@ -215,7 +215,6 @@ public class UserService {
                     "Resent invite for role " + roleName
             );
         } catch (Exception e) {
-            // Invite logging failed - continue with email
         }
 
         try {
@@ -227,7 +226,6 @@ public class UserService {
                     null
             );
         } catch (Exception e) {
-            // Email sending failed - invite token still created
         }
 
         Map<String, String> response = new HashMap<>();
@@ -258,7 +256,6 @@ public class UserService {
         try {
             auditLogService.log(action, actorEmail, targetEmail, details);
         } catch (Exception e) {
-            // Audit logging failed - continue
         }
 
         liveUpdatePublisher.publishUsersChanged("status-updated");
@@ -306,7 +303,6 @@ public class UserService {
                     "Changed role from " + oldRole + " to " + normalizedRoles
             );
         } catch (Exception e) {
-            // Audit logging failed - continue
         }
 
         liveUpdatePublisher.publishUsersChanged("role-updated");
@@ -355,7 +351,6 @@ public class UserService {
                         "User had related records, so account was disabled instead of deleted"
                 );
             } catch (Exception e) {
-                // Audit logging failed - continue
             }
 
             liveUpdatePublisher.publishUsersChanged("disabled");
@@ -374,7 +369,6 @@ public class UserService {
                     "Deleted user account"
             );
         } catch (Exception e) {
-            // Audit logging failed - continue
         }
 
         liveUpdatePublisher.publishUsersChanged("deleted");

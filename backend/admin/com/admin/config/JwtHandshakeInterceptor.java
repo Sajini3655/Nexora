@@ -28,7 +28,6 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
                 String token = servlet.getParameter("token");
                 if (token == null || token.isBlank()) {
-                    // Try Authorization header
                     String authHeader = servlet.getHeader("Authorization");
                     if (authHeader != null && authHeader.startsWith("Bearer ")) {
                         token = authHeader.substring(7);
@@ -44,7 +43,6 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
                                 attributes.put("principal", new StompPrincipal(username));
                             }
                         } catch (Exception e) {
-                            // ignore - invalid token or user
                         }
                     }
                 }
@@ -57,6 +55,6 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
     @Override
     public void afterHandshake(@NonNull ServerHttpRequest request, @NonNull org.springframework.http.server.ServerHttpResponse response, @NonNull WebSocketHandler wsHandler, Exception exception) {
-        // no-op
     }
 }
+

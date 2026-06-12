@@ -34,10 +34,8 @@ public class JwtService {
                 .map(role -> "ROLE_" + role.name())
                 .toList();
 
-        // Keep old role claim so old working parts do not break.
         claims.put("role", "ROLE_" + user.getRole().name());
 
-        // New claim for multi-role users.
         claims.put("roles", allRoles);
 
         claims.put("name", user.getName());
@@ -118,4 +116,5 @@ public class JwtService {
                 .getBody();
     }
 }
+
 

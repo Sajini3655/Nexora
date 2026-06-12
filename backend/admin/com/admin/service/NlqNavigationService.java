@@ -333,7 +333,6 @@ public class NlqNavigationService {
                 .build();
             }
 
-            // Check for direct command matches before calling AI
             NlqResolveResponse directMatch = resolveDirectCommand(query, activeRole, moduleAccess, authentication, email);
             if (directMatch != null) {
             return directMatch;
@@ -407,10 +406,7 @@ public class NlqNavigationService {
         }
     }
 
-    /**
-     * Resolve direct command patterns before consulting AI.
-     * Handles edge cases where plural or slight variations don't match expected keywords.
-     */
+    
     private NlqResolveResponse resolveDirectCommand(
             String query,
             Role activeRole,
@@ -420,7 +416,6 @@ public class NlqNavigationService {
     ) {
         String normalized = normalize(query).toLowerCase(Locale.ROOT);
 
-        // Manager: "add projects" or "add project" -> add project page
         if (activeRole == Role.MANAGER && (normalized.equals("add projects") || normalized.equals("add project"))) {
             if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
                 return null;
@@ -431,7 +426,6 @@ public class NlqNavigationService {
                     .build();
         }
 
-        // Manager: "add task" or "add tasks" -> ai assignment page
         if (activeRole == Role.MANAGER && (normalized.equals("add task") || normalized.equals("add tasks"))) {
             if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.TASKS.name()))) {
                 return null;
@@ -442,7 +436,6 @@ public class NlqNavigationService {
                     .build();
         }
 
-        // Manager: "projects list" or "all projects" -> projects management
         if (activeRole == Role.MANAGER && (normalized.contains("projects list") || normalized.equals("all projects"))) {
             if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
                 return null;
@@ -453,7 +446,6 @@ public class NlqNavigationService {
                     .build();
         }
 
-        // No direct match
         return null;
     }
 
@@ -468,7 +460,6 @@ public class NlqNavigationService {
             String searchQuery,
             String rawQuery
     ) {
-        // Manager: navigate to specific project by name
         if (activeRole == Role.MANAGER && "MANAGER_PROJECT".equals(entityType)) {
             if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
                 return null;
@@ -484,13 +475,11 @@ public class NlqNavigationService {
             return "/manager/project-management?q=" + url(name);
         }
 
-        // Manager: navigate to tickets list (email inbox)
         if (activeRole == Role.MANAGER && "MANAGER_TICKET".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             return "/manager/tickets?q=" + url(name);
         }
 
-        // Manager: navigate to specific task by name
         if (activeRole == Role.MANAGER && "MANAGER_TASK".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
@@ -503,7 +492,6 @@ public class NlqNavigationService {
             return "/manager/tasks?q=" + url(name);
         }
 
-        // Client: navigate to specific project by name
         if (activeRole == Role.CLIENT && "CLIENT_PROJECT".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
@@ -516,7 +504,6 @@ public class NlqNavigationService {
             return "/client/projects?q=" + url(name);
         }
 
-        // Client: navigate to specific ticket by name or filter tickets
         if (activeRole == Role.CLIENT && "CLIENT_TICKET".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
@@ -529,7 +516,6 @@ public class NlqNavigationService {
             }
         }
 
-        // Developer: navigate to specific task by name
         if (activeRole == Role.DEVELOPER && "DEVELOPER_TASK".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
@@ -542,7 +528,6 @@ public class NlqNavigationService {
             return "/dev/tasks?q=" + url(name);
         }
 
-        // Developer: navigate to specific ticket by name or ID
         if (activeRole == Role.DEVELOPER && "TICKET".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
@@ -741,3 +726,4 @@ public class NlqNavigationService {
         return prev[b.length()];
     }
 }
+

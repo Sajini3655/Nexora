@@ -20,7 +20,6 @@ public class InviteToken {
     @Column(nullable = false, unique = true, length = 64)
     private String token;
 
-    // ✅ Explicit join column added
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -32,3 +31,4 @@ public class InviteToken {
     @Builder.Default
     private Boolean used = false;
 }
+

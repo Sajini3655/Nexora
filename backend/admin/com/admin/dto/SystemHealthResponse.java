@@ -21,13 +21,11 @@ public class SystemHealthResponse {
     private String lastCheckedAt;
     private Long refreshIntervalSeconds;
 
-    // Detailed messages and info
     private String apiMessage;
     private String databaseMessage;
     private String mailMessage;
     private String aiServiceMessage;
 
-    // Service-specific details
     private String backendUrl;
     private String aiServiceUrl;
     private String aiModel;

@@ -21,19 +21,14 @@ public class UserResponse {
 
     private String email;
 
-    /*
-     * Primary role.
-     * Keep this because old working pages may still use user.role.
-     */
+    
     private Role role;
 
-    /*
-     * All roles.
-     * Example: ["CLIENT", "MANAGER"]
-     */
+    
     private List<Role> roles;
 
     private Boolean enabled;
 
     private LocalDateTime createdAt;
 }
+

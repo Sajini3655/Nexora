@@ -46,7 +46,6 @@ public class ProjectService {
                 .manager(manager)
                 .build();
 
-        // If a clientId was provided, resolve and assign the client
         if (request.getClientId() != null) {
             User client = userRepository.findById(request.getClientId())
                     .orElseThrow(() -> new ResourceNotFoundException("Selected client not found"));
@@ -70,12 +69,10 @@ public class ProjectService {
                             .project(project)
                             .build();
                     
-                    // Set due date if provided
                     if (taskRequest.getDueDate() != null && !taskRequest.getDueDate().isEmpty()) {
                         try {
                             task.setDueDate(LocalDate.parse(taskRequest.getDueDate()));
                         } catch (Exception e) {
-                            // Invalid date format, skip setting dueDate
                         }
                     }
                     
@@ -86,7 +83,6 @@ public class ProjectService {
         project.getTasks().addAll(taskItems);
         Project savedProject = projectRepository.save(project);
 
-        // Create nested story points for each task
         createNestedStoryPoints(request.getTasks(), savedProject.getTasks());
 
         liveUpdatePublisher.publishProjectsChanged("created");
@@ -108,7 +104,6 @@ public class ProjectService {
         project.setName(request.getName().trim());
         project.setDescription(request.getDescription().trim());
 
-        // Allow manager to change or unset the client assignment
         if (request.getClientId() != null) {
             User client = userRepository.findById(request.getClientId())
                     .orElseThrow(() -> new ResourceNotFoundException("Selected client not found"));
@@ -199,3 +194,4 @@ public class ProjectService {
                 .build();
     }
 }
+

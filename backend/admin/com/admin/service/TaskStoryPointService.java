@@ -35,10 +35,8 @@ public class TaskStoryPointService {
         TaskItem task = getTask(taskId);
         validateCanCreateStoryPoint(actor, task, request.getPointValue());
 
-        // Optionally enforce budget only when task.estimatedPoints is set
         Integer taskEstimated = task.getEstimatedPoints();
 
-        // Ensure total point values do not exceed task.estimatedPoints if it's defined
         List<TaskStoryPoint> existing = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(task.getId());
         long existingTotal = existing.stream().mapToLong(p -> p.getPointValue() == null ? 0 : p.getPointValue()).sum();
         Integer newPoint = request.getPointValue() == null ? 0 : request.getPointValue();
@@ -88,7 +86,6 @@ public class TaskStoryPointService {
 
         validateManagerCanManageStoryPoints(actor, storyPoint.getTask());
 
-        // When updating a story point, ensure the total does not exceed task.estimatedPoints if defined
         TaskItem task = storyPoint.getTask();
         Integer taskEstimated = task.getEstimatedPoints();
 
@@ -192,10 +189,8 @@ public class TaskStoryPointService {
             throw new AccessDeniedException("You are not allowed to view this developer progress");
         }
 
-        // Get all tasks assigned to the developer
         List<TaskItem> allDeveloperTasks = taskRepository.findByAssignedToId(developer.getId());
 
-        // If manager, filter to only their visible projects' tasks
         List<TaskItem> developerTasks = actorIsManager
             ? filterTasksByManagerVisibleProjects(actor, allDeveloperTasks)
             : allDeveloperTasks;
@@ -507,13 +502,11 @@ public class TaskStoryPointService {
     }
 
     private List<TaskItem> filterTasksByManagerVisibleProjects(User manager, List<TaskItem> tasks) {
-        // Get all projects managed by this manager
         List<Project> managerProjects = projectRepository.findByManagerOrderByCreatedAtDesc(manager);
         Set<Long> managedProjectIds = managerProjects.stream()
                 .map(Project::getId)
                 .collect(java.util.stream.Collectors.toSet());
 
-        // Filter tasks to only those in the manager's projects
         return tasks.stream()
                 .filter(task -> task.getProject() != null && managedProjectIds.contains(task.getProject().getId()))
                 .collect(java.util.stream.Collectors.toList());
@@ -526,3 +519,4 @@ public class TaskStoryPointService {
             long completedPointValue
     ) {}
 }
+

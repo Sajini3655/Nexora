@@ -16,6 +16,6 @@ public class NlqResolveRequest {
     @NotBlank
     private String query;
 
-    // Optional: frontend active workspace role (ADMIN|MANAGER|DEVELOPER|CLIENT)
     private String currentRole;
 }
+

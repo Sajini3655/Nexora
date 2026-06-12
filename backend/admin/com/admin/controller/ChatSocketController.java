@@ -45,10 +45,8 @@ public class ChatSocketController {
                 trimmed
         );
 
-        // Get session and project info to send to session-scoped topic
         var session = chatService.getSession(request.getSessionId());
         if (session != null && session.getProject() != null) {
-            // double-check access
             if (!chatService.canAccessProjectChat(session.getProject(), authUser)) {
                 return;
             }

@@ -12,12 +12,13 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class AiNlqResolveResponse {
-    private String action; // NAVIGATE | SWITCH_ROLE | UNKNOWN
+    private String action;
     private String destinationId;
     private String targetRole;
-    private String entityType; // MANAGER_PROJECT | CLIENT_PROJECT | CLIENT_TICKET | TICKET
+    private String entityType;
     private String entityName;
     private String searchQuery;
     private Double confidence;
     private String reason;
 }
+

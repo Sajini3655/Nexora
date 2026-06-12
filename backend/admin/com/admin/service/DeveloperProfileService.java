@@ -44,13 +44,10 @@ public class DeveloperProfileService {
         DeveloperProfile profile = profileRepository.findByUserId(user.getId())
             .orElseGet(() -> profileRepository.save(createDefaultProfile(user)));
 
-        // update user name (email stays the login identifier in demo)
         if (req.getName() != null && !req.getName().isBlank()) {
             user.setName(req.getName().trim());
         }
 
-        // optional: allow updating email in UI, but keep unique constraint safe
-        // For demo: ignore email update.
 
         profile.setPhone(req.getPhone());
         profile.setLocation(req.getLocation());
@@ -70,7 +67,6 @@ public class DeveloperProfileService {
             profile.setYearsOfExperience(req.getYearsOfExperience());
         }
 
-        // Replace skills
         skillRepository.deleteByProfileId(profile.getId());
         if (req.getSkills() != null) {
             for (SkillDto s : req.getSkills()) {
@@ -136,3 +132,4 @@ public class DeveloperProfileService {
                 .build();
     }
 }
+
