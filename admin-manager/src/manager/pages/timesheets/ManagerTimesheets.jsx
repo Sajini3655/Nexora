@@ -7,22 +7,26 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   Grid,
+  MenuItem,
+  Popover,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import Card from "../../../components/ui/Card.jsx";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
-import { formatDate } from "../../../utils/formatDate.js";
+import { formatDate as formatLocalDate } from "../../../utils/formatDate.js";
 import {
   approveTimesheet,
   rejectTimesheet,
 } from "../../../services/timesheetService.js";
-import { useTeamTimesheets, useTeamTimesheetsSummary } from "../../data/useTimesheets";
+import { useTeamTimesheets } from "../../data/useTimesheets";
 
 const FILTERS = [
   { label: "All", value: "ALL" },
@@ -38,14 +42,24 @@ export default function ManagerTimesheets() {
   const [actionKey, setActionKey] = useState("");
   const [rejectTarget, setRejectTarget] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [dateFilterMode, setDateFilterMode] = useState("ALL_DATES");
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [weekStart, setWeekStart] = useState(() => getStartOfWeek(new Date()));
+  const [dateFilterAnchor, setDateFilterAnchor] = useState(null);
+  const openDateFilter = Boolean(dateFilterAnchor);
 
   const itemsQuery = useTeamTimesheets(filter);
-  const summaryQuery = useTeamTimesheetsSummary();
   const items = Array.isArray(itemsQuery.data) ? itemsQuery.data : [];
-  const summary = summaryQuery.data || null;
-  const loading = itemsQuery.isLoading || summaryQuery.isLoading;
-  const refreshing = (itemsQuery.isFetching || summaryQuery.isFetching) && !loading && (items.length > 0 || summary !== null);
-  const fetchError = itemsQuery.error?.message || summaryQuery.error?.message || "";
+  const filteredByStatusItems = useMemo(() => filterTimesheetsByStatus(items, filter), [items, filter]);
+  const dateFilteredItems = useMemo(
+    () => filterTimesheetsByDateMode(filteredByStatusItems, dateFilterMode, selectedDate, weekStart),
+    [filteredByStatusItems, dateFilterMode, selectedDate, weekStart]
+  );
+  const displayedItems = dateFilteredItems;
+  const summary = useMemo(() => calculateSummaryStats(displayedItems), [displayedItems]);
+  const loading = itemsQuery.isLoading;
+  const refreshing = itemsQuery.isFetching && !loading && items.length > 0;
+  const fetchError = itemsQuery.error?.message || "";
 
   const neutralChipSx = {
     bgcolor: "var(--nx-panel-2)",
@@ -85,7 +99,7 @@ export default function ManagerTimesheets() {
       setMessage("");
       await approveTimesheet(item.id);
       setMessage("Timesheet approved.");
-      await Promise.all([itemsQuery.refetch(), summaryQuery.refetch()]);
+      await itemsQuery.refetch();
     } catch (err) {
       setError(err?.message || "Unable to approve timesheet.");
     } finally {
@@ -113,12 +127,27 @@ export default function ManagerTimesheets() {
       await rejectTimesheet(rejectTarget.id, rejectReason);
       setMessage("Timesheet rejected.");
       closeReject();
-      await Promise.all([itemsQuery.refetch(), summaryQuery.refetch()]);
+      await itemsQuery.refetch();
     } catch (err) {
       setError(err?.message || "Unable to reject timesheet.");
     } finally {
       setActionKey("");
     }
+  };
+
+  const changeWeek = (direction) => {
+    setWeekStart((current) => {
+      const next = new Date(current);
+      next.setDate(next.getDate() + direction * 7);
+      return getStartOfWeek(next);
+    });
+    setSelectedDate(null);
+  };
+
+  const showThisWeek = () => {
+    const now = new Date();
+    setWeekStart(getStartOfWeek(now));
+    setSelectedDate(null);
   };
 
   return (
@@ -133,14 +162,7 @@ export default function ManagerTimesheets() {
           <Typography variant="h4" sx={{ fontWeight: 900, lineHeight: 1.15 }}>
             Team Timesheets
           </Typography>
-            {}
         </Box>
-
-        <Stack direction="row" spacing={1.5} sx={{ alignSelf: { xs: "stretch", md: "auto" } }} justifyContent="flex-end" flexWrap="wrap" useFlexGap>
-          <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={() => Promise.all([itemsQuery.refetch(), summaryQuery.refetch()])}>
-            Refresh
-          </Button>
-        </Stack>
       </Stack>
 
       {error || fetchError ? <ErrorNotice message={error || fetchError} severity="error" dedupeKey="manager-timesheets-error" /> : null}
@@ -154,17 +176,132 @@ export default function ManagerTimesheets() {
         ))}
       </Grid>
 
-      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end">
-        {FILTERS.map((item) => (
-          <Button
-            key={item.value}
-            variant={filter === item.value ? "contained" : "outlined"}
-            onClick={() => setFilter(item.value)}
-          >
-            {item.label}
+      <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap" useFlexGap justifyContent="space-between" alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Button variant="outlined" startIcon={<RefreshRoundedIcon />} onClick={() => itemsQuery.refetch()}>
+            Refresh
           </Button>
-        ))}
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={(event) => setDateFilterAnchor(event.currentTarget)}
+            endIcon={<CalendarTodayOutlinedIcon />}
+            sx={{ textTransform: "none", minWidth: 220 }}
+          >
+            {formatDateLabel(dateFilterMode, selectedDate, weekStart, getEndOfWeek(weekStart))}
+          </Button>
+        </Stack>
+
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end">
+          {FILTERS.map((item) => (
+            <Button
+              key={item.value}
+              variant={filter === item.value ? "contained" : "outlined"}
+              onClick={() => setFilter(item.value)}
+            >
+              {item.label}
+            </Button>
+          ))}
+        </Stack>
       </Stack>
+
+      <Popover
+        open={openDateFilter}
+        anchorEl={dateFilterAnchor}
+        onClose={() => setDateFilterAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        PaperProps={{ sx: { backgroundColor: "var(--nx-panel)", color: "var(--nx-text)", borderRadius: 3, border: "1px solid var(--nx-border)", minWidth: 220 } }}
+      >
+        <Stack spacing={0} sx={{ p: 1 }}>
+          <MenuItem
+            selected={dateFilterMode === "ALL_DATES"}
+            onClick={() => {
+              setDateFilterMode("ALL_DATES");
+              setSelectedDate(null);
+              setDateFilterAnchor(null);
+            }}
+          >
+            All Dates
+          </MenuItem>
+          <MenuItem
+            selected={dateFilterMode === "TODAY"}
+            onClick={() => {
+              const today = normalizeDate(new Date());
+              setDateFilterMode("TODAY");
+              setSelectedDate(today);
+              setWeekStart(getStartOfWeek(today));
+              setDateFilterAnchor(null);
+            }}
+          >
+            Today
+          </MenuItem>
+          <MenuItem
+            selected={dateFilterMode === "WEEK" && isSameDate(weekStart, getStartOfWeek(new Date()))}
+            onClick={() => {
+              const today = normalizeDate(new Date());
+              setDateFilterMode("WEEK");
+              setWeekStart(getStartOfWeek(today));
+              setSelectedDate(null);
+              setDateFilterAnchor(null);
+            }}
+          >
+            This Week
+          </MenuItem>
+          <MenuItem
+            selected={dateFilterMode === "WEEK" && weekStart < getStartOfWeek(new Date())}
+            onClick={() => {
+              setDateFilterMode("WEEK");
+              setWeekStart((current) => getStartOfWeek(new Date(current.setDate(current.getDate() - 7))));
+              setSelectedDate(null);
+              setDateFilterAnchor(null);
+            }}
+          >
+            Previous Week
+          </MenuItem>
+          <MenuItem
+            selected={dateFilterMode === "WEEK" && weekStart > getStartOfWeek(new Date())}
+            onClick={() => {
+              setDateFilterMode("WEEK");
+              setWeekStart((current) => getStartOfWeek(new Date(current.setDate(current.getDate() + 7))));
+              setSelectedDate(null);
+              setDateFilterAnchor(null);
+            }}
+          >
+            Next Week
+          </MenuItem>
+          <Divider sx={{ borderColor: "var(--nx-border)", my: 0.5 }} />
+          <Box sx={{ px: 1, pt: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: "var(--nx-text-soft)", mb: 1 }}>
+              Select specific date
+            </Typography>
+            <TextField
+              type="date"
+              fullWidth
+              size="small"
+              value={formatDateInputValue(selectedDate ?? new Date())}
+              onChange={(event) => {
+                const date = normalizeDate(event.target.value);
+                if (date) {
+                  setDateFilterMode("SPECIFIC_DATE");
+                  setSelectedDate(date);
+                  setWeekStart(getStartOfWeek(date));
+                }
+                setDateFilterAnchor(null);
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2.2,
+                  backgroundColor: "var(--nx-panel-2)",
+                },
+                input: {
+                  color: "var(--nx-text)",
+                },
+              }}
+            />
+          </Box>
+        </Stack>
+      </Popover>
 
       {refreshing ? (
         <Typography variant="body2" sx={{ color: "var(--nx-muted)", textAlign: "right", mt: -1 }}>
@@ -176,7 +313,7 @@ export default function ManagerTimesheets() {
         <Card sx={{ p: 3 }}>
           <Typography sx={{ color: "var(--nx-text-soft)" }}>Loading team timesheets...</Typography>
         </Card>
-      ) : items.length === 0 ? (
+      ) : displayedItems.length === 0 ? (
         <Card sx={{ p: 3, textAlign: "center" }}>
           <Typography variant="h6" sx={{ fontWeight: 800 }}>
             No timesheets to review.
@@ -184,7 +321,7 @@ export default function ManagerTimesheets() {
         </Card>
       ) : (
         <Stack spacing={1.5}>
-          {items.map((item) => {
+          {displayedItems.map((item) => {
             const isSubmitted = item.status === "SUBMITTED";
 
             return (
@@ -196,7 +333,7 @@ export default function ManagerTimesheets() {
                         {item.developerName || "Developer"}
                       </Typography>
                       <Typography variant="body2" sx={{ color: "var(--nx-muted)" }}>
-                        {item.projectName || "Project"} • {item.taskTitle || "No task"} • {formatDate(item.workDate)}
+                        {item.projectName || "Project"} • {item.taskTitle || "No task"} • {formatLocalDate(item.workDate)}
                       </Typography>
                     </Box>
                     <Chip label={item.status} color={chipColor(item.status)} size="small" />
@@ -306,6 +443,165 @@ function formatHours(value) {
     return "0.00";
   }
   return number.toFixed(2);
+}
+
+function getStartOfWeek(date) {
+  const current = new Date(date);
+  const day = current.getDay();
+  const diff = current.getDate() - day + (day === 0 ? -6 : 1);
+  current.setDate(diff);
+  current.setHours(0, 0, 0, 0);
+  return current;
+}
+
+function getEndOfWeek(date) {
+  const end = new Date(date);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
+
+function formatDateRange(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const startFmt = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const endFmt = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return `${startFmt} - ${endFmt}`;
+}
+
+function formatCompactDate(date) {
+  return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatDateInputValue(date) {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeDate(value) {
+  if (!value) return null;
+  const date = typeof value === "string" ? new Date(value) : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function isSameDate(a, b) {
+  const left = normalizeDate(a);
+  const right = normalizeDate(b);
+  if (!left || !right) return false;
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
+}
+
+function formatDateLabel(mode, selectedDate, weekStart, weekEnd) {
+  if (mode === "ALL_DATES") {
+    return "All Dates";
+  }
+
+  if (mode === "TODAY") {
+    return `Today: ${formatCompactDate(selectedDate ?? new Date())}`;
+  }
+
+  if (mode === "SPECIFIC_DATE") {
+    return `Date: ${formatCompactDate(selectedDate ?? new Date())}`;
+  }
+
+  if (mode === "WEEK") {
+    return `Week: ${formatDateRange(weekStart, weekEnd)}`;
+  }
+
+  return "All Dates";
+}
+
+function filterTimesheetsByStatus(items, status) {
+  if (!Array.isArray(items)) return [];
+  if (!status || status === "ALL") return items;
+  return items.filter((item) => {
+    if (status === "PENDING") {
+      return item.status === "SUBMITTED";
+    }
+    return item.status === status;
+  });
+}
+
+function filterTimesheetsByDateMode(items, mode, selectedDate, weekStart) {
+  if (!Array.isArray(items)) return [];
+
+  if (mode === "ALL_DATES") {
+    return items;
+  }
+
+  if (mode === "TODAY") {
+    const today = normalizeDate(new Date());
+    return items.filter((item) => isSameDate(item.workDate, today));
+  }
+
+  if (mode === "SPECIFIC_DATE") {
+    const selected = normalizeDate(selectedDate);
+    if (!selected) return items;
+    return items.filter((item) => isSameDate(item.workDate, selected));
+  }
+
+  if (mode === "WEEK") {
+    const start = normalizeDate(weekStart);
+    if (!start) return items;
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return items.filter((item) => {
+      const workDate = new Date(item.workDate);
+      return workDate >= start && workDate <= end;
+    });
+  }
+
+  return items;
+}
+
+function filterTimesheetsByWeek(items, weekStart) {
+  if (!Array.isArray(items)) return [];
+  const start = new Date(weekStart);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return items.filter((item) => {
+    const workDate = new Date(item.workDate);
+    return workDate >= start && workDate <= end;
+  });
+}
+
+function filterTimesheetsByDate(items, selectedDate) {
+  if (!Array.isArray(items) || !selectedDate) return items;
+  return items.filter((item) => isSameDate(item.workDate, selectedDate));
+}
+
+function calculateSummaryStats(items) {
+  const summary = {
+    submittedCount: 0,
+    approvedCount: 0,
+    rejectedCount: 0,
+    totalHours: 0,
+  };
+
+  if (!Array.isArray(items)) return summary;
+
+  items.forEach((item) => {
+    if (item.status === "SUBMITTED") {
+      summary.submittedCount += 1;
+    } else if (item.status === "APPROVED") {
+      summary.approvedCount += 1;
+    } else if (item.status === "REJECTED") {
+      summary.rejectedCount += 1;
+    }
+    summary.totalHours += Number(item.hours || 0);
+  });
+
+  return summary;
 }
 
 function chipColor(status) {

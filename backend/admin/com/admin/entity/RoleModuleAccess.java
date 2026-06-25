@@ -21,9 +21,8 @@ public class RoleModuleAccess {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;
+    private String role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, name = "module")
