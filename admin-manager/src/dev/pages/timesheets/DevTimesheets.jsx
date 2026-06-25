@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -15,6 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import PublishRoundedIcon from "@mui/icons-material/PublishRounded";
@@ -83,6 +84,7 @@ export default function DevTimesheets() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const dateInputRef = useRef(null);
   const todayDate = getLocalDateInputValue();
 
   const loadData = useCallback(async () => {
@@ -162,6 +164,11 @@ export default function DevTimesheets() {
       const parsedHours = Number(form.hours);
       if (!Number.isFinite(parsedHours) || parsedHours <= 0 || parsedHours >= 24) {
         setError("Hours must be greater than 0 and less than 24.");
+        return;
+      }
+
+      if (!form.workDate) {
+        setError("Date is required for draft timesheets.");
         return;
       }
 
@@ -396,14 +403,75 @@ export default function DevTimesheets() {
 
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <Input
-                  type="date"
-                  label="Date"
-                  value={form.workDate}
-                  onChange={(event) => setForm((current) => ({ ...current, workDate: event.target.value }))}
-                  inputProps={{ max: todayDate }}
-                  InputLabelProps={{ shrink: true }}
-                />
+                <Box sx={{ position: "relative", width: "100%" }}>
+                  <Typography variant="body2" sx={{ mb: 0.75, color: "var(--nx-muted)", fontWeight: 700 }}>
+                    Date
+                  </Typography>
+                  <Box
+                    onClick={() => {
+                      dateInputRef.current?.showPicker?.();
+                      dateInputRef.current?.focus();
+                    }}
+                    sx={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1,
+                      px: 2,
+                      minHeight: 56,
+                      borderRadius: 2.2,
+                      border: "1px solid var(--nx-border)",
+                      backgroundColor: "var(--nx-input)",
+                      color: "var(--nx-text)",
+                      cursor: "pointer",
+                      transition: "all 160ms ease",
+                      '&:hover': {
+                        backgroundColor: "rgba(255,255,255,0.04)",
+                      },
+                      '&:focus-within': {
+                        borderColor: "var(--nx-purple)",
+                      },
+                    }}
+                  >
+                    <Typography sx={{ color: form.workDate ? "var(--nx-text)" : "var(--nx-muted)" }}>
+                      {form.workDate ? formatDisplayDate(form.workDate) : "Select date"}
+                    </Typography>
+                    <CalendarTodayOutlinedIcon sx={{ color: "var(--nx-text-soft)" }} />
+                    <TextField
+                      type="date"
+                      value={form.workDate}
+                      onChange={(event) => setForm((current) => ({ ...current, workDate: event.target.value }))}
+                      inputRef={dateInputRef}
+                      inputProps={{
+                        max: todayDate,
+                        sx: {
+                          position: "absolute",
+                          inset: 0,
+                          width: "100%",
+                          height: "100%",
+                          opacity: 0,
+                          cursor: "pointer",
+                          pointerEvents: "auto",
+                          '&::-webkit-calendar-picker-indicator': {
+                            display: "none",
+                          },
+                          '&::-webkit-clear-button': {
+                            display: "none",
+                          },
+                        },
+                      }}
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        opacity: 0,
+                        pointerEvents: "auto",
+                      }}
+                    />
+                  </Box>
+                </Box>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Input
@@ -475,6 +543,13 @@ function formatHours(value) {
     return "0.00";
   }
   return number.toFixed(2);
+}
+
+function formatDisplayDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function chipColor(status) {
