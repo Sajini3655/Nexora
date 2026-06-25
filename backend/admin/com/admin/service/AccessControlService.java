@@ -3,6 +3,9 @@ package com.admin.service;
 import com.admin.dto.AccessModuleDto;
 import com.admin.dto.AccessUserDto;
 import com.admin.dto.UserOverridesUpdateRequest;
+import com.admin.dto.AccessModuleDto;
+import com.admin.dto.AccessUserDto;
+import com.admin.dto.UserOverridesUpdateRequest;
 import com.admin.entity.AccessModule;
 import com.admin.entity.Role;
 import com.admin.entity.RoleModuleAccess;
@@ -18,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,10 +31,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AccessControlService {
 
-    private static final List<Role> MANAGED_ROLES = List.of(
-            Role.MANAGER,
-            Role.DEVELOPER,
-            Role.CLIENT
+    private static final List<String> MANAGED_ROLES = List.of(
+            "MANAGER",
+            "DEVELOPER",
+            "CLIENT"
     );
 
     private final RoleModuleAccessRepository roleModuleAccessRepository;
@@ -50,16 +54,27 @@ public class AccessControlService {
 
     @Transactional(readOnly = true)
     public List<String> getRoles() {
-        return MANAGED_ROLES.stream().map(Enum::name).toList();
+        LinkedHashMap<String, Boolean> roleNames = new LinkedHashMap<>();
+        for (String role : MANAGED_ROLES) {
+            roleNames.put(role, Boolean.TRUE);
+        }
+        for (String role : roleModuleAccessRepository.findDistinctRoles()) {
+            roleNames.put(role, Boolean.TRUE);
+        }
+        return new ArrayList<>(roleNames.keySet());
     }
 
     @Transactional(readOnly = true)
     public Map<String, Map<String, Boolean>> getRoleMatrix() {
-        Map<String, Map<String, Boolean>> matrix = createDefaultRoleMatrix();
+        List<String> existingRoles = roleModuleAccessRepository.findDistinctRoles();
+        LinkedHashSet<String> allRoles = new LinkedHashSet<>(MANAGED_ROLES);
+        allRoles.addAll(existingRoles);
 
-        List<RoleModuleAccess> persisted = roleModuleAccessRepository.findByRoleIn(MANAGED_ROLES);
+        Map<String, Map<String, Boolean>> matrix = createDefaultRoleMatrix(new ArrayList<>(allRoles));
+
+        List<RoleModuleAccess> persisted = roleModuleAccessRepository.findByRoleIn(new ArrayList<>(allRoles));
         for (RoleModuleAccess entry : persisted) {
-            Map<String, Boolean> roleMap = matrix.get(entry.getRole().name());
+            Map<String, Boolean> roleMap = matrix.get(entry.getRole());
             if (roleMap != null) {
                 roleMap.put(entry.getModule().name(), Boolean.TRUE.equals(entry.getAllowed()));
             }
@@ -74,8 +89,11 @@ public class AccessControlService {
             return getRoleMatrix();
         }
 
-        for (Role role : MANAGED_ROLES) {
-            Map<String, Boolean> roleValues = payload.get(role.name());
+        Set<String> payloadRoles = payload.keySet();
+
+        for (Map.Entry<String, Map<String, Boolean>> roleEntry : payload.entrySet()) {
+            String roleName = roleEntry.getKey();
+            Map<String, Boolean> roleValues = roleEntry.getValue();
             if (roleValues == null) {
                 continue;
             }
@@ -91,14 +109,24 @@ public class AccessControlService {
                 }
 
                 RoleModuleAccess access = roleModuleAccessRepository
-                        .findByRoleAndModule(role, module)
+                        .findByRoleAndModule(roleName, module)
                         .orElse(RoleModuleAccess.builder()
-                                .role(role)
+                                .role(roleName)
                                 .module(module)
                                 .build());
 
                 access.setAllowed(allowed);
                 roleModuleAccessRepository.save(access);
+            }
+        }
+
+        List<String> existingRoles = roleModuleAccessRepository.findDistinctRoles();
+        for (String existingRole : existingRoles) {
+            if (MANAGED_ROLES.contains(existingRole)) {
+                continue;
+            }
+            if (!payloadRoles.contains(existingRole)) {
+                roleModuleAccessRepository.deleteByRole(existingRole);
             }
         }
 
@@ -114,8 +142,8 @@ public class AccessControlService {
             users = userRepository.findByRoleOrderByNameAsc(role);
         } else {
             users = new ArrayList<>();
-            for (Role role : MANAGED_ROLES) {
-                users.addAll(userRepository.findByRoleOrderByNameAsc(role));
+            for (String roleName : MANAGED_ROLES) {
+                users.addAll(userRepository.findByRoleOrderByNameAsc(Role.valueOf(roleName)));
             }
         }
 
@@ -248,7 +276,7 @@ public class AccessControlService {
     }
 
     private void ensureManagedRole(Role role) {
-        if (!MANAGED_ROLES.contains(role)) {
+        if (!MANAGED_ROLES.contains(role.name())) {
             throw new RuntimeException("Overrides are allowed only for manager, developer, or client users.");
         }
     }
@@ -265,19 +293,24 @@ public class AccessControlService {
         return role;
     }
 
-    private Map<String, Map<String, Boolean>> createDefaultRoleMatrix() {
+    private Map<String, Map<String, Boolean>> createDefaultRoleMatrix(List<String> roles) {
         Map<String, Map<String, Boolean>> matrix = new LinkedHashMap<>();
 
-        for (Role role : MANAGED_ROLES) {
+        for (String role : roles) {
             Map<String, Boolean> roleMap = new LinkedHashMap<>();
             for (AccessModule module : AccessModule.values()) {
-                boolean allowed = role == Role.CLIENT
-                        ? module == AccessModule.DASHBOARD || module == AccessModule.CHAT
-                        : true;
+                boolean allowed;
+                if ("CLIENT".equals(role)) {
+                    allowed = module == AccessModule.DASHBOARD || module == AccessModule.CHAT;
+                } else if (MANAGED_ROLES.contains(role)) {
+                    allowed = true;
+                } else {
+                    allowed = false;
+                }
 
                 roleMap.put(module.name(), allowed);
             }
-            matrix.put(role.name(), roleMap);
+            matrix.put(role, roleMap);
         }
 
         return matrix;
