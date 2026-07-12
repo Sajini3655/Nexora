@@ -3,6 +3,7 @@ import { Box } from "@mui/material";
 import ManagerSidebar from "./ManagerSidebar";
 import Topbar from "./Topbar";
 import { layoutGaps } from "../../theme/layoutGaps.js";
+import { closeWithBlur } from "../../utils/focus";
 
 export default function ManagerShell({ children }) {
   const [open, setOpen] = useState(false);
@@ -17,7 +18,7 @@ export default function ManagerShell({ children }) {
       }}
     >
       <Topbar onMenuClick={() => setOpen((p) => !p)} />
-      <ManagerSidebar open={open} onClose={() => setOpen(false)} />
+      <ManagerSidebar open={open} onClose={() => closeWithBlur(() => setOpen(false))} />
       <Box sx={{ height: `${topbarClearance}px` }} />
       <Box
         sx={{

@@ -24,6 +24,7 @@ import Card from "../../../components/ui/Card.jsx";
 import Input from "../../../components/ui/Input.jsx";
 import { formatDate } from "../../../utils/formatDate.js";
 import { getLocalDateInputValue, isAfterDate } from "../../../utils/dateInput";
+import { closeWithBlur } from "../../../utils/focus";
 import {
   createTimesheet,
   deleteTimesheet,
@@ -150,9 +151,11 @@ export default function DevTimesheets() {
   };
 
   const closeDialog = () => {
-    setDialogOpen(false);
-    setEditingId(null);
-    setForm(emptyForm);
+    closeWithBlur(() => {
+      setDialogOpen(false);
+      setEditingId(null);
+      setForm(emptyForm);
+    });
   };
 
   const handleSave = async () => {

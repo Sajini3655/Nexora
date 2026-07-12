@@ -16,6 +16,7 @@ import {
 
 import Input from "../../../components/ui/Input";
 import useApi from "../../../hooks/useApi";
+import { closeWithBlur } from "../../../utils/focus";
 
 const ROLES = ["ADMIN", "MANAGER", "DEVELOPER", "CLIENT"];
 
@@ -86,8 +87,10 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
 
   const handleClose = () => {
     if (loading) return;
-    reset();
-    onClose?.();
+    closeWithBlur(() => {
+      reset();
+      onClose?.();
+    });
   };
 
   async function handleInvite() {

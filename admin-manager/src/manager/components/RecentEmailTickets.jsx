@@ -162,13 +162,15 @@ export default function RecentEmailTickets() {
 
   const closeConvertModal = () => {
     if (submitting) return;
-    setConvertOpen(false);
-    setSelectedTicket(null);
-    setSelectedProjectId("");
-    setSelectedDeveloperId("");
-    setStoryPoints(buildDefaultStoryPoints({}));
-    setSuggestion(null);
-    setActionError("");
+    closeWithBlur(() => {
+      setConvertOpen(false);
+      setSelectedTicket(null);
+      setSelectedProjectId("");
+      setSelectedDeveloperId("");
+      setStoryPoints(buildDefaultStoryPoints({}));
+      setSuggestion(null);
+      setActionError("");
+    });
   };
 
   const handleSuggestDeveloper = async () => {

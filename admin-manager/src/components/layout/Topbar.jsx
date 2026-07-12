@@ -18,6 +18,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useThemeMode } from "../../context/ThemeContext.jsx";
+import { closeWithBlur } from "../../utils/focus";
 import { layoutGaps } from "../../theme/layoutGaps.js";
 import { getActiveRole } from "../../utils/roleRouting";
 import { getUserRoles } from "../../utils/roleRouting";
@@ -245,7 +246,7 @@ export default function Topbar({ onMenuClick }) {
             <Menu
               anchorEl={anchorEl}
               open={open}
-              onClose={() => setAnchorEl(null)}
+              onClose={() => closeWithBlur(() => setAnchorEl(null))}
               autoFocus={false}
               MenuListProps={{ autoFocusItem: false }}
               PaperProps={{

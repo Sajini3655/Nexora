@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Box } from "@mui/material";
 import DevSidebar from "./DevSidebar";
 import Topbar from "../../../components/layout/Topbar.jsx";
+import { closeWithBlur } from "../../../utils/focus";
 
 export default function DevLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -24,7 +25,7 @@ export default function DevLayout({ children }) {
 
       <DevSidebar
         open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={() => closeWithBlur(() => setSidebarOpen(false))}
       />
 
       <Box

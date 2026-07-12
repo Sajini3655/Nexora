@@ -113,8 +113,10 @@ export default function ManagerTimesheets() {
   };
 
   const closeReject = () => {
-    setRejectTarget(null);
-    setRejectReason("");
+    closeWithBlur(() => {
+      setRejectTarget(null);
+      setRejectReason("");
+    });
   };
 
   const handleReject = async () => {

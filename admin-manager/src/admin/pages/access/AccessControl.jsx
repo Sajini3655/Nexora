@@ -28,6 +28,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import PageHeader from "../../../components/ui/PageHeader";
 import Card from "../../../components/ui/Card";
 import Button from "../../../components/ui/Button";
+import { closeWithBlur } from "../../../utils/focus";
 import {
   getAccessModules,
   getAccessRoleMatrix,
@@ -112,16 +113,41 @@ export default function AccessControl() {
     setDirty(true);
   };
 
+  const normalizeRoleAccessPayload = (payload) => {
+    const normalized = {};
+
+    Object.entries(payload ?? {}).forEach(([role, entries]) => {
+      if (!role || typeof entries !== "object" || entries === null) {
+        return;
+      }
+
+      const rolePermissions = {};
+      Object.entries(entries).forEach(([moduleKey, value]) => {
+        if (!moduleKey) {
+          return;
+        }
+        rolePermissions[moduleKey] = Boolean(value);
+      });
+
+      normalized[role] = rolePermissions;
+    });
+
+    return normalized;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError("");
     setSuccess("");
 
     try {
-      await saveAccessRoleMatrix(roleAccess);
+      const normalizedPayload = normalizeRoleAccessPayload(roleAccess);
+      console.debug("Saving access role matrix payload", normalizedPayload);
+      await saveAccessRoleMatrix(JSON.parse(JSON.stringify(normalizedPayload)));
       await loadAccessData();
       setSuccess("Access control changes saved successfully.");
     } catch (err) {
+      console.error("Access role matrix save failed", err?.response?.status, err?.details || err?.response?.data || err?.message || err);
       setError("Failed to save access control changes.");
     } finally {
       setSaving(false);
@@ -138,11 +164,19 @@ export default function AccessControl() {
   };
 
   const handleCreateClose = () => {
-    setCreateOpen(false);
+    closeWithBlur(() => setCreateOpen(false));
   };
 
   const normalizeRoleName = (value) => {
-    return value.trim().replace(/\s+/g, "_").toUpperCase();
+    return value
+      .trim()
+      .replace(/[^A-Za-z ]+/g, "")
+      .replace(/\s+/g, "_")
+      .toUpperCase();
+  };
+
+  const isValidRoleName = (value) => {
+    return /^[A-Z_]+$/.test(value);
   };
 
   const buildTemplateDefaults = (template) => {
@@ -183,6 +217,11 @@ export default function AccessControl() {
       return;
     }
 
+    if (!isValidRoleName(name)) {
+      setCreateError("Role names may only contain letters and underscores.");
+      return;
+    }
+
     if (BUILT_IN_ROLES.includes(name)) {
       setCreateError("That name is reserved for a default role.");
       return;
@@ -200,7 +239,7 @@ export default function AccessControl() {
     setRoleAccess((prev) => ({ ...prev, [name]: rolePermissions }));
     setRoleDescriptions((prev) => ({ ...prev, [name]: newRoleDescription.trim() }));
     setExpandedRole(name);
-    setCreateOpen(false);
+    closeWithBlur(() => setCreateOpen(false));
     setDirty(true);
   };
 

@@ -16,6 +16,19 @@ export default function UnifiedSidebar({
   const location = useLocation();
   const closeButtonRef = useRef(null);
 
+  const blurActiveElement = () => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+  };
+
+  const handleClose = (afterClose) => {
+    blurActiveElement();
+    onClose?.();
+    afterClose?.();
+  };
+
   useEffect(() => {
     if (!open) return;
 
@@ -23,8 +36,7 @@ export default function UnifiedSidebar({
   }, [open]);
 
   const handleItemClick = (to) => {
-    onClose?.();
-    navigate(to);
+    handleClose(() => navigate(to));
   };
 
   const isActivePath = (item) => {
@@ -41,10 +53,11 @@ export default function UnifiedSidebar({
     <Drawer
       anchor="left"
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       variant="temporary"
       ModalProps={{
         keepMounted: true,
+        disableRestoreFocus: true,
         container: () => document.body,
         sx: {
           top: `${topbarClearance}px`,
@@ -72,7 +85,7 @@ export default function UnifiedSidebar({
       <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 0.4 }}>
         <IconButton
           ref={closeButtonRef}
-          onClick={onClose}
+          onClick={() => handleClose()}
           size="small"
           sx={{
             width: 38,
