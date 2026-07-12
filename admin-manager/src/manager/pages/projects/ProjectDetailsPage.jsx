@@ -20,6 +20,7 @@ import { useAuth } from "../../../context/AuthContext.jsx";
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import ChatBox from "../../../dev/pages/chat/src/ChatBox";
 import { getProjectSessions } from "../../../dev/pages/chat/src/api";
+import { closeWithBlur } from "../../../utils/focus";
 import { useProjectDetails } from "../../data/useManager";
 
 function getDateLabel(value) {
@@ -478,8 +479,10 @@ export default function ProjectDetailsPage() {
                 hideNewChatButton
                 onSummary={handleChatEnd}
                 onClose={() => {
-                  setChatDrawerOpen(false);
-                  loadProjectSessions();
+                  closeWithBlur(() => {
+                    setChatDrawerOpen(false);
+                    loadProjectSessions();
+                  });
                 }}
               />
             </Box>

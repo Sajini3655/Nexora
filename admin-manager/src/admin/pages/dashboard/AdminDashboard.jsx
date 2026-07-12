@@ -18,6 +18,7 @@ import {
   Button,
   Divider,
 } from "@mui/material";
+import { closeWithBlur } from "../../../utils/focus";
 import {
   Activity,
   BriefcaseBusiness,
@@ -414,7 +415,7 @@ export default function AdminDashboard() {
       <HealthDetailDialog
         item={selectedHealthItem}
         open={detailDialogOpen}
-        onClose={() => setDetailDialogOpen(false)}
+        onClose={() => closeWithBlur(() => setDetailDialogOpen(false))}
         onRefresh={loadDashboard}
       />
     </Stack>

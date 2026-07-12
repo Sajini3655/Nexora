@@ -17,6 +17,7 @@ import com.admin.repository.TicketRepository;
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -58,19 +59,19 @@ public class UserService {
     ) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.max(size, 1);
-        int offset = safePage * safeSize;
+        Role roleFilter = parseRoleFilter(role);
+        String searchTerm = q == null ? "" : q.trim().toLowerCase();
 
-        List<User> users = userRepository.findByFiltersNative(
-                (q == null || q.isBlank()) ? null : q.trim(),
-                (role == null || role.isBlank()) ? null : role.trim().toUpperCase(),
+        List<User> users = userRepository.findByFilters(
+            searchTerm,
+            roleFilter,
                 enabled,
-                safeSize,
-                offset
-        );
+            PageRequest.of(safePage, safeSize)
+        ).getContent();
 
         long total = userRepository.countByFilters(
-                (q == null || q.isBlank()) ? null : q.trim(),
-                (role == null || role.isBlank()) ? null : role.trim().toUpperCase(),
+            searchTerm,
+            roleFilter,
                 enabled
         );
 
@@ -416,5 +417,17 @@ public class UserService {
         } catch (Exception ignored) {
         }
         return "system";
+    }
+
+    private Role parseRoleFilter(String role) {
+        if (role == null || role.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Role.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new RuntimeException("Invalid role filter: " + role);
+        }
     }
 }

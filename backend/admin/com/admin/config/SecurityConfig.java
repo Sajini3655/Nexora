@@ -39,6 +39,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public auth endpoints (login, register, invite accept)
                 .requestMatchers("/api/auth/**").permitAll()
+                // SockJS websocket endpoint used by live updates
+                .requestMatchers("/ws/**").permitAll()
                 // Allow CORS preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "submit").hasRole("DEVELOPER")

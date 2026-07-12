@@ -52,6 +52,7 @@ import { layoutGaps } from "./theme/layoutGaps.js";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useLayout } from "./context/LayoutContext.jsx";
 import { getActiveRole, getUserRoles, setActiveRole } from "./utils/roleRouting";
+import { closeWithBlur } from "./utils/focus";
 
 
 function UnifiedShell({ children, role }) {
@@ -75,11 +76,11 @@ function UnifiedShell({ children, role }) {
       case "ADMIN":
         return <Sidebar />;
       case "MANAGER":
-        return <ManagerSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />;
+        return <ManagerSidebar open={sidebarOpen} onClose={() => closeWithBlur(() => setSidebarOpen(false))} />;
       case "DEVELOPER":
-        return <DevSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />;
+        return <DevSidebar open={sidebarOpen} onClose={() => closeWithBlur(() => setSidebarOpen(false))} />;
       case "CLIENT":
-        return <ClientSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />;
+        return <ClientSidebar open={sidebarOpen} onClose={() => closeWithBlur(() => setSidebarOpen(false))} />;
       default:
         return null;
     }

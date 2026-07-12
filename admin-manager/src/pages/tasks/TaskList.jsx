@@ -18,6 +18,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
+import { closeWithBlur } from "../../utils/focus";
 
 const demoTasks = [
   { id: 101, title: "Setup project repo", assignee: "Dev B", status: "TODO", priority: "HIGH", due: "2025-12-20" },
@@ -120,7 +121,7 @@ export default function TaskList() {
       <Drawer
         anchor="right"
         open={Boolean(selected)}
-        onClose={() => setSelected(null)}
+        onClose={() => closeWithBlur(() => setSelected(null))}
         PaperProps={{
           sx: {
             width: { xs: "100%", sm: 460 },

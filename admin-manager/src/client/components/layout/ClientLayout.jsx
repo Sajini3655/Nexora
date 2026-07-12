@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Box } from "@mui/material";
 import ClientSidebar from "./ClientSidebar";
 import ClientTopbar from "./ClientTopbar";
+import { closeWithBlur } from "../../../utils/focus";
 
 export default function ClientLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -21,7 +22,7 @@ export default function ClientLayout({ children }) {
 
       <ClientSidebar
         open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={() => closeWithBlur(() => setSidebarOpen(false))}
       />
 
       <Box

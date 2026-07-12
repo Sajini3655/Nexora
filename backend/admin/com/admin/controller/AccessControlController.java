@@ -6,6 +6,8 @@ import com.admin.dto.UserOverridesUpdateRequest;
 import com.admin.service.AccessControlService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,7 @@ import java.util.Map;
 @PreAuthorize("hasRole('ADMIN')")
 public class AccessControlController {
 
+    private static final Logger log = LoggerFactory.getLogger(AccessControlController.class);
     private final AccessControlService accessControlService;
 
     @GetMapping("/modules")
@@ -38,9 +41,15 @@ public class AccessControlController {
 
     @PutMapping("/role-matrix")
     public ResponseEntity<Map<String, Map<String, Boolean>>> saveRoleMatrix(
-            @RequestBody Map<String, Map<String, Boolean>> payload
+            @RequestBody Map<String, Map<String, Object>> payload
     ) {
-        return ResponseEntity.ok(accessControlService.saveRoleMatrix(payload));
+        log.debug("saveRoleMatrix called with payload keys={}", payload == null ? null : payload.keySet());
+        try {
+            return ResponseEntity.ok(accessControlService.saveRoleMatrix(payload));
+        } catch (RuntimeException ex) {
+            log.error("saveRoleMatrix failed for payload {}", payload, ex);
+            throw ex;
+        }
     }
 
     @GetMapping("/users")

@@ -16,6 +16,9 @@ import com.admin.repository.RoleModuleAccessRepository;
 import com.admin.repository.UserModuleOverrideRepository;
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,18 +27,24 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AccessControlService {
 
+    private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
+
     private static final List<String> MANAGED_ROLES = List.of(
             "MANAGER",
             "DEVELOPER",
             "CLIENT"
     );
+    private static final Pattern VALID_ROLE_NAME = Pattern.compile("^[A-Z_]+$");
+    private static final Pattern NORMALIZE_ROLE_NAME_PATTERN = Pattern.compile("[^A-Z_]+" );
 
     private final RoleModuleAccessRepository roleModuleAccessRepository;
     private final UserModuleOverrideRepository userModuleOverrideRepository;
@@ -59,42 +68,67 @@ public class AccessControlService {
             roleNames.put(role, Boolean.TRUE);
         }
         for (String role : roleModuleAccessRepository.findDistinctRoles()) {
-            roleNames.put(role, Boolean.TRUE);
+            String normalized = normalizeRoleName(role);
+            if (normalized != null) {
+                roleNames.put(normalized, Boolean.TRUE);
+            }
         }
         return new ArrayList<>(roleNames.keySet());
     }
 
     @Transactional(readOnly = true)
     public Map<String, Map<String, Boolean>> getRoleMatrix() {
-        List<String> existingRoles = roleModuleAccessRepository.findDistinctRoles();
+        List<String> existingRoles = roleModuleAccessRepository.findDistinctRoles().stream()
+                .map(this::normalizeRoleName)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
         LinkedHashSet<String> allRoles = new LinkedHashSet<>(MANAGED_ROLES);
         allRoles.addAll(existingRoles);
 
         Map<String, Map<String, Boolean>> matrix = createDefaultRoleMatrix(new ArrayList<>(allRoles));
 
-        List<RoleModuleAccess> persisted = roleModuleAccessRepository.findByRoleIn(new ArrayList<>(allRoles));
-        for (RoleModuleAccess entry : persisted) {
-            Map<String, Boolean> roleMap = matrix.get(entry.getRole());
-            if (roleMap != null) {
-                roleMap.put(entry.getModule().name(), Boolean.TRUE.equals(entry.getAllowed()));
+        try {
+            List<RoleModuleAccess> persisted = roleModuleAccessRepository.findByRoleIn(new ArrayList<>(allRoles));
+            for (RoleModuleAccess entry : persisted) {
+                if (entry == null || entry.getRole() == null || entry.getModule() == null) {
+                    continue;
+                }
+
+                String normalizedRole = normalizeRoleName(entry.getRole());
+                if (normalizedRole == null) {
+                    continue;
+                }
+
+                Map<String, Boolean> roleMap = matrix.get(normalizedRole);
+                if (roleMap != null) {
+                    roleMap.put(entry.getModule().name(), Boolean.TRUE.equals(entry.getAllowed()));
+                }
             }
+        } catch (RuntimeException ex) {
+            log.warn("Falling back to default role matrix because persisted access rows could not be loaded: {}", ex.getMessage());
         }
 
         return matrix;
     }
 
     @Transactional
-    public Map<String, Map<String, Boolean>> saveRoleMatrix(Map<String, Map<String, Boolean>> payload) {
+    public Map<String, Map<String, Boolean>> saveRoleMatrix(Map<String, Map<String, Object>> payload) {
         if (payload == null || payload.isEmpty()) {
             return getRoleMatrix();
         }
 
         Set<String> payloadRoles = payload.keySet();
 
-        for (Map.Entry<String, Map<String, Boolean>> roleEntry : payload.entrySet()) {
-            String roleName = roleEntry.getKey();
-            Map<String, Boolean> roleValues = roleEntry.getValue();
-            if (roleValues == null) {
+        for (Map.Entry<String, Map<String, Object>> roleEntry : payload.entrySet()) {
+            String rawRoleName = roleEntry.getKey();
+            Map<String, Object> roleValues = roleEntry.getValue();
+            if (roleValues == null || rawRoleName == null || rawRoleName.isBlank()) {
+                continue;
+            }
+            String roleName = rawRoleName.trim();
+            if (roleName.isBlank() || !VALID_ROLE_NAME.matcher(roleName).matches()) {
+                log.warn("Skipping invalid role name in payload: {}", roleName);
                 continue;
             }
 
@@ -103,34 +137,91 @@ public class AccessControlService {
                     continue;
                 }
 
-                Boolean allowed = roleValues.get(module.name());
+                Boolean allowed = parseBooleanValue(roleValues.get(module.name()));
                 if (allowed == null) {
                     continue;
                 }
 
-                RoleModuleAccess access = roleModuleAccessRepository
-                        .findByRoleAndModule(roleName, module)
-                        .orElse(RoleModuleAccess.builder()
-                                .role(roleName)
-                                .module(module)
-                                .build());
+                try {
+                    RoleModuleAccess access = roleModuleAccessRepository
+                            .findByRoleAndModule(roleName, module)
+                            .or(() -> roleModuleAccessRepository.findByNormalizedRoleAndModule(roleName, module))
+                            .orElse(RoleModuleAccess.builder()
+                                    .role(roleName)
+                                    .module(module)
+                                    .build());
 
-                access.setAllowed(allowed);
-                roleModuleAccessRepository.save(access);
+                    access.setAllowed(allowed);
+                    try {
+                        roleModuleAccessRepository.save(access);
+                    } catch (DataIntegrityViolationException dive) {
+                        log.warn("Unique constraint conflict saving role-matrix for role {} and module {}: {}", roleName, module.name(), dive.getMessage());
+                        RoleModuleAccess existing = roleModuleAccessRepository
+                                .findByNormalizedRoleAndModule(roleName, module)
+                                .orElse(access);
+                        existing.setAllowed(allowed);
+                        roleModuleAccessRepository.save(existing);
+                    }
+                } catch (RuntimeException ex) {
+                    log.warn("Skipping role-matrix save for role {} and module {} due to repository error: {}", roleName, module.name(), ex.getMessage());
+                }
             }
         }
 
-        List<String> existingRoles = roleModuleAccessRepository.findDistinctRoles();
-        for (String existingRole : existingRoles) {
-            if (MANAGED_ROLES.contains(existingRole)) {
-                continue;
+        try {
+            List<String> existingRoles = roleModuleAccessRepository.findDistinctRoles();
+            for (String existingRole : existingRoles) {
+                if (MANAGED_ROLES.contains(existingRole)) {
+                    continue;
+                }
+                if (!payloadRoles.contains(existingRole)) {
+                    roleModuleAccessRepository.deleteByRole(existingRole);
+                }
             }
-            if (!payloadRoles.contains(existingRole)) {
-                roleModuleAccessRepository.deleteByRole(existingRole);
-            }
+        } catch (RuntimeException ex) {
+            log.warn("Skipping role-matrix cleanup after save due to repository error: {}", ex.getMessage());
         }
 
-        return getRoleMatrix();
+        try {
+            return getRoleMatrix();
+        } catch (RuntimeException ex) {
+            log.warn("Returning fallback role matrix after save due to repository error: {}", ex.getMessage());
+            return createDefaultRoleMatrix(new ArrayList<>(MANAGED_ROLES));
+        }
+    }
+
+    private Boolean parseBooleanValue(Object value) {
+        if (value instanceof Boolean boolValue) {
+            return boolValue;
+        }
+        if (value instanceof Number numberValue) {
+            return numberValue.intValue() != 0;
+        }
+        if (value instanceof String stringValue) {
+            String trimmed = stringValue.trim();
+            if (trimmed.isEmpty()) {
+                return null;
+            }
+            return Boolean.parseBoolean(trimmed);
+        }
+        return null;
+    }
+
+    private String normalizeRoleName(String rawRoleName) {
+        if (rawRoleName == null) {
+            return null;
+        }
+        String normalized = rawRoleName
+                .trim()
+                .toUpperCase()
+                .replaceAll(NORMALIZE_ROLE_NAME_PATTERN.pattern(), "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_+|_+$", "");
+
+        if (normalized.isBlank() || !VALID_ROLE_NAME.matcher(normalized).matches()) {
+            return null;
+        }
+        return normalized;
     }
 
     @Transactional(readOnly = true)

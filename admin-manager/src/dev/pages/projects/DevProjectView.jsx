@@ -23,6 +23,7 @@ import ChatBubbleRoundedIcon from "@mui/icons-material/ChatBubbleRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import { closeWithBlur } from "../../../utils/focus";
 import Card from "../../../components/ui/Card.jsx";
 import ErrorBoundary from "../../../components/ui/ErrorBoundary.jsx";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
@@ -550,7 +551,7 @@ export default function DevProjectView() {
                 hideSidebar
                 hideNewChatButton
                 onSummary={handleChatEnd}
-                onClose={() => setChatDrawerOpen(false)}
+                onClose={() => closeWithBlur(() => setChatDrawerOpen(false))}
               />
             </Box>
           ) : (

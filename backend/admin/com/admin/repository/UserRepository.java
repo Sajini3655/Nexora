@@ -2,6 +2,8 @@ package com.admin.repository;
 
 import com.admin.entity.Role;
 import com.admin.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -44,57 +46,49 @@ public interface UserRepository extends JpaRepository<User, Long> {
     )
     List<Object[]> countRegistrationsGroupedByDay(@Param("startDate") LocalDateTime startDate);
 
-    @Query(
-        value = """
-            SELECT * FROM users u
-            WHERE (:q IS NULL OR LOWER(u.name) LIKE CONCAT('%', LOWER(:q), '%')
-               OR LOWER(u.email) LIKE CONCAT('%', LOWER(:q), '%'))
-                            AND (
-                                :role IS NULL
-                                OR u.role = :role
-                                OR EXISTS (
-                                        SELECT 1
-                                        FROM user_roles ur
-                                        WHERE ur.user_id = u.id
-                                            AND ur.role = :role
-                                )
-                            )
-              AND (:enabled IS NULL OR u.enabled = :enabled)
-            ORDER BY u.created_at DESC
-            LIMIT :size OFFSET :offset
-        """,
-        nativeQuery = true
-    )
-    List<User> findByFiltersNative(
+    @Query("""
+        select distinct u
+        from User u
+        left join u.additionalRoles additionalRole
+        where (
+            :q = ''
+            or lower(u.name) like concat('%', :q, '%')
+            or lower(u.email) like concat('%', :q, '%')
+        )
+        and (
+            :role is null
+            or u.role = :role
+            or additionalRole = :role
+        )
+        and (:enabled is null or u.enabled = :enabled)
+        order by u.createdAt desc
+    """)
+    Page<User> findByFilters(
             @Param("q") String q,
-            @Param("role") String role,
+            @Param("role") Role role,
             @Param("enabled") Boolean enabled,
-            @Param("size") int size,
-            @Param("offset") int offset
+            Pageable pageable
     );
 
-    @Query(
-        value = """
-            SELECT COUNT(*) FROM users u
-            WHERE (:q IS NULL OR LOWER(u.name) LIKE CONCAT('%', LOWER(:q), '%')
-               OR LOWER(u.email) LIKE CONCAT('%', LOWER(:q), '%'))
-                            AND (
-                                :role IS NULL
-                                OR u.role = :role
-                                OR EXISTS (
-                                        SELECT 1
-                                        FROM user_roles ur
-                                        WHERE ur.user_id = u.id
-                                            AND ur.role = :role
-                                )
-                            )
-              AND (:enabled IS NULL OR u.enabled = :enabled)
-        """,
-        nativeQuery = true
-    )
+    @Query("""
+        select count(distinct u)
+        from User u
+        left join u.additionalRoles additionalRole
+        where (
+            :q = ''
+            or lower(u.name) like concat('%', :q, '%')
+            or lower(u.email) like concat('%', :q, '%')
+        )
+        and (
+            :role is null
+            or u.role = :role
+            or additionalRole = :role
+        )
+        and (:enabled is null or u.enabled = :enabled)
+    """)
     long countByFilters(
             @Param("q") String q,
-            @Param("role") String role,
+            @Param("role") Role role,
             @Param("enabled") Boolean enabled
     );
 }

@@ -15,6 +15,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext.jsx";
+import { closeWithBlur } from "../../../utils/focus";
 
 export default function DevTopbar({ onMenuClick }) {
   const { user, logout } = useAuth();
@@ -164,7 +165,7 @@ export default function DevTopbar({ onMenuClick }) {
       <Menu
         anchorEl={anchorEl}
         open={open}
-        onClose={() => setAnchorEl(null)}
+        onClose={() => closeWithBlur(() => setAnchorEl(null))}
         PaperProps={{
           sx: {
             mt: 1,

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Box, Button, TextField, Typography, Paper, Dialog, DialogTitle, DialogActions } from "@mui/material";
+import { closeWithBlur } from "../../../../utils/focus";
 
 interface Message {
   user: string;
@@ -70,12 +71,14 @@ const App: React.FC = () => {
   };
 
   const handleTicketDecision = async (create: boolean) => {
-    setShowTicketDialog(false);
-    if (pendingEndData) {
-      await endChat(create);
-    } else {
-      setChatStarted(false);
-    }
+    closeWithBlur(async () => {
+      setShowTicketDialog(false);
+      if (pendingEndData) {
+        await endChat(create);
+      } else {
+        setChatStarted(false);
+      }
+    });
   };
 
   const sendMessage = async () => {
@@ -309,11 +312,11 @@ const App: React.FC = () => {
         </Paper>
       )}
 
-      <Dialog open={showTicketDialog} onClose={() => handleTicketDecision(false)}>
+      <Dialog open={showTicketDialog} onClose={() => closeWithBlur(() => handleTicketDecision(false))}>
         <DialogTitle>Create tickets for detected blockers?</DialogTitle>
         <DialogActions>
-          <Button onClick={() => handleTicketDecision(false)}>No</Button>
-          <Button onClick={() => handleTicketDecision(true)} autoFocus>
+          <Button onClick={() => closeWithBlur(() => handleTicketDecision(false))}>No</Button>
+          <Button onClick={() => closeWithBlur(() => handleTicketDecision(true))} autoFocus>
             Yes
           </Button>
         </DialogActions>

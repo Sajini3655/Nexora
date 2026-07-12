@@ -30,6 +30,7 @@ import SupportAgentRoundedIcon from "@mui/icons-material/SupportAgentRounded";
 import api from "../../../services/api";
 import ErrorNotice from "../../../components/ui/ErrorNotice.jsx";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
+import { closeWithBlur } from "../../../utils/focus";
 import {
   suggestManagerTaskAssignment,
 } from "../../../services/managerService";
@@ -170,13 +171,15 @@ export default function ManagerTickets() {
 
   const closeConvertModal = () => {
     if (submitting) return;
-    setConvertOpen(false);
-    setSelectedTicket(null);
-    setSelectedProjectId("");
-    setSelectedDeveloperId("");
-    setStoryPoints(buildDefaultStoryPoints({}));
-    setSuggestion(null);
-    setActionError("");
+    closeWithBlur(() => {
+      setConvertOpen(false);
+      setSelectedTicket(null);
+      setSelectedProjectId("");
+      setSelectedDeveloperId("");
+      setStoryPoints(buildDefaultStoryPoints({}));
+      setSuggestion(null);
+      setActionError("");
+    });
   };
 
   const handleSuggestDeveloper = async () => {

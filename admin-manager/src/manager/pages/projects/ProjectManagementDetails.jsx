@@ -23,6 +23,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
+import { closeWithBlur } from "../../../utils/focus";
 import ChatBubbleRoundedIcon from "@mui/icons-material/ChatBubbleRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { useParams } from "react-router-dom";
@@ -479,18 +480,20 @@ export default function ProjectManagementDetails() {
 
   const closeTaskModal = () => {
     if (savingAssignment || savingStoryPoint || savingAllChanges) return;
-    setTaskModalOpen(false);
-    setSelectedTask(null);
-    setTaskDraft(null);
-    setOriginalTaskDraft(null);
-    setSelectedDeveloperId("");
-    setOriginalDeveloperId("");
-    setSuggestion(null);
-    setStoryPoints([]);
-    setStoryPointForm(emptyStoryPointForm);
-    setEditingStoryPointId(null);
-    projectDetailsQuery.refetch();
-    developersQuery.refetch();
+    closeWithBlur(() => {
+      setTaskModalOpen(false);
+      setSelectedTask(null);
+      setTaskDraft(null);
+      setOriginalTaskDraft(null);
+      setSelectedDeveloperId("");
+      setOriginalDeveloperId("");
+      setSuggestion(null);
+      setStoryPoints([]);
+      setStoryPointForm(emptyStoryPointForm);
+      setEditingStoryPointId(null);
+      projectDetailsQuery.refetch();
+      developersQuery.refetch();
+    });
   };
 
   const hasUnsavedChanges = () => {

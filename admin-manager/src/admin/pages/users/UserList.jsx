@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import Input from "../../../components/ui/Input";
 import InviteUserDialog from "./InviteUserDialog.jsx";
+import { closeWithBlur } from "../../../utils/focus";
 import {
   deleteAdminUser,
   getAdminUsers,
@@ -499,7 +500,7 @@ export default function UserList() {
 
       <InviteUserDialog
         open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
+        onClose={() => closeWithBlur(() => setInviteOpen(false))}
         onInvited={handleInviteSuccess}
       />
     </Stack>
