@@ -25,6 +25,7 @@ import { getUserRoles } from "../../utils/roleRouting";
 import NLQNav from "./NLQNav.jsx";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import NotificationBell from "../notifications/NotificationBell.jsx";
 
 function roleFromPathname(pathname) {
   const path = String(pathname || "");
@@ -204,20 +205,7 @@ export default function Topbar({ onMenuClick }) {
               {mode === "dark" ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}
             </IconButton>
 
-            <IconButton
-              sx={{
-                width: 42,
-                height: 42,
-                color: "var(--nx-text)",
-                border: "1px solid var(--nx-border)",
-                background: "var(--nx-panel-2)",
-                "&:hover": {
-                  background: "var(--nx-card)",
-                },
-              }}
-            >
-              <NotificationsNoneIcon />
-            </IconButton>
+            <NotificationBell />
 
             <IconButton
               onClick={(event) => setAnchorEl((prev) => (prev ? null : event.currentTarget))}

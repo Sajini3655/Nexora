@@ -1,0 +1,15 @@
+package com.admin.entity;
+
+public enum ActivityType {
+    PROJECT_CREATED,
+    PROJECT_UPDATED,
+    MANAGER_ASSIGNED,
+    CLIENT_ASSIGNED,
+    TASK_CREATED,
+    TASK_ASSIGNED,
+    TASK_COMPLETED,
+    TICKET_CREATED,
+    TICKET_STATUS_CHANGED,
+    TICKET_RESOLVED,
+    TICKET_CLOSED
+}

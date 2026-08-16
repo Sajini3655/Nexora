@@ -11,8 +11,10 @@ import com.admin.service.AuditLogService;
 import com.admin.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -48,8 +50,16 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+
         String email = authentication.getName();
-        return ResponseEntity.ok(authService.me(email));
+        try {
+            return ResponseEntity.ok(authService.me(email));
+        } catch (RuntimeException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Session invalid or user missing", ex);
+        }
     }
 
     @GetMapping("/accept-invite")

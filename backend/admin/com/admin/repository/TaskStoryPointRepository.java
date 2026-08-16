@@ -12,6 +12,10 @@ public interface TaskStoryPointRepository extends JpaRepository<TaskStoryPoint, 
 
     List<TaskStoryPoint> findByTaskIdOrderByCreatedAtAsc(Long taskId);
 
+    List<TaskStoryPoint> findByTaskIdIn(Collection<Long> taskIds);
+
+    List<TaskStoryPoint> findByCompletedById(Long userId);
+
     long countByTaskId(Long taskId);
 
     long countByTaskIdAndStatus(Long taskId, StoryPointStatus status);

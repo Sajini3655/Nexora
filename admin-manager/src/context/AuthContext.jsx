@@ -59,9 +59,12 @@ export function AuthProvider({ children }) {
       return normalizedUser;
     } catch (err) {
       console.warn("loadMe failed, clearing token", err);
-      clearAuthCaches();
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      const status = err?.response?.status;
+      if (status === 400 || status === 401 || status === 403) {
+        clearAuthCaches();
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
       setUser(null);
       setModuleAccess(null);
       setAccessLoading(false);

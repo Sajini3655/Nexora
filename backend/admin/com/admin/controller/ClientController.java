@@ -2,8 +2,11 @@ package com.admin.controller;
 
 import com.admin.dto.CreateClientTicketRequest;
 import com.admin.dto.ProjectResponse;
+import com.admin.dto.ProjectActivityResponseDto;
 import com.admin.dto.TicketDto;
 import com.admin.service.ClientPortalService;
+import com.admin.service.ProjectActivityService;
+import com.admin.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +24,7 @@ import java.util.List;
 public class ClientController {
 
     private final ClientPortalService clientPortalService;
+    private final ProjectActivityService projectActivityService;
 
     @GetMapping("/projects")
     public ResponseEntity<List<ProjectResponse>> getMyProjects(Authentication authentication) {
@@ -39,5 +43,17 @@ public class ClientController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(clientPortalService.createTicket(authentication, request));
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<ProjectActivityResponseDto>> getProjectHistory(
+            Authentication authentication,
+            @RequestParam(required = false) Long projectId
+    ) {
+        if (projectId != null) {
+            return ResponseEntity.ok(projectActivityService.getProjectActivitiesByClient(projectId, authentication));
+        } else {
+            return ResponseEntity.ok(projectActivityService.getClientActivities(authentication));
+        }
     }
 }

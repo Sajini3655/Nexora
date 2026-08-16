@@ -26,8 +26,10 @@ public class TaskAssignmentService {
     private final TaskRepository taskRepository;
     private final TaskStoryPointRepository storyPointRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
+    private final NotificationPublisher notificationPublisher;
     private final AiSkillExtractionService aiSkillExtractionService;
     private final AiAssigneeService aiAssigneeService;
+    private final ProjectActivityService projectActivityService;
 
     
     @Transactional(readOnly = true)
@@ -177,6 +179,11 @@ public class TaskAssignmentService {
         if (req.getAssignedToId() != null) {
             assignee = userRepository.findById(Objects.requireNonNull(req.getAssignedToId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
+
+            // Ensure the assignee is an enabled user
+            if (!Boolean.TRUE.equals(assignee.getEnabled())) {
+                throw new RuntimeException("Cannot assign task to a disabled user.");
+            }
         }
 
         Project project = null;
@@ -201,7 +208,42 @@ public class TaskAssignmentService {
 
         TaskItem saved = Objects.requireNonNull(taskRepository.save(task));
         TaskDto dto = toTaskDto(saved);
+        
+        // Record activity
+        if (project != null) {
+            projectActivityService.recordActivity(
+                    project,
+                    manager,
+                    ActivityType.TASK_CREATED,
+                    "Task created",
+                    "Task '" + saved.getTitle() + "' was created"
+            );
+        }
+        
         liveUpdatePublisher.publishTasksChanged("created");
+
+        // Publish notification if task was assigned to a developer
+        if (assignee != null) {
+            String projectName = project != null ? project.getName() : "A project";
+            NotificationEventDto notification = NotificationEventDto.builder()
+                    .eventType("TASK_ASSIGNED")
+                    .sourceUserId(manager.getId())
+                    .targetUserId(assignee.getId())
+                    .aggregateType("TASK")
+                    .aggregateId(saved.getId())
+                    .title("New Task Assigned")
+                    .message("You have been assigned a new task: " + saved.getTitle() + " in " + projectName)
+                    .metadata(Map.of(
+                        "taskId", saved.getId(),
+                        "taskTitle", saved.getTitle(),
+                        "projectId", project != null ? project.getId() : null,
+                        "projectName", projectName,
+                        "priority", saved.getPriority()
+                    ))
+                    .build();
+            notificationPublisher.publish(notification);
+        }
+
         return dto;
     }
 
@@ -237,7 +279,42 @@ public class TaskAssignmentService {
 
         TaskItem saved = taskRepository.save(task);
         TaskDto dto = toTaskDto(saved);
+        
+        // Record activity for task assignment (only if actually assigned)
+        if (assignee != null && task.getProject() != null) {
+            projectActivityService.recordActivity(
+                    task.getProject(),
+                    manager,
+                    ActivityType.TASK_ASSIGNED,
+                    "Task assigned",
+                    "Task '" + saved.getTitle() + "' was assigned to " + assignee.getEmail()
+            );
+        }
+        
         liveUpdatePublisher.publishTasksChanged("assigned");
+
+        // Publish notification if task was assigned to a developer
+        if (assignee != null) {
+            String projectName = task.getProject() != null ? task.getProject().getName() : "A project";
+            NotificationEventDto notification = NotificationEventDto.builder()
+                    .eventType("TASK_ASSIGNED")
+                    .sourceUserId(manager.getId())
+                    .targetUserId(assignee.getId())
+                    .aggregateType("TASK")
+                    .aggregateId(saved.getId())
+                    .title("Task Assigned")
+                    .message("You have been assigned a task: " + saved.getTitle() + " in " + projectName)
+                    .metadata(Map.of(
+                        "taskId", saved.getId(),
+                        "taskTitle", saved.getTitle(),
+                        "projectId", task.getProject() != null ? task.getProject().getId() : null,
+                        "projectName", projectName,
+                        "priority", saved.getPriority()
+                    ))
+                    .build();
+            notificationPublisher.publish(notification);
+        }
+
         return dto;
     }
 
@@ -254,6 +331,8 @@ public class TaskAssignmentService {
             throw new AccessDeniedException("You can only update tasks for projects you manage");
         }
 
+        TaskStatus oldStatus = task.getStatus();
+        
         task.setTitle(req.getTitle().trim());
         task.setDescription(req.getDescription());
         task.setPriority(req.getPriority() == null ? TaskPriority.MEDIUM : req.getPriority());
@@ -269,6 +348,21 @@ public class TaskAssignmentService {
 
         TaskItem saved = taskRepository.save(task);
         TaskDto dto = toTaskDto(saved);
+        
+        // Record activity if status changed to COMPLETED
+        if (COMPLETED_TASK_STATUSES.contains(saved.getStatus()) && 
+            (oldStatus == null || !COMPLETED_TASK_STATUSES.contains(oldStatus))) {
+            if (task.getProject() != null) {
+                projectActivityService.recordActivity(
+                        task.getProject(),
+                        manager,
+                        ActivityType.TASK_COMPLETED,
+                        "Task completed",
+                        "Task '" + saved.getTitle() + "' was completed"
+                );
+            }
+        }
+        
         liveUpdatePublisher.publishTasksChanged("updated");
         return dto;
     }

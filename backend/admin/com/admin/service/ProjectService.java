@@ -2,10 +2,12 @@ package com.admin.service;
 
 import com.admin.dto.CreateProjectRequest;
 import com.admin.dto.CreateTaskStoryPointRequest;
+import com.admin.dto.NotificationEventDto;
 import com.admin.dto.ProjectResponse;
 import com.admin.dto.ProjectTaskRequest;
 import com.admin.dto.ProjectTaskResponse;
 import com.admin.dto.UpdateProjectRequest;
+import com.admin.entity.ActivityType;
 import com.admin.entity.Project;
 import com.admin.entity.Role;
 import com.admin.entity.StoryPointStatus;
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,8 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final TaskStoryPointRepository taskStoryPointRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
+    private final NotificationPublisher notificationPublisher;
+    private final ProjectActivityService projectActivityService;
 
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request, Authentication authentication) {
@@ -46,12 +51,17 @@ public class ProjectService {
                 .manager(manager)
                 .build();
 
+        User client = null;
         if (request.getClientId() != null) {
-            User client = userRepository.findById(request.getClientId())
+            client = userRepository.findById(request.getClientId())
                     .orElseThrow(() -> new ResourceNotFoundException("Selected client not found"));
 
             if (!client.getAllRoles().contains(Role.CLIENT)) {
                 throw new AccessDeniedException("Selected user is not a client");
+            }
+
+            if (!Boolean.TRUE.equals(client.getEnabled())) {
+                throw new RuntimeException("Cannot assign project to a disabled user.");
             }
 
             project.setClient(client);
@@ -85,8 +95,49 @@ public class ProjectService {
 
         createNestedStoryPoints(request.getTasks(), savedProject.getTasks());
 
+        // Record activity
+        projectActivityService.recordActivity(
+                savedProject,
+                manager,
+                ActivityType.PROJECT_CREATED,
+                "Project created",
+                "Project '" + savedProject.getName() + "' was created"
+        );
+
+        // If client was assigned, record that activity too
+        if (client != null) {
+            projectActivityService.recordActivity(
+                    savedProject,
+                    manager,
+                    ActivityType.CLIENT_ASSIGNED,
+                    "Client assigned",
+                    "Client " + client.getEmail() + " was assigned to this project"
+            );
+        }
+
         liveUpdatePublisher.publishProjectsChanged("created");
         liveUpdatePublisher.publishTasksChanged("created");
+
+        // Publish notification if project was assigned to a client
+        if (client != null) {
+            NotificationEventDto notification = NotificationEventDto.builder()
+                    .eventType("PROJECT_ASSIGNED")
+                    .sourceUserId(manager.getId())
+                    .targetUserId(client.getId())
+                    .aggregateType("PROJECT")
+                    .aggregateId(savedProject.getId())
+                    .title("New Project Assigned")
+                    .message("You have been assigned a new project: " + savedProject.getName())
+                    .metadata(Map.of(
+                        "projectId", savedProject.getId(),
+                        "projectName", savedProject.getName(),
+                        "managerId", manager.getId(),
+                        "managerName", manager.getName() != null ? manager.getName() : manager.getEmail()
+                    ))
+                    .build();
+            notificationPublisher.publish(notification);
+        }
+
         return mapToResponse(savedProject);
     }
 
@@ -101,24 +152,91 @@ public class ProjectService {
             throw new AccessDeniedException("You can only update your own projects");
         }
 
+        // Track if client assignment changed for notifications
+        User oldClient = project.getClient();
+
         project.setName(request.getName().trim());
         project.setDescription(request.getDescription().trim());
 
+        User newClient = null;
         if (request.getClientId() != null) {
-            User client = userRepository.findById(request.getClientId())
+            newClient = userRepository.findById(request.getClientId())
                     .orElseThrow(() -> new ResourceNotFoundException("Selected client not found"));
 
-            if (!client.getAllRoles().contains(Role.CLIENT)) {
+            if (!newClient.getAllRoles().contains(Role.CLIENT)) {
                 throw new AccessDeniedException("Selected user is not a client");
             }
 
-            project.setClient(client);
+            if (!Boolean.TRUE.equals(newClient.getEnabled())) {
+                throw new RuntimeException("Cannot assign project to a disabled user.");
+            }
+
+            project.setClient(newClient);
         } else {
             project.setClient(null);
         }
 
         Project saved = projectRepository.save(project);
+        
+        // Record activity for project update if details changed
+        String oldNameDesc = "";
+        String newNameDesc = "";
+        if (!project.getName().equals(request.getName().trim()) || 
+            !project.getDescription().equals(request.getDescription().trim())) {
+            projectActivityService.recordActivity(
+                    saved,
+                    manager,
+                    ActivityType.PROJECT_UPDATED,
+                    "Project updated",
+                    "Project details were updated"
+            );
+        }
+        
+        // Record activity if client assignment changed
+        if ((oldClient == null && newClient != null) || 
+            (oldClient != null && newClient == null) ||
+            (oldClient != null && newClient != null && !oldClient.getId().equals(newClient.getId()))) {
+            if (newClient != null) {
+                projectActivityService.recordActivity(
+                        saved,
+                        manager,
+                        ActivityType.CLIENT_ASSIGNED,
+                        "Client assigned",
+                        "Client " + newClient.getEmail() + " was assigned to this project"
+                );
+            } else {
+                projectActivityService.recordActivity(
+                        saved,
+                        manager,
+                        ActivityType.CLIENT_ASSIGNED,
+                        "Client removed",
+                        "Client assignment was removed from this project"
+                );
+            }
+        }
+
         liveUpdatePublisher.publishProjectsChanged("updated");
+
+        // Publish notification if client assignment changed
+        if (newClient != null && (oldClient == null || !oldClient.getId().equals(newClient.getId()))) {
+            NotificationEventDto notification = NotificationEventDto.builder()
+                    .eventType("PROJECT_ASSIGNED")
+                    .sourceUserId(manager.getId())
+                    .targetUserId(newClient.getId())
+                    .aggregateType("PROJECT")
+                    .aggregateId(saved.getId())
+                    .title("Project Assigned to You")
+                    .message("You have been assigned a project: " + saved.getName())
+                    .metadata(Map.of(
+                        "projectId", saved.getId(),
+                        "projectName", saved.getName(),
+                        "managerId", manager.getId(),
+                        "managerName", manager.getName() != null ? manager.getName() : manager.getEmail()
+                    ))
+                    .build();
+            notificationPublisher.publish(notification);
+        }
+
         return mapToResponse(saved);
     }
 

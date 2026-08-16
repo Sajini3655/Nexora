@@ -7,6 +7,7 @@ import com.admin.dto.LoginRequest;
 import com.admin.dto.RegisterRequest;
 import com.admin.dto.UserResponse;
 import com.admin.entity.InviteToken;
+import com.admin.entity.Role;
 import com.admin.entity.User;
 import com.admin.repository.InviteTokenRepository;
 import com.admin.repository.UserRepository;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -181,14 +184,30 @@ public class AuthService {
     }
 
     private UserResponse toUserResponse(User user) {
+        Role role = resolvePrimaryRole(user);
+        Set<Role> roles = new LinkedHashSet<>(user.getAllRoles());
+        if (role != null) {
+            roles.add(role);
+        }
+
         return UserResponse.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
-                .role(user.getRole())
-                .roles(new ArrayList<>(user.getAllRoles()))
+                .role(role)
+                .roles(new ArrayList<>(roles))
                 .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    private Role resolvePrimaryRole(User user) {
+        if (user.getRole() != null) {
+            return user.getRole();
+        }
+
+        return user.getAllRoles().stream().findFirst().orElseThrow(
+                () -> new RuntimeException("User role is not configured")
+        );
     }
 }

@@ -1,8 +1,10 @@
 package com.admin.service;
 
 import com.admin.dto.AssignTicketRequest;
+import com.admin.dto.NotificationEventDto;
 import com.admin.dto.TaskDto;
 import com.admin.dto.TicketDto;
+import com.admin.entity.ActivityType;
 import com.admin.entity.Project;
 import com.admin.entity.Role;
 import com.admin.entity.StoryPointStatus;
@@ -50,6 +52,8 @@ public class TicketService {
     private final TaskStoryPointRepository taskStoryPointRepository;
     private final TaskStoryPointService taskStoryPointService;
     private final LiveUpdatePublisher liveUpdatePublisher;
+    private final NotificationPublisher notificationPublisher;
+    private final ProjectActivityService projectActivityService;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true)
@@ -110,6 +114,11 @@ public class TicketService {
         Project project = resolveProject(request);
         User assignee = resolveAssignee(request);
 
+        // Prevent assigning tickets to disabled users
+        if (assignee != null && !Boolean.TRUE.equals(assignee.getEnabled())) {
+            throw new RuntimeException("Cannot assign ticket to a disabled user.");
+        }
+
         if (actor.getAllRoles().contains(Role.CLIENT) && project == null) {
             throw new IllegalArgumentException("projectId is required when a client creates a ticket");
         }
@@ -169,6 +178,63 @@ public class TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
         liveUpdatePublisher.publishTicketsChanged("created");
+
+        // Publish notifications
+        // 1. Notify manager if ticket is created by client
+        if (ticket.getManager() != null && actor.getAllRoles().contains(Role.CLIENT)) {
+            String projectName = project != null ? project.getName() : "A project";
+            NotificationEventDto managerNotification = NotificationEventDto.builder()
+                    .eventType("TICKET_CREATED")
+                    .sourceUserId(actor.getId())
+                    .targetUserId(ticket.getManager().getId())
+                    .aggregateType("TICKET")
+                    .aggregateId(saved.getId())
+                    .title("New Ticket Received")
+                    .message("New support ticket created: " + saved.getTitle() + " in " + projectName)
+                    .metadata(Map.of(
+                        "ticketId", saved.getId(),
+                        "ticketTitle", saved.getTitle(),
+                        "projectId", project != null ? project.getId() : null,
+                        "projectName", projectName,
+                        "priority", saved.getPriority()
+                    ))
+                    .build();
+            notificationPublisher.publish(managerNotification);
+        }
+
+        // 2. Notify assigned developer
+        if (assignee != null) {
+            String projectName = project != null ? project.getName() : "A project";
+            NotificationEventDto assigneeNotification = NotificationEventDto.builder()
+                    .eventType("TICKET_ASSIGNED")
+                    .sourceUserId(actor.getId())
+                    .targetUserId(assignee.getId())
+                    .aggregateType("TICKET")
+                    .aggregateId(saved.getId())
+                    .title("Ticket Assigned")
+                    .message("You have been assigned a ticket: " + saved.getTitle() + " in " + projectName)
+                    .metadata(Map.of(
+                        "ticketId", saved.getId(),
+                        "ticketTitle", saved.getTitle(),
+                        "projectId", project != null ? project.getId() : null,
+                        "projectName", projectName,
+                        "priority", saved.getPriority()
+                    ))
+                    .build();
+            notificationPublisher.publish(assigneeNotification);
+        }
+
+        // Record activity if ticket is associated with a project
+        if (project != null) {
+            projectActivityService.recordActivity(
+                    project,
+                    actor,
+                    ActivityType.TICKET_CREATED,
+                    "Ticket created",
+                    "Support ticket '" + saved.getTitle() + "' was created"
+            );
+        }
+
         return toDto(saved);
     }
 
@@ -181,13 +247,20 @@ public class TicketService {
             throw new AccessDeniedException("You are not allowed to modify this ticket");
         }
 
+        // Track if assignment changed for notifications
+        User oldAssignee = ticket.getAssignedTo();
+
         ticket.setTitle(ticketDetails.getTitle());
         ticket.setDescription(ticketDetails.getDescription());
         ticket.setStatus(ticketDetails.getStatus());
         ticket.setPriority(ticketDetails.getPriority());
 
         if (ticketDetails.getAssignedTo() != null) {
-            ticket.setAssignedTo(resolveAssignee(ticketDetails));
+            User assignee = resolveAssignee(ticketDetails);
+            if (assignee != null && !Boolean.TRUE.equals(assignee.getEnabled())) {
+                throw new RuntimeException("Cannot assign ticket to a disabled user.");
+            }
+            ticket.setAssignedTo(assignee);
         }
 
         if (ticketDetails.getProject() != null) {
@@ -198,15 +271,49 @@ public class TicketService {
 
         if (user.getAllRoles().contains(Role.ADMIN)) {
             if (ticketDetails.getManager() != null && ticketDetails.getManager().getId() != null) {
-                ticket.setManager(resolveUser(ticketDetails.getManager().getId(), "Manager not found"));
+                User manager = resolveUser(ticketDetails.getManager().getId(), "Manager not found");
+                if (!Boolean.TRUE.equals(manager.getEnabled())) {
+                    throw new RuntimeException("Cannot assign ticket to a disabled user.");
+                }
+                ticket.setManager(manager);
             }
             if (ticketDetails.getClient() != null && ticketDetails.getClient().getId() != null) {
-                ticket.setClient(resolveUser(ticketDetails.getClient().getId(), "Client not found"));
+                User client = resolveUser(ticketDetails.getClient().getId(), "Client not found");
+                if (!Boolean.TRUE.equals(client.getEnabled())) {
+                    throw new RuntimeException("Cannot assign ticket to a disabled user.");
+                }
+                ticket.setClient(client);
             }
         }
 
-        TicketDto dto = toDto(ticketRepository.save(ticket));
+        Ticket saved = ticketRepository.save(ticket);
         liveUpdatePublisher.publishTicketsChanged("updated");
+
+        // Publish notification if assignment changed
+        if ((oldAssignee == null && ticket.getAssignedTo() != null) ||
+            (oldAssignee != null && ticket.getAssignedTo() != null && !oldAssignee.getId().equals(ticket.getAssignedTo().getId()))) {
+            User newAssignee = ticket.getAssignedTo();
+            String projectName = ticket.getProject() != null ? ticket.getProject().getName() : "A project";
+            NotificationEventDto notification = NotificationEventDto.builder()
+                    .eventType("TICKET_ASSIGNED")
+                    .sourceUserId(user.getId())
+                    .targetUserId(newAssignee.getId())
+                    .aggregateType("TICKET")
+                    .aggregateId(saved.getId())
+                    .title("Ticket Assigned to You")
+                    .message("You have been assigned a ticket: " + saved.getTitle() + " in " + projectName)
+                    .metadata(Map.of(
+                        "ticketId", saved.getId(),
+                        "ticketTitle", saved.getTitle(),
+                        "projectId", ticket.getProject() != null ? ticket.getProject().getId() : null,
+                        "projectName", projectName,
+                        "priority", saved.getPriority()
+                    ))
+                    .build();
+            notificationPublisher.publish(notification);
+        }
+
+        TicketDto dto = toDto(saved);
         return dto;
     }
 

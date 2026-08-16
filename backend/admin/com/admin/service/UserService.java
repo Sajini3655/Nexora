@@ -3,21 +3,35 @@ package com.admin.service;
 import com.admin.dto.InviteRequest;
 import com.admin.dto.PageResponse;
 import com.admin.dto.UserResponse;
+import com.admin.entity.ChatMessage;
+import com.admin.entity.ChatSession;
 import com.admin.entity.DeveloperProfile;
 import com.admin.entity.ExperienceLevel;
 import com.admin.entity.InviteToken;
+import com.admin.entity.Project;
 import com.admin.entity.Role;
+import com.admin.entity.TaskItem;
+import com.admin.entity.TaskStoryPoint;
+import com.admin.entity.Ticket;
+import com.admin.entity.TimesheetEntry;
 import com.admin.entity.User;
 import com.admin.exception.ResourceNotFoundException;
+import com.admin.repository.ChatMessageRepository;
+import com.admin.repository.ChatSessionRepository;
 import com.admin.repository.DeveloperProfileRepository;
 import com.admin.repository.InviteTokenRepository;
 import com.admin.repository.ProjectRepository;
 import com.admin.repository.TaskRepository;
+import com.admin.repository.TaskStoryPointRepository;
 import com.admin.repository.TicketRepository;
+import com.admin.repository.TimesheetEntryRepository;
+import com.admin.repository.UserModuleOverrideRepository;
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -27,6 +41,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,9 +56,15 @@ public class UserService {
     private final MailService mailService;
     private final AuditLogService auditLogService;
     private final TaskRepository taskRepository;
+    private final TaskStoryPointRepository taskStoryPointRepository;
     private final TicketRepository ticketRepository;
+    private final TimesheetEntryRepository timesheetEntryRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatSessionRepository chatSessionRepository;
     private final DeveloperProfileRepository developerProfileRepository;
     private final ProjectRepository projectRepository;
+    private final UserModuleOverrideRepository userModuleOverrideRepository;
+    private final JdbcTemplate jdbcTemplate;
     private final LiveUpdatePublisher liveUpdatePublisher;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
@@ -323,58 +344,97 @@ public class UserService {
             throw new RuntimeException("You cannot delete your own account.");
         }
 
-        long taskCreatedRefs = taskRepository.countByCreatedBy_Id(userId);
-        long taskAssignedRefs = taskRepository.countByAssignedTo_Id(userId);
-
-        long ticketCreatedRefs = ticketRepository.countByCreatedBy_Id(userId);
-        long ticketAssignedRefs = ticketRepository.countByAssignedTo_Id(userId);
-
-        long profileRefs = developerProfileRepository.countByUser_Id(userId);
-        long projectRefs = projectRepository.countByManager_Id(userId);
-
-        boolean hasDependencies =
-                taskCreatedRefs > 0 ||
-                taskAssignedRefs > 0 ||
-                ticketCreatedRefs > 0 ||
-                ticketAssignedRefs > 0 ||
-                profileRefs > 0 ||
-                projectRefs > 0;
-
-        if (hasDependencies) {
-            user.setEnabled(false);
-            userRepository.save(user);
-
-            try {
-                auditLogService.log(
-                        "DISABLED_USER",
-                        actorEmail,
-                        targetEmail,
-                        "User had related records, so account was disabled instead of deleted"
-                );
-            } catch (Exception e) {
-            }
-
-            liveUpdatePublisher.publishUsersChanged("disabled");
-
-            return "User has related records. Disabled instead of deleted.";
-        }
-
-        inviteTokenRepository.deleteByUser_Id(userId);
-        userRepository.deleteById(userId);
+        // Soft delete: Disable the user instead of hard delete
+        // This preserves all historical data (tasks, tickets, projects, timesheets, etc.)
+        // while preventing the user from:
+        // - Logging in (checked in AuthService and UserDetails.isEnabled())
+        // - Appearing in active user lists (queries filter by enabled = true)
+        // - Being assigned to new work
+        user.setEnabled(false);
+        userRepository.save(user);
+        userRepository.flush();
 
         try {
             auditLogService.log(
                     "DELETED_USER",
                     actorEmail,
                     targetEmail,
-                    "Deleted user account"
+                    "User account disabled (soft delete) - all historical records preserved"
             );
         } catch (Exception e) {
+            // Log suppressed to avoid affecting user deletion if audit logging fails
         }
 
-        liveUpdatePublisher.publishUsersChanged("deleted");
+        try {
+            liveUpdatePublisher.publishUsersChanged("deleted");
+        } catch (Exception e) {
+            // Log suppressed to avoid affecting user deletion if live update fails
+        }
 
-        return "User deleted successfully.";
+        return "User account has been disabled successfully. All historical project and task data has been preserved.";
+    }
+
+    private void forceCleanupResidualUserReferences(Long userId) {
+        List<Map<String, Object>> references = jdbcTemplate.queryForList("""
+            SELECT kcu.table_schema,
+                   kcu.table_name,
+                   kcu.column_name,
+                   cols.is_nullable
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_name = kcu.constraint_name
+             AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage ccu
+              ON ccu.constraint_name = tc.constraint_name
+             AND ccu.table_schema = tc.table_schema
+            JOIN information_schema.columns cols
+              ON cols.table_schema = kcu.table_schema
+             AND cols.table_name = kcu.table_name
+             AND cols.column_name = kcu.column_name
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+              AND ccu.table_name = 'users'
+                            AND ccu.table_schema = current_schema()
+              AND ccu.column_name = 'id'
+              AND kcu.table_name <> 'users'
+              AND kcu.table_schema NOT IN ('pg_catalog', 'information_schema')
+            ORDER BY kcu.table_schema, kcu.table_name, kcu.column_name
+            """);
+
+        Set<String> visited = new HashSet<>();
+
+        for (Map<String, Object> reference : references) {
+            String schema = String.valueOf(reference.get("table_schema"));
+            String table = String.valueOf(reference.get("table_name"));
+            String column = String.valueOf(reference.get("column_name"));
+            String nullable = String.valueOf(reference.get("is_nullable"));
+            String key = schema + "." + table + "." + column;
+
+            if (!visited.add(key)) {
+                continue;
+            }
+
+            String qualifiedTable = quoteIdentifier(schema) + "." + quoteIdentifier(table);
+            String quotedColumn = quoteIdentifier(column);
+
+            if ("YES".equalsIgnoreCase(nullable)) {
+                jdbcTemplate.update(
+                        "UPDATE " + qualifiedTable + " SET " + quotedColumn + " = NULL WHERE " + quotedColumn + " = ?",
+                        userId
+                );
+            } else {
+                jdbcTemplate.update(
+                        "DELETE FROM " + qualifiedTable + " WHERE " + quotedColumn + " = ?",
+                        userId
+                );
+            }
+        }
+    }
+
+    private String quoteIdentifier(String identifier) {
+        if (identifier == null || !identifier.matches("[A-Za-z0-9_]+")) {
+            throw new IllegalArgumentException("Unsafe SQL identifier: " + identifier);
+        }
+        return "\"" + identifier + "\"";
     }
 
     private UserResponse toUserResponse(User user) {

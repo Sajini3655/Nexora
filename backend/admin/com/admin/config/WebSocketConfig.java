@@ -29,7 +29,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
+        // Enable simple broker for topics (existing live updates)
+        // and for user queues (new notifications)
+        config.enableSimpleBroker("/topic", "/queue");
+        // User destination prefix for secure per-user messaging
+        config.setUserDestinationPrefix("/user");
         config.setApplicationDestinationPrefixes("/app");
     }
 

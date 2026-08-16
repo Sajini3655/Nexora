@@ -6,11 +6,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface TimesheetEntryRepository extends JpaRepository<TimesheetEntry, Long> {
 
     List<TimesheetEntry> findByDeveloperIdOrderByWorkDateDesc(Long developerId);
+
+    List<TimesheetEntry> findByReviewedByIdOrderByWorkDateDesc(Long reviewedById);
+
+    List<TimesheetEntry> findByProject_IdInOrderByWorkDateDesc(Collection<Long> projectIds);
+
+    List<TimesheetEntry> findByTask_IdInOrderByWorkDateDesc(Collection<Long> taskIds);
 
     List<TimesheetEntry> findByDeveloperIdAndStatusOrderByWorkDateDesc(Long developerId, TimesheetStatus status);
 

@@ -1,6 +1,7 @@
 package com.admin.service;
 
 import com.admin.entity.User;
+import com.admin.entity.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -28,13 +29,14 @@ public class JwtService {
 
     public String generateToken(User user) {
         Map<String, Object> claims = new HashMap<>();
+        Role primaryRole = resolvePrimaryRole(user);
 
         List<String> allRoles = user.getAllRoles()
                 .stream()
                 .map(role -> "ROLE_" + role.name())
                 .toList();
 
-        claims.put("role", "ROLE_" + user.getRole().name());
+        claims.put("role", "ROLE_" + primaryRole.name());
 
         claims.put("roles", allRoles);
 
@@ -114,6 +116,16 @@ public class JwtService {
             .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    private Role resolvePrimaryRole(User user) {
+        if (user.getRole() != null) {
+            return user.getRole();
+        }
+
+        return user.getAllRoles().stream().findFirst().orElseThrow(
+                () -> new RuntimeException("User role is not configured")
+        );
     }
 }
 
