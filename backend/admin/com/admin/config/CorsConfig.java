@@ -25,12 +25,13 @@ public class CorsConfig {
         if (frontendBaseUrl != null && !frontendBaseUrl.isBlank()) {
             allowedOrigins.add(frontendBaseUrl.trim());
         }
+
+        allowedOrigins.add("https://nexora-96b9d0fxg-sajini3655s-projects.vercel.app");
         allowedOrigins.add("http://localhost:5173");
         allowedOrigins.add("http://127.0.0.1:5173");
 
-        config.setAllowedOriginPatterns(allowedOrigins);
-
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -39,7 +40,6 @@ public class CorsConfig {
                 "X-Requested-With"
         ));
         config.setAllowCredentials(true);
-
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
