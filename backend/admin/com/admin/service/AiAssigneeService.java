@@ -32,7 +32,8 @@ public class AiAssigneeService {
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(
+            @SuppressWarnings("unchecked")
+            ResponseEntity<Map<String, Object>> response = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) restTemplate.postForEntity(
                     aiServiceBaseUrl + "/assign/recommend",
                     request,
                     Map.class

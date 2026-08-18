@@ -38,20 +38,14 @@ public class TaskStoryPointService {
         Integer taskEstimated = task.getEstimatedPoints();
 
         List<TaskStoryPoint> existing = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(task.getId());
-        long existingTotal = existing.stream().mapToLong(p -> p.getPointValue() == null ? 0 : p.getPointValue()).sum();
-        Integer newPoint = request.getPointValue() == null ? 0 : request.getPointValue();
-        if (taskEstimated != null && taskEstimated > 0) {
-            if (existingTotal + newPoint > taskEstimated) {
-                throw new RuntimeException("Adding this story point would exceed the task's estimated points");
-            }
-        }
+        validateStoryPointEstimate(taskEstimated, existing, request.getPointValue(), "add");
 
         String normalizedTitle = normalizeTitleOrDefault(request.getTitle(), request.getPointValue());
 
         TaskStoryPoint storyPoint = TaskStoryPoint.builder()
                 .task(task)
-            .title(normalizedTitle)
-                .description(request.getDescription())
+                .title(normalizedTitle)
+                .description(null)
                 .pointValue(request.getPointValue())
                 .status(StoryPointStatus.TODO)
                 .completed(Boolean.FALSE)
@@ -92,18 +86,13 @@ public class TaskStoryPointService {
         List<TaskStoryPoint> existing = storyPointRepository.findByTaskIdOrderByCreatedAtAsc(task.getId());
         long othersTotal = existing.stream()
                 .filter(p -> !Objects.equals(p.getId(), storyPoint.getId()))
-                .mapToLong(p -> p.getPointValue() == null ? 0 : p.getPointValue())
+                .mapToLong(this::safePointValue)
                 .sum();
 
-        Integer newPoint = request.getPointValue() == null ? 0 : request.getPointValue();
-        if (taskEstimated != null && taskEstimated > 0) {
-            if (othersTotal + newPoint > taskEstimated) {
-                throw new RuntimeException("Updating this story point would exceed the task's estimated points");
-            }
-        }
+        validateStoryPointEstimate(taskEstimated, othersTotal, request.getPointValue(), "update");
 
         storyPoint.setTitle(normalizeTitleOrDefault(request.getTitle(), request.getPointValue()));
-        storyPoint.setDescription(request.getDescription());
+        storyPoint.setDescription(null);
         storyPoint.setPointValue(request.getPointValue());
 
         TaskStoryPoint saved = storyPointRepository.save(storyPoint);
@@ -311,6 +300,39 @@ public class TaskStoryPointService {
         }
         int safePoints = pointValue == null ? 0 : pointValue;
         return "Story Point " + safePoints;
+    }
+
+    private void validateStoryPointEstimate(Integer taskEstimated, List<TaskStoryPoint> existing, Integer newPointValue, String action) {
+        if (taskEstimated == null || taskEstimated <= 0) {
+            return;
+        }
+
+        long existingTotal = existing.stream().mapToLong(this::safePointValue).sum();
+        validateStoryPointEstimate(taskEstimated, existingTotal, newPointValue, action);
+    }
+
+    private void validateStoryPointEstimate(Integer taskEstimated, long existingTotal, Integer newPointValue, String action) {
+        if (taskEstimated == null || taskEstimated <= 0) {
+            return;
+        }
+
+        long requestedPointValue = newPointValue == null ? 0 : Math.max(0, newPointValue);
+        long remaining = taskEstimated - existingTotal;
+
+        if (existingTotal + requestedPointValue > taskEstimated) {
+            long available = Math.max(0, remaining);
+            throw new RuntimeException(
+                    "This story point would exceed the task estimate of " + taskEstimated + " points. " +
+                    "Current total: " + existingTotal + ". Remaining budget: " + available + " point(s)."
+            );
+        }
+    }
+
+    private long safePointValue(TaskStoryPoint storyPoint) {
+        if (storyPoint == null || storyPoint.getPointValue() == null) {
+            return 0;
+        }
+        return Math.max(0, storyPoint.getPointValue());
     }
 
     private ProgressTotals calculateTaskTotals(TaskItem task) {

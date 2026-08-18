@@ -676,10 +676,8 @@ public class NlqNavigationService {
         }
 
         int intersection = 0;
-        int total = 0;
         for (String t : bt) {
             if (t.isBlank()) continue;
-            total++;
             Integer count = am.get(t);
             if (count != null && count > 0) {
                 intersection++;
