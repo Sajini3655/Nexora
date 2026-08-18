@@ -15,7 +15,6 @@ import com.admin.repository.ProjectRepository;
 import com.admin.repository.TaskRepository;
 import com.admin.repository.TicketRepository;
 import com.admin.repository.UserRepository;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -46,7 +45,6 @@ public class UserService {
     private final DeveloperProfileRepository developerProfileRepository;
     private final ProjectRepository projectRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
-    private final EntityManager entityManager;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
