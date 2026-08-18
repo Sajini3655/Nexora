@@ -1671,32 +1671,35 @@ export default function ProjectManagementDetails() {
       </Dialog>
 
       <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
+        <DialogTitle sx={{ fontWeight: 900, color: "#1f2937", bgcolor: "#f9fafb" }}>
           Delete Project
         </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Typography sx={{ color: "var(--nx-text)" }}>
+        <DialogContent sx={{ pt: 3, bgcolor: "#ffffff", color: "#374151" }}>
+          <Typography sx={{ color: "#1f2937", mb: 1.5 }}>
             Are you sure you want to delete <strong>{project?.name}</strong>? This action will:
           </Typography>
-          <Box component="ul" sx={{ mt: 1.5, mb: 1.5, color: "var(--nx-text-soft)" }}>
-            <Typography component="li">Remove all tasks and story points</Typography>
-            <Typography component="li">Remove all timesheet entries</Typography>
-            <Typography component="li">Remove all project activities and chats</Typography>
+          <Box component="ul" sx={{ mt: 1, mb: 2, color: "#374151", pl: 2 }}>
+            <Typography component="li" sx={{ mb: 0.5 }}>Remove all tasks and story points</Typography>
+            <Typography component="li" sx={{ mb: 0.5 }}>Remove all timesheet entries</Typography>
+            <Typography component="li" sx={{ mb: 0.5 }}>Remove all project activities and chats</Typography>
             <Typography component="li">Remove all project files</Typography>
           </Box>
-          <Typography sx={{ color: "var(--nx-text-soft)", fontWeight: 600 }}>
+          <Typography sx={{ color: "#6b7280", fontWeight: 600, mt: 1.5 }}>
             This action cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, bgcolor: "#f9fafb", gap: 1 }}>
           <Button
             onClick={handleCloseDeleteDialog}
             disabled={deletingProject}
             sx={{
               textTransform: "none",
               fontWeight: 700,
-              color: "var(--nx-text)",
+              color: "#6b7280",
+              borderColor: "#d1d5db",
+              '&:hover': { bgcolor: "#f3f4f6" },
             }}
+            variant="outlined"
           >
             Cancel
           </Button>
@@ -1718,30 +1721,33 @@ export default function ProjectManagementDetails() {
       </Dialog>
 
       <Dialog open={deleteTaskDialogOpen} onClose={handleCloseDeleteTaskDialog} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
+        <DialogTitle sx={{ fontWeight: 900, color: "#1f2937", bgcolor: "#f9fafb" }}>
           Delete Task
         </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Typography sx={{ color: "var(--nx-text)" }}>
+        <DialogContent sx={{ pt: 3, bgcolor: "#ffffff", color: "#374151" }}>
+          <Typography sx={{ color: "#1f2937", mb: 1.5 }}>
             Are you sure you want to delete <strong>{selectedTask?.title || "this task"}</strong>? This action will:
           </Typography>
-          <Box component="ul" sx={{ mt: 1.5, mb: 1.5, color: "var(--nx-text-soft)" }}>
-            <Typography component="li">Remove all story points</Typography>
+          <Box component="ul" sx={{ mt: 1, mb: 2, color: "#374151", pl: 2 }}>
+            <Typography component="li" sx={{ mb: 0.5 }}>Remove all story points</Typography>
             <Typography component="li">Remove all timesheet entries</Typography>
           </Box>
-          <Typography sx={{ color: "var(--nx-text-soft)", fontWeight: 600 }}>
+          <Typography sx={{ color: "#6b7280", fontWeight: 600, mt: 1.5 }}>
             This action cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, bgcolor: "#f9fafb", gap: 1 }}>
           <Button
             onClick={handleCloseDeleteTaskDialog}
             disabled={deletingTask}
             sx={{
               textTransform: "none",
               fontWeight: 700,
-              color: "var(--nx-text)",
+              color: "#6b7280",
+              borderColor: "#d1d5db",
+              '&:hover': { bgcolor: "#f3f4f6" },
             }}
+            variant="outlined"
           >
             Cancel
           </Button>

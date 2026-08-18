@@ -264,8 +264,8 @@ export default function ProjectManagement() {
           </Typography>
         ) : (
           <Box sx={{ overflow: "auto", flex: 1, minHeight: 0 }}>
-            <Box sx={{ minWidth: 860 }}>
-              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.9fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid var(--nx-border)", position: "sticky", top: 0, zIndex: 1, background: "var(--nx-panel)" }}>
+            <Box sx={{ minWidth: 1100 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "2.2fr 1.1fr 0.85fr 0.75fr 0.9fr 1.1fr 0.95fr 1.05fr", gap: 1, py: 0.8, borderBottom: "1px solid var(--nx-border)", position: "sticky", top: 0, zIndex: 1, background: "var(--nx-panel)" }}>
                 {["Project", "Date Created", "Status", "Tasks", "Completed", "Weighted", "Progress", "Actions"].map((header) => (
                   <Typography key={header} variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", fontWeight: 800 }}>
                     {header}
@@ -274,35 +274,45 @@ export default function ProjectManagement() {
               </Box>
 
               {visibleProjectRows.map((project) => (
-                <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.9fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid var(--nx-border)" }}>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: 14, color: "var(--nx-text)" }} noWrap>
+                <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "2.2fr 1.1fr 0.85fr 0.75fr 0.9fr 1.1fr 0.95fr 1.05fr", gap: 1, py: 1.2, borderBottom: "1px solid var(--nx-border)", alignItems: "center" }}>
+                  <Box sx={{ minWidth: 0, overflow: "hidden" }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: 14, color: "var(--nx-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {project.name}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: "var(--nx-muted)" }} noWrap>
-                      {project.description}
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: "var(--nx-muted)", 
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        mt: 0.3
+                      }}
+                    >
+                      {project.description || "No description"}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block", mt: 0.4 }} noWrap>
+                    <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block", mt: 0.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       Client: {project.clientName || "No client assigned"}
                     </Typography>
                   </Box>
 
-                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", alignSelf: "center" }}>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", whiteSpace: "nowrap" }}>
                     {formatDate(project.createdAt)}
                   </Typography>
 
-                  <Chip size="small" label={project.status} sx={{ width: "fit-content", alignSelf: "center", fontWeight: 800, ...getStatusChipStyle(project.status) }} />
+                  <Chip size="small" label={project.status} sx={{ width: "fit-content", fontWeight: 800, ...getStatusChipStyle(project.status) }} />
 
-                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", alignSelf: "center" }}>{project.taskCount}</Typography>
-                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", alignSelf: "center" }}>{project.completedTaskCount}</Typography>
-                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", alignSelf: "center" }}>{project.completedPointValue}/{project.totalPointValue}</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", textAlign: "center" }}>{project.taskCount}</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", textAlign: "center" }}>{project.completedTaskCount}</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", whiteSpace: "nowrap" }}>{project.completedPointValue}/{project.totalPointValue}</Typography>
 
-                  <Box sx={{ alignSelf: "center" }}>
-                    <Typography variant="caption" sx={{ color: "var(--nx-text-soft)" }}>{project.weightedProgress}%</Typography>
-                    <LinearProgress variant="determinate" value={project.weightedProgress} sx={{ mt: 0.4, height: 6, borderRadius: 999, bgcolor: "var(--nx-panel-2)", '& .MuiLinearProgress-bar': { bgcolor: "var(--nx-purple)" } }} />
+                  <Box>
+                    <Typography variant="caption" sx={{ color: "var(--nx-text-soft)", display: "block", mb: 0.3 }}>{project.weightedProgress}%</Typography>
+                    <LinearProgress variant="determinate" value={project.weightedProgress} sx={{ height: 6, borderRadius: 999, bgcolor: "var(--nx-panel-2)", '& .MuiLinearProgress-bar': { bgcolor: "var(--nx-purple)" } }} />
                   </Box>
 
-                  <Box sx={{ alignSelf: "center", display: "flex", gap: 0.5 }}>
+                  <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
                     <Button 
                       size="small" 
                       variant="outlined" 
@@ -316,7 +326,7 @@ export default function ProjectManagement() {
                         color: "var(--nx-text)",
                         borderColor: "var(--nx-border)",
                         '&:hover': { backgroundColor: "var(--nx-panel-2)" },
-                        flex: 1,
+                        whiteSpace: "nowrap",
                       }}
                     >
                       Manage
@@ -333,6 +343,7 @@ export default function ProjectManagement() {
                         borderColor: "#ef4444",
                         '&:hover': { backgroundColor: "rgba(239,68,68,0.1)" },
                         '&:disabled': { opacity: 0.5 },
+                        whiteSpace: "nowrap",
                       }}
                     >
                       Delete
@@ -346,39 +357,41 @@ export default function ProjectManagement() {
       </Paper>
 
       <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
+        <DialogTitle sx={{ fontWeight: 900, color: "#1f2937", bgcolor: "#f9fafb" }}>
           Delete Project
         </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Typography sx={{ color: "var(--nx-text)" }}>
+        <DialogContent sx={{ pt: 3, bgcolor: "#ffffff", color: "#374151" }}>
+          <Typography sx={{ color: "#1f2937", mb: 1.5 }}>
             Are you sure you want to delete <strong>{projectToDelete?.name}</strong>? This action will:
           </Typography>
-          <Box component="ul" sx={{ mt: 1.5, mb: 1.5, color: "var(--nx-text-soft)" }}>
-            <Typography component="li">Remove all tasks and story points</Typography>
-            <Typography component="li">Remove all timesheet entries</Typography>
-            <Typography component="li">Remove all project activities and chats</Typography>
+          <Box component="ul" sx={{ mt: 1, mb: 2, color: "#374151", pl: 2 }}>
+            <Typography component="li" sx={{ mb: 0.5 }}>Remove all tasks and story points</Typography>
+            <Typography component="li" sx={{ mb: 0.5 }}>Remove all timesheet entries</Typography>
+            <Typography component="li" sx={{ mb: 0.5 }}>Remove all project activities and chats</Typography>
             <Typography component="li">Remove all project files</Typography>
           </Box>
-          <Typography sx={{ color: "var(--nx-text-soft)", fontWeight: 600 }}>
+          <Typography sx={{ color: "#6b7280", fontWeight: 600, mt: 1.5 }}>
             This action cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, bgcolor: "#f9fafb", gap: 1 }}>
           <Button
             onClick={handleCloseDeleteDialog}
             disabled={deletingProject}
             sx={{
               textTransform: "none",
               fontWeight: 700,
-              color: "var(--nx-text)",
+              color: "#6b7280",
+              borderColor: "#d1d5db",
+              '&:hover': { bgcolor: "#f3f4f6" },
             }}
+            variant="outlined"
           >
             Cancel
           </Button>
           <Button
             onClick={handleConfirmDelete}
             disabled={deletingProject}
-            loading={deletingProject}
             sx={{
               textTransform: "none",
               fontWeight: 700,
