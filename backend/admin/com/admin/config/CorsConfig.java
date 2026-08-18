@@ -52,7 +52,8 @@ public class CorsConfig {
                 "Accept",
                 "Origin",
                 "X-Requested-With",
-                "Access-Control-Allow-Origin"
+                "Access-Control-Allow-Origin",
+                "Cache-Control"
         ));
         config.setExposedHeaders(List.of(
                 "Authorization",
