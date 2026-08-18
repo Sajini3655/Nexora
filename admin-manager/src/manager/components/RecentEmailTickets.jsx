@@ -212,7 +212,7 @@ export default function RecentEmailTickets() {
   };
 
   const addStoryPoint = () => {
-    setStoryPoints((prev) => [...prev, { title: "", description: "", pointValue: 1 }]);
+    setStoryPoints((prev) => [...prev, { title: "", pointValue: 1 }]);
   };
 
   const removeStoryPoint = (rowIndex) => {
@@ -572,15 +572,6 @@ export default function RecentEmailTickets() {
                           onChange={(event) => updateStoryPoint(rowIndex, "pointValue", event.target.value)}
                         />
                       </Stack>
-                      <TextField
-                        size="small"
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        label="Description"
-                        value={row.description}
-                        onChange={(event) => updateStoryPoint(rowIndex, "description", event.target.value)}
-                      />
                       <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                           Row {rowIndex + 1}

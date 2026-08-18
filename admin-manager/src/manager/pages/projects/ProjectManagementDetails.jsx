@@ -40,6 +40,8 @@ import {
   updateProject,
   updateManagerTask,
   fetchManagerClients,
+  deleteProject,
+  deleteTask,
 } from "../../../services/managerService";
 import {
   getManagerQueryScope,
@@ -62,7 +64,6 @@ const emptyTaskForm = {
 
 const emptyStoryPointForm = {
   title: "",
-  description: "",
   pointValue: 1,
 };
 
@@ -246,6 +247,10 @@ export default function ProjectManagementDetails() {
   const [loadingStoryPoints, setLoadingStoryPoints] = useState(false);
   const [savingStoryPoint, setSavingStoryPoint] = useState(false);
   const [savingAllChanges, setSavingAllChanges] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
+  const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false);
+  const [deletingTask, setDeletingTask] = useState(false);
   const [projectFiles, setProjectFiles] = useState([]);
   const [selectedProjectFiles, setSelectedProjectFiles] = useState([]);
   const [projectFilesInputKey, setProjectFilesInputKey] = useState(0);
@@ -649,6 +654,66 @@ export default function ProjectManagementDetails() {
     }
   };
 
+  const handleDeleteProject = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!projectId) return;
+
+    setDeletingProject(true);
+    setActionError("");
+    setSuccess("");
+
+    try {
+      await deleteProject(Number(projectId));
+      setSuccess("Project deleted successfully.");
+      setDeleteDialogOpen(false);
+      setTimeout(() => {
+        window.location.href = "/manager/project-management";
+      }, 500);
+    } catch (err) {
+      setActionError(getErrorMessage(err, "Failed to delete project."));
+      setDeletingProject(false);
+    }
+  };
+
+  const handleCloseDeleteDialog = () => {
+    if (!deletingProject) {
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleDeleteTask = () => {
+    setDeleteTaskDialogOpen(true);
+  };
+
+  const handleConfirmDeleteTask = async () => {
+    if (!selectedTask) return;
+
+    setDeletingTask(true);
+    setActionError("");
+    setSuccess("");
+
+    try {
+      await deleteTask(Number(selectedTask.id));
+      setSuccess("Task deleted successfully.");
+      setDeleteTaskDialogOpen(false);
+      setTaskModalOpen(false);
+      setSelectedTask(null);
+      await projectDetailsQuery.refetch();
+    } catch (err) {
+      setActionError(getErrorMessage(err, "Failed to delete task."));
+      setDeletingTask(false);
+    }
+  };
+
+  const handleCloseDeleteTaskDialog = () => {
+    if (!deletingTask) {
+      setDeleteTaskDialogOpen(false);
+    }
+  };
+
   const handleAddTask = async () => {
     if (!project || !canAddTask) return;
 
@@ -875,7 +940,6 @@ export default function ProjectManagementDetails() {
 
       const payload = {
         title: storyPointForm.title ? storyPointForm.title.trim() : null,
-        description: storyPointForm.description ? storyPointForm.description.trim() : null,
         pointValue: pv,
       };
       await api.post(`/tasks/${selectedTask.id}/story-points`, payload);
@@ -894,7 +958,6 @@ export default function ProjectManagementDetails() {
     setEditingStoryPointId(storyPoint.id);
     setStoryPointForm({
       title: storyPoint.title || "",
-      description: storyPoint.description || "",
       pointValue: Number(storyPoint.pointValue || 1),
     });
   };
@@ -915,7 +978,6 @@ export default function ProjectManagementDetails() {
 
       const payload = {
         title: storyPointForm.title ? storyPointForm.title.trim() : null,
-        description: storyPointForm.description ? storyPointForm.description.trim() : null,
         pointValue: pv,
       };
       await api.put(`/story-points/${editingStoryPointId}`, payload);
@@ -998,7 +1060,7 @@ export default function ProjectManagementDetails() {
             <Metric label="Description" value={getProjectDescription(project)} />
           </Box>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr auto" }, gap: 1, alignItems: "center" }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr auto auto" }, gap: 1, alignItems: "center" }}>
             <TextField size="small" label="Project name" value={editProjectName} onChange={(e) => setEditProjectName(e.target.value)} />
             <TextField size="small" label="Project description" value={editProjectDescription} onChange={(e) => setEditProjectDescription(e.target.value)} />
             <TextField
@@ -1015,6 +1077,18 @@ export default function ProjectManagementDetails() {
             </TextField>
             <Button variant="outlined" disabled={savingProjectDetails} onClick={handleSaveProjectDetails}>
               {savingProjectDetails ? "Saving..." : "Save Project Details"}
+            </Button>
+            <Button 
+              variant="outlined" 
+              disabled={deletingProject} 
+              onClick={handleDeleteProject}
+              sx={{
+                color: "#ef4444",
+                borderColor: "#ef4444",
+                '&:hover': { backgroundColor: "rgba(239,68,68,0.1)" },
+              }}
+            >
+              Delete Project
             </Button>
           </Box>
         </Paper>
@@ -1565,15 +1639,125 @@ export default function ProjectManagementDetails() {
         </DialogContent>
 
         <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 }, flexDirection: { xs: "column-reverse", sm: "row" }, alignItems: { xs: "stretch", sm: "center" }, gap: 1, "& .MuiButton-root": { width: { xs: "100%", sm: "auto" } } }}>
-          <Button onClick={closeTaskModal} disabled={hasUnsavedChanges() || savingAllChanges}>
-            Close
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={handleSaveAllChanges} 
-            disabled={!hasUnsavedChanges() || savingAllChanges}
+          <Box sx={{ display: "flex", gap: 1, width: "100%", justifyContent: "space-between" }}>
+            <Button 
+              onClick={handleDeleteTask} 
+              disabled={deletingTask}
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                color: "#ef4444",
+                borderColor: "#ef4444",
+                '&:hover': { backgroundColor: "rgba(239,68,68,0.1)" },
+                '&:disabled': { opacity: 0.5 },
+              }}
+            >
+              Delete Task
+            </Button>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button onClick={closeTaskModal} disabled={hasUnsavedChanges() || savingAllChanges}>
+                Close
+              </Button>
+              <Button 
+                variant="contained" 
+                onClick={handleSaveAllChanges} 
+                disabled={!hasUnsavedChanges() || savingAllChanges}
+              >
+                {savingAllChanges ? "Saving..." : "Save Changes"}
+              </Button>
+            </Box>
+          </Box>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
+          Delete Project
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography sx={{ color: "var(--nx-text)" }}>
+            Are you sure you want to delete <strong>{project?.name}</strong>? This action will:
+          </Typography>
+          <Box component="ul" sx={{ mt: 1.5, mb: 1.5, color: "var(--nx-text-soft)" }}>
+            <Typography component="li">Remove all tasks and story points</Typography>
+            <Typography component="li">Remove all timesheet entries</Typography>
+            <Typography component="li">Remove all project activities and chats</Typography>
+            <Typography component="li">Remove all project files</Typography>
+          </Box>
+          <Typography sx={{ color: "var(--nx-text-soft)", fontWeight: 600 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={handleCloseDeleteDialog}
+            disabled={deletingProject}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              color: "var(--nx-text)",
+            }}
           >
-            {savingAllChanges ? "Saving..." : "Save Changes"}
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDeleteProject}
+            disabled={deletingProject}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              backgroundColor: "#ef4444",
+              color: "white",
+              '&:hover': { backgroundColor: "#dc2626" },
+              '&:disabled': { opacity: 0.5 },
+            }}
+          >
+            {deletingProject ? "Deleting..." : "Delete Project"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteTaskDialogOpen} onClose={handleCloseDeleteTaskDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
+          Delete Task
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography sx={{ color: "var(--nx-text)" }}>
+            Are you sure you want to delete <strong>{selectedTask?.title || "this task"}</strong>? This action will:
+          </Typography>
+          <Box component="ul" sx={{ mt: 1.5, mb: 1.5, color: "var(--nx-text-soft)" }}>
+            <Typography component="li">Remove all story points</Typography>
+            <Typography component="li">Remove all timesheet entries</Typography>
+          </Box>
+          <Typography sx={{ color: "var(--nx-text-soft)", fontWeight: 600 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={handleCloseDeleteTaskDialog}
+            disabled={deletingTask}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              color: "var(--nx-text)",
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDeleteTask}
+            disabled={deletingTask}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              backgroundColor: "#ef4444",
+              color: "white",
+              '&:hover': { backgroundColor: "#dc2626" },
+              '&:disabled': { opacity: 0.5 },
+            }}
+          >
+            {deletingTask ? "Deleting..." : "Delete Task"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -296,6 +296,44 @@ public class TaskAssignmentService {
         return dto;
     }
 
+    @Transactional
+    public String deleteTask(String managerEmail, Long taskId) {
+        User manager = userRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
+        TaskItem task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (task.getProject() == null || task.getProject().getManager() == null
+                || !task.getProject().getManager().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only delete tasks for projects you manage");
+        }
+
+        // STEP 1: Delete task story points
+        try {
+            List<TaskStoryPoint> storyPoints = storyPointRepository.findAll().stream()
+                    .filter(sp -> sp.getTask() != null && sp.getTask().getId().equals(taskId))
+                    .toList();
+            
+            if (!storyPoints.isEmpty()) {
+                storyPointRepository.deleteAll(storyPoints);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete task story points: " + e.getMessage(), e);
+        }
+
+        // STEP 2: Delete task itself
+        try {
+            taskRepository.deleteById(taskId);
+            taskRepository.flush();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete task: " + e.getMessage(), e);
+        }
+
+        liveUpdatePublisher.publishTasksChanged("deleted");
+        return "Task deleted successfully.";
+    }
+
     @Transactional(readOnly = true)
     public List<TaskDto> listManagerTasks(String managerEmail) {
         User manager = userRepository.findByEmail(managerEmail)

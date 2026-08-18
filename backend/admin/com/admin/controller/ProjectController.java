@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/manager/projects")
@@ -42,5 +43,14 @@ public class ProjectController {
     ) {
         ProjectResponse response = projectService.updateProject(projectId, request, authentication);
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, String>> deleteProject(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String message = projectService.deleteProject(id, authentication);
+        return ResponseEntity.ok(Map.of("message", message));
     }
 }

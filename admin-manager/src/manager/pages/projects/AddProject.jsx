@@ -28,7 +28,6 @@ const emptyTask = {
 
 const emptyStoryPoint = {
   title: "",
-  description: "",
   pointValue: 1,
 };
 
@@ -145,7 +144,6 @@ export default function AddProject() {
           task.storyPoints.length > 0
             ? task.storyPoints.map((sp) => ({
                 title: sp.title.trim(),
-                description: sp.description.trim(),
                 pointValue: Number(sp.pointValue),
               }))
             : null,
@@ -373,13 +371,6 @@ export default function AddProject() {
                               value={sp.title}
                               onChange={(e) => handleStoryPointChange(taskIndex, spIndex, "title", e.target.value)}
                               placeholder="e.g., Design UI"
-                            />
-                            <TextField
-                              size="small"
-                              label="Description"
-                              value={sp.description}
-                              onChange={(e) => handleStoryPointChange(taskIndex, spIndex, "description", e.target.value)}
-                              placeholder="What needs to be done"
                             />
                             <TextField
                               size="small"

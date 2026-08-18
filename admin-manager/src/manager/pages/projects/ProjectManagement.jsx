@@ -10,9 +10,13 @@ import {
   TextField,
   MenuItem,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getErrorMessage, fetchManagerClients } from "../../../services/managerService";
+import { getErrorMessage, fetchManagerClients, deleteProject } from "../../../services/managerService";
 import api from "../../../services/api";
 import { useManagerProjects, useManagerTasks } from "../../data/useManager";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
@@ -57,6 +61,10 @@ export default function ProjectManagement() {
 
   const [newProjectForm, setNewProjectForm] = useState({ name: "", description: "" });
   const [creatingProject, setCreatingProject] = useState(false);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [deletingProject, setDeletingProject] = useState(false);
 
   const q = useMemo(() => {
     const params = new URLSearchParams(location.search || "");
@@ -155,6 +163,38 @@ export default function ProjectManagement() {
       setError(getErrorMessage(err, "Failed to create project."));
     } finally {
       setCreatingProject(false);
+    }
+  };
+
+  const handleDeleteProject = (project) => {
+    setProjectToDelete(project);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!projectToDelete) return;
+
+    setDeletingProject(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await deleteProject(projectToDelete.id);
+      setSuccess("Project deleted successfully.");
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+      await projectsQuery.refetch();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to delete project."));
+    } finally {
+      setDeletingProject(false);
+    }
+  };
+
+  const handleCloseDeleteDialog = () => {
+    if (!deletingProject) {
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
     }
   };
   const getStatusChipStyle = (status) => {
@@ -262,7 +302,7 @@ export default function ProjectManagement() {
                     <LinearProgress variant="determinate" value={project.weightedProgress} sx={{ mt: 0.4, height: 6, borderRadius: 999, bgcolor: "var(--nx-panel-2)", '& .MuiLinearProgress-bar': { bgcolor: "var(--nx-purple)" } }} />
                   </Box>
 
-                  <Box sx={{ alignSelf: "center" }}>
+                  <Box sx={{ alignSelf: "center", display: "flex", gap: 0.5 }}>
                     <Button 
                       size="small" 
                       variant="outlined" 
@@ -276,10 +316,26 @@ export default function ProjectManagement() {
                         color: "var(--nx-text)",
                         borderColor: "var(--nx-border)",
                         '&:hover': { backgroundColor: "var(--nx-panel-2)" },
-                        width: "100%",
+                        flex: 1,
                       }}
                     >
                       Manage
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={!project.id || deletingProject}
+                      onClick={() => handleDeleteProject(project)}
+                      sx={{
+                        textTransform: "none",
+                        fontWeight: 700,
+                        color: "#ef4444",
+                        borderColor: "#ef4444",
+                        '&:hover': { backgroundColor: "rgba(239,68,68,0.1)" },
+                        '&:disabled': { opacity: 0.5 },
+                      }}
+                    >
+                      Delete
                     </Button>
                   </Box>
                 </Box>
@@ -288,6 +344,54 @@ export default function ProjectManagement() {
           </Box>
         )}
       </Paper>
+
+      <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 900, color: "var(--nx-text)" }}>
+          Delete Project
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography sx={{ color: "var(--nx-text)" }}>
+            Are you sure you want to delete <strong>{projectToDelete?.name}</strong>? This action will:
+          </Typography>
+          <Box component="ul" sx={{ mt: 1.5, mb: 1.5, color: "var(--nx-text-soft)" }}>
+            <Typography component="li">Remove all tasks and story points</Typography>
+            <Typography component="li">Remove all timesheet entries</Typography>
+            <Typography component="li">Remove all project activities and chats</Typography>
+            <Typography component="li">Remove all project files</Typography>
+          </Box>
+          <Typography sx={{ color: "var(--nx-text-soft)", fontWeight: 600 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={handleCloseDeleteDialog}
+            disabled={deletingProject}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              color: "var(--nx-text)",
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            disabled={deletingProject}
+            loading={deletingProject}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              backgroundColor: "#ef4444",
+              color: "white",
+              '&:hover': { backgroundColor: "#dc2626" },
+              '&:disabled': { opacity: 0.5 },
+            }}
+          >
+            {deletingProject ? "Deleting..." : "Delete Project"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

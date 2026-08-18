@@ -18,7 +18,6 @@ import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
 
 const emptyForm = {
   title: "",
-  description: "",
   pointValue: 1,
 };
 
@@ -70,7 +69,6 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
     try {
       await api.post(`/tasks/${selectedTaskId}/story-points`, {
         title: form.title.trim(),
-        description: form.description.trim() || null,
         pointValue: Number(form.pointValue),
       });
 
@@ -101,7 +99,6 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
     setEditingStoryPointId(storyPoint.id);
     setForm({
       title: storyPoint.title || "",
-      description: storyPoint.description || "",
       pointValue: Number(storyPoint.pointValue || 1),
     });
     setError("");
@@ -123,7 +120,6 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
     try {
       await api.put(`/story-points/${editingStoryPointId}`, {
         title: form.title.trim(),
-        description: form.description.trim() || null,
         pointValue: Number(form.pointValue),
       });
 
@@ -170,14 +166,6 @@ export default function StoryPointManagerPanel({ tasks = [] }) {
       </Stack>
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} sx={{ mb: 1.5 }}>
-        <TextField
-          size="small"
-          label="Description"
-          value={form.description}
-          onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-          fullWidth
-        />
-
         <TextField
           size="small"
           label="Point Value"

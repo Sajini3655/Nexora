@@ -14,7 +14,6 @@ public class TaskStoryPointDto {
     private Long id;
     private Long taskId;
     private String title;
-    private String description;
     private Integer pointValue;
     private StoryPointStatus status;
     private Boolean completed;

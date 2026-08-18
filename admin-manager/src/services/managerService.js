@@ -145,8 +145,18 @@ export const updateProject = async (projectId, payload) => {
   return response.data;
 };
 
+export const deleteProject = async (projectId) => {
+  const response = await api.delete(`/manager/projects/${projectId}`);
+  return response.data;
+};
+
 export const updateManagerTask = async (taskId, payload) => {
   const response = await api.put(`/manager/tasks/${taskId}`, payload);
+  return response.data;
+};
+
+export const deleteTask = async (taskId) => {
+  const response = await api.delete(`/manager/tasks/${taskId}`);
   return response.data;
 };
 

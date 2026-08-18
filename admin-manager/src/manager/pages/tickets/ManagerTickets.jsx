@@ -227,7 +227,7 @@ export default function ManagerTickets() {
   };
 
   const addStoryPoint = () => {
-    setStoryPoints((prev) => [...prev, { title: "", description: "", pointValue: 1 }]);
+    setStoryPoints((prev) => [...prev, { title: "", pointValue: 1 }]);
   };
 
   const removeStoryPoint = (rowIndex) => {
@@ -242,10 +242,9 @@ export default function ManagerTickets() {
     const normalizedStoryPoints = storyPoints
       .map((row) => ({
         title: String(row.title || "").trim(),
-        description: String(row.description || "").trim(),
         pointValue: Number(row.pointValue),
       }))
-      .filter((row) => row.title || row.description || Number.isFinite(row.pointValue));
+      .filter((row) => row.title || Number.isFinite(row.pointValue));
 
     if (!selectedProjectId) {
       setActionError("Please select a project before converting this ticket.");
@@ -537,17 +536,7 @@ export default function ManagerTickets() {
                           }
                         />
                       </Stack>
-                      <TextField
-                        size="small"
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        label="Description"
-                        value={row.description}
-                        onChange={(event) =>
-                          updateStoryPoint(rowIndex, "description", event.target.value)
-                        }
-                      />
+
                       <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
                           Row {rowIndex + 1}

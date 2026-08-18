@@ -76,4 +76,13 @@ public class ManagerTaskController {
 
         return ResponseEntity.ok(taskAssignmentService.updateTaskEstimate(authentication.getName(), taskId, estimatedPoints));
     }
+
+    @DeleteMapping("/tasks/{taskId}")
+    public ResponseEntity<Map<String, String>> deleteTask(
+            Authentication authentication,
+            @PathVariable Long taskId
+    ) {
+        String message = taskAssignmentService.deleteTask(authentication.getName(), taskId);
+        return ResponseEntity.ok(Map.of("message", message));
+    }
 }

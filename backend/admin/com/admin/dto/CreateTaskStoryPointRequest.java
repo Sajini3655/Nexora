@@ -13,8 +13,6 @@ public class CreateTaskStoryPointRequest {
 
     private String title;
 
-    private String description;
-
     @NotNull
     @Min(1)
     private Integer pointValue;
