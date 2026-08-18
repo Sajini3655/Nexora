@@ -204,8 +204,10 @@ export default function UserList() {
       setMessage("");
 
       await deleteAdminUser(user.id);
+      
+      // Remove deleted user from state immediately
+      setItems((prevItems) => prevItems.filter((item) => item.id !== user.id));
       setMessage("User deleted successfully.");
-      await loadUsers();
     } catch (e) {
       setError(extractError(e));
     } finally {
