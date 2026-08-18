@@ -163,7 +163,17 @@ export default function ClientProfile() {
             >
               {loadingPassword ? "Updating..." : "Update password"}
             </button>
-            {pwMsg && <span className="text-sm text-slate-200">{pwMsg}</span>}
+            {pwMsg && (
+              <span
+                className={`text-sm ${
+                  pwMsg === "Password updated successfully."
+                    ? "text-emerald-400"
+                    : "text-red-400"
+                }`}
+              >
+                {pwMsg}
+              </span>
+            )}
           </div>
         </form>
       </div>
