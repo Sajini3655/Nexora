@@ -20,7 +20,21 @@ from get_valid_model import get_first_available_model
 # ----------------------------
 def extract_blockers(messages):
     blockers = []
-    combined = " ".join([m["message"].lower() for m in messages])
+    combined_parts = []
+
+    for m in messages or []:
+        if not isinstance(m, dict):
+            continue
+        text = m.get("message")
+        if text is None:
+            text = m.get("content")
+        if text is None:
+            continue
+        combined_parts.append(str(text).lower())
+
+    combined = " ".join(combined_parts)
+    if not combined:
+        return []
 
     # Database-related issues
     if any(term in combined for term in ["database server is down", "db server is down", "database down", "db down", "database is down"]):
@@ -47,12 +61,12 @@ def extract_blockers(messages):
     if any(term in combined for term in ["service is down", "server is down"]) and "ai service" not in combined and "database" not in combined:
         if "service is down" in combined:
             blockers.append("Service is down")
-    
+
     # Critical issues
-    if any(term in combined for term in ["critical", "blocker", "blocking", "cannot proceed"]):
+    if any(term in combined for term in ["critical", "blocker", "blocking", "cannot proceed", "cannot continue", "stuck", "urgent"]):
         if not any(b.lower() in combined for b in blockers):
             blockers.append("Critical issue reported")
-    
+
     return blockers
 
 

@@ -179,6 +179,17 @@ public class ProjectService {
         log.info("DELETE PROJECT cleanup started: projectId={}, projectName={}", projectId, project.getName());
 
         try {
+            // STEP 0: Delete project activity audit rows before removing the parent project
+            try {
+                log.info("DELETE PROJECT Step 0: Deleting project activities");
+                jdbcTemplate.update("DELETE FROM project_activities WHERE project_id = ?", projectId);
+                projectRepository.flush();
+                log.debug("DELETE PROJECT Step 0 completed: Deleted project activities for projectId={}", projectId);
+            } catch (Exception e) {
+                log.error("DELETE PROJECT FAILED AT STEP 0: Error deleting project activities: {}", e.getMessage(), e);
+                throw e;
+            }
+
             // Get project tasks first
             List<TaskItem> projectTasks = taskRepository.findByProject_Id(projectId);
             List<Long> taskIds = projectTasks.stream()
