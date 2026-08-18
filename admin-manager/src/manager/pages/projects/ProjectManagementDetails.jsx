@@ -704,6 +704,7 @@ export default function ProjectManagementDetails() {
       await projectDetailsQuery.refetch();
     } catch (err) {
       setActionError(getErrorMessage(err, "Failed to delete task."));
+    } finally {
       setDeletingTask(false);
     }
   };
