@@ -21,7 +21,7 @@ function roleHome(role, moduleAccess = {}) {
 
   if (r === "MANAGER") {
     if (moduleAccess.DASHBOARD) return "/manager";
-    if (moduleAccess.FILES) return "/manager/projects";
+    if (moduleAccess.PROJECTS) return "/manager/projects";
     if (moduleAccess.TASKS) return "/manager/ai-assignment";
     return "/users";
   }
@@ -30,8 +30,15 @@ function roleHome(role, moduleAccess = {}) {
     if (moduleAccess.DASHBOARD) return "/dev";
     if (moduleAccess.TASKS) return "/dev/tasks";
     if (moduleAccess.CHAT) return "/dev/chat";
-    if (moduleAccess.FILES) return "/dev/projects";
+    if (moduleAccess.PROJECTS) return "/dev/projects";
     return "/dev/profile";
+  }
+
+  if (r === "CLIENT") {
+    if (moduleAccess.DASHBOARD) return "/client";
+    if (moduleAccess.TICKETS) return "/client/tickets";
+    if (moduleAccess.PROJECTS) return "/client/projects";
+    return "/client/profile";
   }
 
   return "/login";
@@ -60,7 +67,9 @@ export default function ProtectedRoute({ allowedRoles, requiredModule }) {
   }
 
   if (requiredModule && String(activeRole || "").toUpperCase() !== "ADMIN") {
-    const allowed = Boolean(moduleAccess?.[requiredModule]);
+    // requiredModule may be a single module key or an array of keys (any-of).
+    const required = Array.isArray(requiredModule) ? requiredModule : [requiredModule];
+    const allowed = required.some((module) => Boolean(moduleAccess?.[module]));
     if (!allowed) {
       return <Navigate to={roleHome(activeRole, moduleAccess || {})} replace />;
     }

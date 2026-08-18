@@ -45,9 +45,7 @@ const CREATE_ROLE_FEATURES = [
   { key: "TICKETS", label: "Tickets" },
   { key: "TIMESHEETS", label: "Timesheets" },
   { key: "USERS", label: "Users" },
-  { key: "FILES", label: "Files" },
   { key: "CHAT", label: "Chat" },
-  { key: "REPORTS", label: "Reports" },
   { key: "AI_PROJECT_CHAT", label: "AI Project Chat" },
   { key: "AI_SUMMARIZATION", label: "AI Summarization" },
   { key: "AI_TICKET_CREATION", label: "AI Ticket Creation" },
@@ -232,8 +230,14 @@ export default function AccessControl() {
       return;
     }
 
-    const defaults = buildTemplateDefaults(newRoleTemplate);
-    const rolePermissions = { ...defaults, ...previewPermissions };
+    const merged = { ...buildTemplateDefaults(newRoleTemplate), ...previewPermissions };
+    // Only the selected permissions become the role's assigned set (its rows).
+    const rolePermissions = {};
+    Object.keys(merged).forEach((key) => {
+      if (merged[key]) {
+        rolePermissions[key] = true;
+      }
+    });
 
     setRoles((prev) => [...prev, name]);
     setRoleAccess((prev) => ({ ...prev, [name]: rolePermissions }));
@@ -353,7 +357,13 @@ export default function AccessControl() {
 }
 
 function RoleCard({ role, modules, access, open, onToggle, onExpand, onDelete, isBuiltin, description }) {
-  const activeCount = modules.filter((module) => Boolean(access[module.key])).length;
+  // A role's assigned permissions are the modules that have a row for it, i.e. the
+  // keys present in `access` (regardless of allowed/denied). Toggling a permission
+  // only flips its allowed flag; the key stays, so its row remains listed.
+  const visibleModules = modules.filter((module) =>
+    Object.prototype.hasOwnProperty.call(access, module.key)
+  );
+  const activeCount = visibleModules.filter((module) => Boolean(access[module.key])).length;
 
   return (
     <Grid item xs={12}>
@@ -380,7 +390,7 @@ function RoleCard({ role, modules, access, open, onToggle, onExpand, onDelete, i
 
           <Chip
             size="small"
-            label={`${activeCount}/${modules.length} allowed`}
+            label={`${activeCount}/${visibleModules.length} allowed`}
             sx={{ textTransform: "none" }}
           />
 
@@ -400,33 +410,41 @@ function RoleCard({ role, modules, access, open, onToggle, onExpand, onDelete, i
         <Collapse in={open} unmountOnExit>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={1}>
-            {modules.map((module) => (
-              <Grid item xs={12} key={module.key}>
-                <Card sx={{ p: 2, bgcolor: "var(--nx-panel-2)" }}>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography sx={{ fontWeight: 700 }}>{module.label}</Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.68 }}>
-                        {module.desc}
-                      </Typography>
-                    </Box>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={Boolean(access[module.key])}
-                          onChange={(event) => {
-                            event.stopPropagation();
-                            onToggle(role, module.key);
-                          }}
-                        />
-                      }
-                      label={access[module.key] ? "Allowed" : "Denied"}
-                      sx={{ m: 0 }}
-                    />
-                  </Box>
-                </Card>
+            {visibleModules.length === 0 ? (
+              <Grid item xs={12}>
+                <Typography variant="body2" sx={{ opacity: 0.68, py: 1 }}>
+                  No permissions allocated to this role.
+                </Typography>
               </Grid>
-            ))}
+            ) : (
+              visibleModules.map((module) => (
+                <Grid item xs={12} key={module.key}>
+                  <Card sx={{ p: 2, bgcolor: "var(--nx-panel-2)" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography sx={{ fontWeight: 700 }}>{module.label}</Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.68 }}>
+                          {module.desc}
+                        </Typography>
+                      </Box>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={Boolean(access[module.key])}
+                            onChange={(event) => {
+                              event.stopPropagation();
+                              onToggle(role, module.key);
+                            }}
+                          />
+                        }
+                        label={access[module.key] ? "Allowed" : "Denied"}
+                        sx={{ m: 0 }}
+                      />
+                    </Box>
+                  </Card>
+                </Grid>
+              ))
+            )}
           </Grid>
           {!isBuiltin ? (
             <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>

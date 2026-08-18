@@ -23,6 +23,7 @@ import {
   isProjectTask,
   isTicketTask,
 } from "../../utils/taskSource";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 function isCompleted(task) {
   const status = String(task?.status || "").toLowerCase();
@@ -69,6 +70,11 @@ function getProgressData(task) {
 
 export default function DevTaskList() {
   const navigate = useNavigate();
+  const { moduleAccess } = useAuth();
+  // TASKS and TICKETS are independent permissions: each section shows only if
+  // the developer has that specific module allowed.
+  const canViewTasks = Boolean(moduleAccess?.TASKS);
+  const canViewTickets = Boolean(moduleAccess?.TICKETS);
   const [tasks, setTasks] = useState(() => loadTasks());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -173,12 +179,16 @@ export default function DevTaskList() {
       {error ? <Alert severity="warning" sx={{ mb: 3 }}>{error}</Alert> : null}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={3}>
-          <StatCard label="Project Tasks" value={stats.projectTasks} />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <StatCard label="Ticket Tasks" value={stats.ticketTasks} hint="Converted from tickets" />
-        </Grid>
+        {canViewTasks ? (
+          <Grid item xs={12} md={3}>
+            <StatCard label="Project Tasks" value={stats.projectTasks} />
+          </Grid>
+        ) : null}
+        {canViewTickets ? (
+          <Grid item xs={12} md={3}>
+            <StatCard label="Ticket Tasks" value={stats.ticketTasks} hint="Converted from tickets" />
+          </Grid>
+        ) : null}
         <Grid item xs={12} md={3}>
           <StatCard label="Completed" value={stats.completed} />
         </Grid>
@@ -214,26 +224,30 @@ export default function DevTaskList() {
         </Box>
       ) : (
         <Box sx={{ display: "grid", gap: 2.5 }}>
-          <TaskTableSection
-            title="Project Tasks"
-            subtitle="Normal project work assigned to you"
-            count={projectTasks.length}
-            rows={projectTasks}
-            emptyMessage="No project tasks assigned yet."
-            showSource={false}
-            onOpenTask={(task) => navigate(`/dev/tasks/${task.id}`)}
-          />
+          {canViewTasks ? (
+            <TaskTableSection
+              title="Project Tasks"
+              subtitle="Normal project work assigned to you"
+              count={projectTasks.length}
+              rows={projectTasks}
+              emptyMessage="No project tasks assigned yet."
+              showSource={false}
+              onOpenTask={(task) => navigate(`/dev/tasks/${task.id}`)}
+            />
+          ) : null}
 
-          <TaskTableSection
-            title="Ticket Tasks"
-            subtitle="Tasks converted from chat, email, and client portal tickets"
-            count={ticketTasks.length}
-            rows={ticketTasks}
-            emptyMessage="No ticket tasks assigned yet."
-            showSource
-            sourceSummary={ticketCategoryCounts}
-            onOpenTask={(task) => navigate(`/dev/tasks/${task.id}`)}
-          />
+          {canViewTickets ? (
+            <TaskTableSection
+              title="Ticket Tasks"
+              subtitle="Tasks converted from chat, email, and client portal tickets"
+              count={ticketTasks.length}
+              rows={ticketTasks}
+              emptyMessage="No ticket tasks assigned yet."
+              showSource
+              sourceSummary={ticketCategoryCounts}
+              onOpenTask={(task) => navigate(`/dev/tasks/${task.id}`)}
+            />
+          ) : null}
         </Box>
       )}
     </>

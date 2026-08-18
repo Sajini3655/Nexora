@@ -195,7 +195,7 @@ export default function App() {
         />
       </Route>
 
-       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+       <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="TICKETS" />}>
          <Route
          path="/manager/tickets"
          element={
@@ -206,7 +206,7 @@ export default function App() {
        />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="PROJECTS" />}>
         <Route
           path="/manager/projects"
           element={
@@ -249,7 +249,7 @@ export default function App() {
         />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} requiredModule="TIMESHEETS" />}>
         <Route
           path="/manager/timesheets"
           element={
@@ -271,7 +271,7 @@ export default function App() {
         />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]} requiredModule="USERS" />}>
         <Route
           path="/users"
           element={
@@ -280,6 +280,9 @@ export default function App() {
             </RoleShell>
           }
         />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]} />}>
         <Route
           path="/profile"
           element={
@@ -294,17 +297,19 @@ export default function App() {
         <Route path="/dev" element={<UnifiedShell role="DEVELOPER"><DevDashboardHome /></UnifiedShell>} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="FILES" />}>
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="PROJECTS" />}>
         <Route path="/dev/project/:id" element={<UnifiedShell role="DEVELOPER"><DevWorkspace /></UnifiedShell>} />
 
         <Route path="/dev/projects" element={<UnifiedShell role="DEVELOPER"><DevProjectList /></UnifiedShell>} />
         <Route path="/dev/projects/:id" element={<UnifiedShell role="DEVELOPER"><DevProjectView /></UnifiedShell>} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="TASKS" />}>
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule={["TASKS", "TICKETS"]} />}>
         <Route path="/dev/tasks" element={<UnifiedShell role="DEVELOPER"><DevTaskList /></UnifiedShell>} />
         <Route path="/dev/tasks/:id" element={<UnifiedShell role="DEVELOPER"><DevTaskView /></UnifiedShell>} />
+      </Route>
 
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="TICKETS" />}>
         <Route path="/dev/tickets/new" element={<UnifiedShell role="DEVELOPER"><DevTicketCreate /></UnifiedShell>} />
         <Route path="/dev/tickets/:id" element={<UnifiedShell role="DEVELOPER"><DevTicketView /></UnifiedShell>} />
       </Route>
@@ -315,8 +320,10 @@ export default function App() {
 
         <Route path="/dev/settings" element={<UnifiedShell role="DEVELOPER"><DevSettings /></UnifiedShell>} />
 
-        <Route path="/dev/timesheets" element={<UnifiedShell role="DEVELOPER"><DevTimesheets /></UnifiedShell>} />
+      </Route>
 
+      <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="TIMESHEETS" />}>
+        <Route path="/dev/timesheets" element={<UnifiedShell role="DEVELOPER"><DevTimesheets /></UnifiedShell>} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["DEVELOPER"]} requiredModule="CHAT" />}>
@@ -325,16 +332,25 @@ export default function App() {
         <Route path="/dev/chat/:projectId" element={<UnifiedShell role="DEVELOPER"><DevChat /></UnifiedShell>} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} requiredModule="DASHBOARD" />}>
         <Route path="/client" element={<UnifiedShell role="CLIENT"><ClientDashboardHome /></UnifiedShell>} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} requiredModule="PROJECTS" />}>
         <Route path="/client/projects" element={<UnifiedShell role="CLIENT"><ClientProjectList /></UnifiedShell>} />
         <Route path="/client/projects/:projectId" element={<UnifiedShell role="CLIENT"><ClientProjectDetails /></UnifiedShell>} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} requiredModule="TICKETS" />}>
         <Route path="/client/history" element={<UnifiedShell role="CLIENT"><ClientHistory /></UnifiedShell>} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
         <Route path="/client/profile" element={<UnifiedShell role="CLIENT"><ClientProfile /></UnifiedShell>} />
         <Route path="/client/settings" element={<UnifiedShell role="CLIENT"><ClientSettings /></UnifiedShell>} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["CLIENT"]} requiredModule="TICKETS" />}>
         <Route path="/client/tickets" element={<UnifiedShell role="CLIENT"><ClientTicketList /></UnifiedShell>} />
       </Route>
 

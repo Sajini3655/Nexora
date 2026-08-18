@@ -9,10 +9,10 @@ import { useAuth } from "../../context/AuthContext.jsx";
 
 const navItems = [
   { label: "Dashboard", to: "/manager", icon: <DashboardIcon />, module: "DASHBOARD" },
-  { label: "Tickets", to: "/manager/tickets", icon: <ConfirmationNumberRoundedIcon />, module: "TICKETS", alwaysVisible: true },
-  { label: "Add Project", to: "/manager/add-project", icon: <AddCircleIcon />, module: "FILES" },
-  { label: "Project Management", to: "/manager/project-management", icon: <FolderIcon />, module: "FILES" },
-  { label: "Timesheets", to: "/manager/timesheets", icon: <AccessTimeRoundedIcon /> },
+  { label: "Tickets", to: "/manager/tickets", icon: <ConfirmationNumberRoundedIcon />, module: "TICKETS" },
+  { label: "Add Project", to: "/manager/add-project", icon: <AddCircleIcon />, module: "PROJECTS" },
+  { label: "Project Management", to: "/manager/project-management", icon: <FolderIcon />, module: "PROJECTS" },
+  { label: "Timesheets", to: "/manager/timesheets", icon: <AccessTimeRoundedIcon />, module: "TIMESHEETS" },
 ];
 
 export default function ManagerSidebar({ open, onClose }) {

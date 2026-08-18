@@ -23,7 +23,7 @@ export default function DevSidebar({ open, onClose }) {
       label: "Projects",
       path: "/dev/projects",
       icon: <FolderRounded />,
-      module: "FILES",
+      module: "PROJECTS",
     },
     {
       label: "Tasks",
@@ -35,6 +35,7 @@ export default function DevSidebar({ open, onClose }) {
       label: "Timesheets",
       path: "/dev/timesheets",
       icon: <AccessTimeRounded />,
+      module: "TIMESHEETS",
     },
     {
       label: "My Profile",

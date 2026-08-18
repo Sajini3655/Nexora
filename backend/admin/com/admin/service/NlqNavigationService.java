@@ -133,7 +133,7 @@ public class NlqNavigationService {
                     "Manager projects",
                     "/manager/project-management",
                     Set.of(Role.MANAGER),
-                    AccessModule.FILES,
+                    AccessModule.PROJECTS,
                     List.of("projects", "project management", "workstreams", "work streams"),
                     true
             ),
@@ -142,7 +142,7 @@ public class NlqNavigationService {
                     "Add project",
                     "/manager/add-project",
                     Set.of(Role.MANAGER),
-                    AccessModule.FILES,
+                    AccessModule.PROJECTS,
                     List.of("add project", "new project", "create project"),
                     false
             ),
@@ -188,7 +188,7 @@ public class NlqNavigationService {
                     "Developer projects",
                     "/dev/projects",
                     Set.of(Role.DEVELOPER),
-                    AccessModule.FILES,
+                    AccessModule.PROJECTS,
                     List.of("projects", "workspaces", "workspace"),
                     false
             ),
@@ -417,7 +417,7 @@ public class NlqNavigationService {
         String normalized = normalize(query).toLowerCase(Locale.ROOT);
 
         if (activeRole == Role.MANAGER && (normalized.equals("add projects") || normalized.equals("add project"))) {
-            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.PROJECTS.name()))) {
                 return null;
             }
             return NlqResolveResponse.builder()
@@ -437,7 +437,7 @@ public class NlqNavigationService {
         }
 
         if (activeRole == Role.MANAGER && (normalized.contains("projects list") || normalized.equals("all projects"))) {
-            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.PROJECTS.name()))) {
                 return null;
             }
             return NlqResolveResponse.builder()
@@ -461,7 +461,7 @@ public class NlqNavigationService {
             String rawQuery
     ) {
         if (activeRole == Role.MANAGER && "MANAGER_PROJECT".equals(entityType)) {
-            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.PROJECTS.name()))) {
                 return null;
             }
             String name = entityName.isBlank() ? rawQuery : entityName;

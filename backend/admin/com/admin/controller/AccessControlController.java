@@ -36,7 +36,7 @@ public class AccessControlController {
 
     @GetMapping("/role-matrix")
     public ResponseEntity<Map<String, Map<String, Boolean>>> getRoleMatrix() {
-        return ResponseEntity.ok(accessControlService.getRoleMatrix());
+        return ResponseEntity.ok(accessControlService.getRoleMatrixForAdmin());
     }
 
     @PutMapping("/role-matrix")

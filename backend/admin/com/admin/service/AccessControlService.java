@@ -112,10 +112,52 @@ public class AccessControlService {
         return matrix;
     }
 
+    /**
+     * Admin-facing view of the matrix. Each role maps only to the modules that
+     * actually have a row (its assigned permissions), with that row's allowed
+     * flag. Built-in roles are always present (possibly with an empty map).
+     * This is intentionally separate from {@link #getRoleMatrix()} so runtime
+     * effective-access keeps its default-fill behaviour for managed roles.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Map<String, Boolean>> getRoleMatrixForAdmin() {
+        List<String> existingRoles = roleModuleAccessRepository.findDistinctRoles().stream()
+                .map(this::normalizeRoleName)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        LinkedHashSet<String> allRoles = new LinkedHashSet<>(MANAGED_ROLES);
+        allRoles.addAll(existingRoles);
+
+        Map<String, Map<String, Boolean>> matrix = new LinkedHashMap<>();
+        for (String role : allRoles) {
+            matrix.put(role, new LinkedHashMap<>());
+        }
+
+        try {
+            List<RoleModuleAccess> persisted = roleModuleAccessRepository.findByRoleIn(new ArrayList<>(allRoles));
+            for (RoleModuleAccess entry : persisted) {
+                if (entry == null || entry.getRole() == null || entry.getModule() == null) {
+                    continue;
+                }
+                String role = normalizeRoleName(entry.getRole());
+                if (role == null) {
+                    continue;
+                }
+                matrix.computeIfAbsent(role, key -> new LinkedHashMap<>())
+                        .put(entry.getModule().name(), Boolean.TRUE.equals(entry.getAllowed()));
+            }
+        } catch (RuntimeException ex) {
+            log.warn("Falling back to empty admin role matrix because persisted rows could not be loaded: {}", ex.getMessage());
+        }
+
+        return matrix;
+    }
+
     @Transactional
     public Map<String, Map<String, Boolean>> saveRoleMatrix(Map<String, Map<String, Object>> payload) {
         if (payload == null || payload.isEmpty()) {
-            return getRoleMatrix();
+            return getRoleMatrixForAdmin();
         }
 
         Set<String> payloadRoles = payload.keySet();
@@ -143,6 +185,9 @@ public class AccessControlService {
                 }
 
                 try {
+                    // Each module in the payload is one of the role's assigned permissions.
+                    // The row is kept whether allowed is true or false; only the flag changes,
+                    // so a permission toggled off stays listed as assigned to the role.
                     RoleModuleAccess access = roleModuleAccessRepository
                             .findByRoleAndModule(roleName, module)
                             .or(() -> roleModuleAccessRepository.findByNormalizedRoleAndModule(roleName, module))
@@ -183,7 +228,7 @@ public class AccessControlService {
         }
 
         try {
-            return getRoleMatrix();
+            return getRoleMatrixForAdmin();
         } catch (RuntimeException ex) {
             log.warn("Returning fallback role matrix after save due to repository error: {}", ex.getMessage());
             return createDefaultRoleMatrix(new ArrayList<>(MANAGED_ROLES));
