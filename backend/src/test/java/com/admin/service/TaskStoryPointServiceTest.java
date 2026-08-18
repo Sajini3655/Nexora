@@ -23,15 +23,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -68,6 +72,9 @@ class TaskStoryPointServiceTest {
 
     @Mock
     private ProjectFileService projectFileService;
+
+    @Mock
+    private JdbcTemplate jdbcTemplate;
 
     @InjectMocks
     private TaskStoryPointService taskStoryPointService;
@@ -168,7 +175,7 @@ class TaskStoryPointServiceTest {
     }
 
     @Test
-    void deleteProject_shouldDeleteTicketsLinkedToTasksInsideTheProject() {
+    void deleteProject_shouldDeleteTicketsLinkedToTasksInsideTheProject() throws Exception {
         User manager = User.builder()
                 .id(7L)
                 .email("manager@example.com")
@@ -212,6 +219,8 @@ class TaskStoryPointServiceTest {
         when(ticketRepository.findAll()).thenReturn(List.of(projectTicket, taskTicket));
         when(timesheetEntryRepository.findAll()).thenReturn(List.of());
         when(taskStoryPointRepository.findAll()).thenReturn(List.of());
+        when(jdbcTemplate.queryForList(anyString())).thenReturn(List.of(Map.of("table_name", "project_activity", "column_name", "project_id")));
+        doNothing().when(projectFileService).deleteAllProjectFiles(12L);
 
         String result = projectService.deleteProject(12L, authentication);
 
@@ -222,5 +231,6 @@ class TaskStoryPointServiceTest {
         java.util.List<Ticket> deletedTickets = ticketsCaptor.getValue();
         assertEquals(2, deletedTickets.size());
         assertEquals(List.of(100L, 101L), deletedTickets.stream().map(Ticket::getId).toList());
+        verify(jdbcTemplate).update("DELETE FROM project_activity WHERE project_id = ?", 12L);
     }
 }

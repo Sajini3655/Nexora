@@ -26,6 +26,7 @@ import com.admin.repository.TimesheetEntryRepository;
 import com.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,7 @@ public class ProjectService {
     private final ChatMessageRepository chatMessageRepository;
     private final TicketRepository ticketRepository;
     private final TimesheetEntryRepository timesheetEntryRepository;
+    private final JdbcTemplate jdbcTemplate;
     private final LiveUpdatePublisher liveUpdatePublisher;
     private final ProjectFileService projectFileService;
 
@@ -306,14 +308,24 @@ public class ProjectService {
                 throw e;
             }
 
-            // STEP 8: Delete project itself
+            // STEP 8: Delete residual project references from legacy or untracked FK tables
             try {
-                log.info("DELETE PROJECT Step 8: Deleting project");
-                projectRepository.deleteById(projectId);
-                projectRepository.flush();
+                log.info("DELETE PROJECT Step 8: Cleaning residual project references");
+                cleanupResidualProjectReferences(projectId);
                 log.debug("DELETE PROJECT Step 8 completed");
             } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 8: Error deleting project: {}", e.getMessage(), e);
+                log.error("DELETE PROJECT FAILED AT STEP 8: Error cleaning residual project references: {}", e.getMessage(), e);
+                throw e;
+            }
+
+            // STEP 9: Delete project itself
+            try {
+                log.info("DELETE PROJECT Step 9: Deleting project");
+                projectRepository.deleteById(projectId);
+                projectRepository.flush();
+                log.debug("DELETE PROJECT Step 9 completed");
+            } catch (Exception e) {
+                log.error("DELETE PROJECT FAILED AT STEP 9: Error deleting project: {}", e.getMessage(), e);
                 throw e;
             }
 
@@ -338,6 +350,45 @@ public class ProjectService {
         }
 
         return user;
+    }
+
+    private void cleanupResidualProjectReferences(Long projectId) {
+        if (projectId == null) {
+            return;
+        }
+
+        List<java.util.Map<String, Object>> foreignKeys = jdbcTemplate.queryForList("""
+            SELECT kcu.table_name, kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_name = kcu.constraint_name
+             AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage ccu
+              ON ccu.constraint_name = tc.constraint_name
+             AND ccu.table_schema = tc.table_schema
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+              AND ccu.table_name = 'projects'
+              AND ccu.table_schema = current_schema()
+              AND ccu.column_name = 'id'
+              AND kcu.table_name <> 'projects'
+              AND kcu.table_schema = current_schema()
+            ORDER BY kcu.table_name, kcu.column_name
+            """);
+
+        for (java.util.Map<String, Object> fk : foreignKeys) {
+            String tableName = (String) fk.get("table_name");
+            String columnName = (String) fk.get("column_name");
+            if (tableName == null || columnName == null || tableName.isBlank() || columnName.isBlank()) {
+                continue;
+            }
+
+            try {
+                jdbcTemplate.update("DELETE FROM " + tableName + " WHERE " + columnName + " = ?", projectId);
+            } catch (Exception e) {
+                log.warn("Skipping residual cleanup for {}.{} because it is not a simple project FK: {}",
+                        tableName, columnName, e.getMessage());
+            }
+        }
     }
 
     private void createNestedStoryPoints(List<ProjectTaskRequest> taskRequests, List<TaskItem> savedTasks) {
