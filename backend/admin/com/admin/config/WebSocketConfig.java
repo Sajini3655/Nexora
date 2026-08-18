@@ -39,6 +39,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         if (frontendBaseUrl != null && !frontendBaseUrl.isBlank()) {
             allowedOrigins.add(frontendBaseUrl.trim());
         }
+        allowedOrigins.add("https://nexora-three-peach.vercel.app");
+        allowedOrigins.add("https://nexora-ab6g.onrender.com");
         // Add development URLs
         allowedOrigins.add("http://localhost:5173");
         allowedOrigins.add("http://127.0.0.1:5173");
@@ -48,6 +50,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws")
             .setHandshakeHandler(new CustomHandshakeHandler())
             .setAllowedOrigins(allowedOrigins.toArray(new String[0]))
+            .setAllowedOriginPatterns(
+                "https://*.vercel.app",
+                "https://*.onrender.com",
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "https://localhost:*"
+            )
             .addInterceptors(new JwtHandshakeInterceptor(jwtService, userDetailsService))
             .withSockJS();
     }

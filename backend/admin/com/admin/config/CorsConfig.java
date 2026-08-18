@@ -26,14 +26,24 @@ public class CorsConfig {
         if (frontendBaseUrl != null && !frontendBaseUrl.isBlank()) {
             allowedOrigins.add(frontendBaseUrl.trim());
         }
+        // Explicit production and preview origins used by the app
+        allowedOrigins.add("https://nexora-three-peach.vercel.app");
+        allowedOrigins.add("https://nexora-ab6g.onrender.com");
         // Add development URLs
         allowedOrigins.add("http://localhost:5173");
         allowedOrigins.add("http://127.0.0.1:5173");
         allowedOrigins.add("http://localhost:3000");
         allowedOrigins.add("http://127.0.0.1:3000");
 
-        // Use setAllowedOrigins for specific origins
+        // Allow patterns for Vercel previews and local development, while keeping exact origins for production
         config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedOriginPatterns(List.of(
+                "https://*.vercel.app",
+                "https://*.onrender.com",
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "https://localhost:*"
+        ));
 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of(
