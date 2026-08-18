@@ -29,6 +29,9 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      # Required for NLQ / AI routing in production. Keep localhost fallback in Spring config for local dev.
+      - key: AI_SERVICE_BASE_URL
+        sync: false
       - key: FRONTEND_URL
         value: "https://nexora-three-peach.vercel.app"
       - key: INBOUND_EMAIL_API_KEY

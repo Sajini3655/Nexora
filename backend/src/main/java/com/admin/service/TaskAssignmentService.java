@@ -210,7 +210,6 @@ public class TaskAssignmentService {
     }
 
     @Transactional
-    @Transactional
     public TaskDto assignTask(String managerEmail, Long taskId, AssignTaskRequest req) {
         User manager = userRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
