@@ -1,10 +1,18 @@
-export function getUserRoles(user) {
-  if (Array.isArray(user?.roles) && user.roles.length > 0) {
-    return user.roles.filter(Boolean).map((role) => String(role).toUpperCase());
-  }
+const BUILT_IN_ROLES = ["ADMIN", "MANAGER", "DEVELOPER", "CLIENT"];
 
+export function isBuiltInRole(role) {
+  return BUILT_IN_ROLES.includes(String(role || "").toUpperCase());
+}
+
+export function getUserRoles(user) {
+  // roleNames carries built-in + custom roles, so prefer it: a newly assigned
+  // custom role must show up on the workspace picker, not just built-in roles.
   if (Array.isArray(user?.roleNames) && user.roleNames.length > 0) {
     return user.roleNames.filter(Boolean).map((role) => String(role).toUpperCase());
+  }
+
+  if (Array.isArray(user?.roles) && user.roles.length > 0) {
+    return user.roles.filter(Boolean).map((role) => String(role).toUpperCase());
   }
 
   if (typeof user?.role === "string" && user.role.trim()) {
@@ -14,13 +22,20 @@ export function getUserRoles(user) {
   return [];
 }
 
-export function getRolePath(role) {
+export function getRolePath(role, user) {
   const value = String(role || "").toUpperCase();
 
   if (value === "ADMIN") return "/admin";
   if (value === "MANAGER") return "/manager";
   if (value === "DEVELOPER") return "/dev";
   if (value === "CLIENT") return "/client";
+
+  // Custom roles have no workspace shell of their own; they add module access on
+  // top of the user's built-in home. Route their tile to that home so it works.
+  if (user) {
+    const home = getRolePath(getDefaultRole(user));
+    if (home !== "/login") return home;
+  }
 
   return "/login";
 }

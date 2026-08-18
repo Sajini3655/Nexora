@@ -53,7 +53,7 @@ export default function ChooseWorkspace() {
 
   const handleSelect = (role) => {
     setActiveRole(role);
-    navigate(getRolePath(role), { replace: true });
+    navigate(getRolePath(role, user), { replace: true });
   };
 
   return (
