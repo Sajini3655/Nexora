@@ -18,6 +18,7 @@ import ClientProjectTimeline from "../../components/dashboard/ClientProjectTimel
 import useLiveRefresh from "../../../hooks/useLiveRefresh";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import DashboardHero from "../../../components/ui/DashboardHero.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
 
 const isChatTicket = (ticket) => {
   const source = String(ticket?.sourceChannel ?? ticket?.source_channel ?? ticket?.createdVia ?? "").trim().toUpperCase();
@@ -52,6 +53,8 @@ const secondarySurfaceSx = {
 export default function ClientDashboardHome() {
   const { data: projects = [], isLoading: projectsLoading } = useClientProjects();
   const { data: tickets = [], isLoading: loading, isFetching: refreshing, error: queryError, refetch: refetchTickets } = useClientTickets();
+  const { moduleAccess } = useAuth();
+  const canViewTickets = Boolean(moduleAccess?.TICKETS);
 
   const error = queryError?.message || "";
   const projectSummaries = useMemo(() => enrichProjectsWithTickets(projects, tickets), [projects, tickets]);
@@ -108,9 +111,9 @@ export default function ClientDashboardHome() {
       <DashboardHero
         icon={<SupportAgentRoundedIcon />}
         title="Client Dashboard"
-        actionLabel="View Tickets"
-        component={Link}
-        actionTo="/client/tickets"
+        actionLabel={canViewTickets ? "View Tickets" : undefined}
+        component={canViewTickets ? Link : undefined}
+        actionTo={canViewTickets ? "/client/tickets" : undefined}
       />
 
       {error ? <Alert severity="warning">{error}</Alert> : null}

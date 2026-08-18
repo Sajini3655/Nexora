@@ -9,8 +9,8 @@ import { useAuth } from "../../../context/AuthContext.jsx";
 const links = [
   { to: "/client", label: "Dashboard", icon: <DashboardRoundedIcon />, end: true, module: "DASHBOARD" },
   { to: "/client/tickets", label: "Tickets", icon: <ConfirmationNumberRoundedIcon />, module: "TICKETS" },
-  { to: "/client/history", label: "History", icon: <HistoryRoundedIcon />, module: "TICKETS" },
-  { to: "/client/projects", label: "Workstreams", icon: <FolderOpenRoundedIcon />, module: "PROJECTS" },
+  { to: "/client/history", label: "History", icon: <HistoryRoundedIcon /> },
+  { to: "/client/projects", label: "Workstreams", icon: <FolderOpenRoundedIcon /> },
 ];
 
 export default function ClientSidebar({ open, onClose }) {

@@ -204,7 +204,9 @@ function normalizeStoredProjectFiles(value) {
 
 export default function ProjectManagementDetails() {
   const { projectId } = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, moduleAccess } = useAuth();
+  const canAccessChat = Boolean(moduleAccess?.CHAT);
+  const canAccessTasks = Boolean(moduleAccess?.TASKS);
   const queryClient = useQueryClient();
   const managerScope = getManagerQueryScope(user);
   const todayDate = useMemo(() => getLocalDateInputValue(), []);
@@ -1093,6 +1095,7 @@ export default function ProjectManagementDetails() {
           </Box>
         </Paper>
 
+        {canAccessTasks && (
         <Paper sx={{ p: { xs: 1.25, sm: 1.6 }, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Add New Task</Typography>
 
@@ -1127,6 +1130,7 @@ export default function ProjectManagementDetails() {
             </Button>
           </Box>
         </Paper>
+        )}
 
         <Paper sx={{ p: { xs: 1.25, sm: 1.6 }, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Project Files</Typography>
@@ -1207,6 +1211,7 @@ export default function ProjectManagementDetails() {
           )}
         </Paper>
 
+        {canAccessChat && (
         <Paper
           sx={{
             p: { xs: 1.25, sm: 1.8 },
@@ -1429,7 +1434,9 @@ export default function ProjectManagementDetails() {
             </Paper>
           </Stack>
         </Paper>
+        )}
 
+        {canAccessTasks && (
         <Paper sx={{ p: 1.6, borderRadius: 2.5, border: "1px solid var(--nx-border)", background: "var(--nx-panel)" }}>
           <Typography sx={{ fontWeight: 900, mb: 1.2, color: "var(--nx-text)" }}>Task List</Typography>
 
@@ -1473,6 +1480,7 @@ export default function ProjectManagementDetails() {
             </Box>
           )}
         </Paper>
+        )}
       </Stack>
 
       {backgroundLoading && (
