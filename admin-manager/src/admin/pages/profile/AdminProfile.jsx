@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import useApi from "../../../hooks/useApi.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { getActiveRole } from "../../../utils/roleRouting";
+import PasswordField from "../../../components/ui/PasswordField.jsx";
 
 export default function AdminProfile() {
   const { user } = useAuth();
@@ -126,36 +127,24 @@ export default function AdminProfile() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs text-slate-400">Current password</label>
-              <input
-                type="password"
-                className="input mt-1"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400">New password</label>
-              <input
-                type="password"
-                className="input mt-1"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400">Confirm new password</label>
-              <input
-                type="password"
-                className="input mt-1"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
+            <PasswordField
+              label="Current password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+            <PasswordField
+              label="New password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+            <PasswordField
+              label="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+            />
           </div>
 
           <div className="mt-4 flex items-center gap-3">
