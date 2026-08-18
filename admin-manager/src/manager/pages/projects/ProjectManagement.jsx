@@ -17,6 +17,7 @@ import api from "../../../services/api";
 import { useManagerProjects, useManagerTasks } from "../../data/useManager";
 import StatusBadge from "../../../components/ui/StatusBadge.jsx";
 import ErrorNotice from "/src/components/ui/ErrorNotice.jsx";
+import { formatDate } from "../../../utils/formatDate.js";
 
 function isCompletedTask(task) {
   const status = String(task?.status || task?.taskStatus || "").toLowerCase();
@@ -105,6 +106,7 @@ export default function ProjectManagement() {
         description: getProjectDescription(project),
         clientName: project?.clientName || project?.client?.name || "",
         clientEmail: project?.clientEmail || project?.client?.email || "",
+        createdAt: project?.createdAt || project?.created_at || project?.created || "",
         status,
         taskCount,
         completedTaskCount,
@@ -223,8 +225,8 @@ export default function ProjectManagement() {
         ) : (
           <Box sx={{ overflow: "auto", flex: 1, minHeight: 0 }}>
             <Box sx={{ minWidth: 860 }}>
-              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid var(--nx-border)", position: "sticky", top: 0, zIndex: 1, background: "var(--nx-panel)" }}>
-                {["Project", "Status", "Tasks", "Completed", "Weighted", "Progress"].map((header) => (
+              <Box sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.9fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr 0.7fr", gap: 1, py: 0.8, borderBottom: "1px solid var(--nx-border)", position: "sticky", top: 0, zIndex: 1, background: "var(--nx-panel)" }}>
+                {["Project", "Date Created", "Status", "Tasks", "Completed", "Weighted", "Progress", "Actions"].map((header) => (
                   <Typography key={header} variant="caption" sx={{ color: "var(--nx-muted)", textTransform: "uppercase", fontWeight: 800 }}>
                     {header}
                   </Typography>
@@ -232,7 +234,7 @@ export default function ProjectManagement() {
               </Box>
 
               {visibleProjectRows.map((project) => (
-                <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid var(--nx-border)" }}>
+                <Box key={project.id} sx={{ display: "grid", gridTemplateColumns: "1.45fr 0.9fr 0.7fr 0.65fr 0.75fr 0.75fr 0.7fr 0.7fr", gap: 1, py: 1, borderBottom: "1px solid var(--nx-border)" }}>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 800, fontSize: 14, color: "var(--nx-text)" }} noWrap>
                       {project.name}
@@ -243,37 +245,42 @@ export default function ProjectManagement() {
                     <Typography variant="caption" sx={{ color: "var(--nx-muted)", display: "block", mt: 0.4 }} noWrap>
                       Client: {project.clientName || "No client assigned"}
                     </Typography>
-                    <Box sx={{ mt: 0.7 }}>
-                      <Button 
-                        size="small" 
-                        variant="outlined" 
-                        disabled={!project.id}
-                        onClick={() => {
-                          if (project.id) navigate(`/manager/project-management/${project.id}`);
-                        }} 
-                        sx={{
-                          textTransform: "none",
-                          fontWeight: 700,
-                          color: "var(--nx-text)",
-                          borderColor: "var(--nx-border)",
-                          '&:hover': { backgroundColor: "var(--nx-panel-2)" },
-                          width: { xs: "100%", sm: "auto" },
-                        }}
-                      >
-                        Manage Project
-                      </Button>
-                    </Box>
                   </Box>
 
-                  <Chip size="small" label={project.status} sx={{ width: "fit-content", fontWeight: 800, ...getStatusChipStyle(project.status) }} />
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", alignSelf: "center" }}>
+                    {formatDate(project.createdAt)}
+                  </Typography>
 
-                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{project.taskCount}</Typography>
-                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{project.completedTaskCount}</Typography>
-                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)" }}>{project.completedPointValue}/{project.totalPointValue}</Typography>
+                  <Chip size="small" label={project.status} sx={{ width: "fit-content", alignSelf: "center", fontWeight: 800, ...getStatusChipStyle(project.status) }} />
 
-                  <Box>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", alignSelf: "center" }}>{project.taskCount}</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", alignSelf: "center" }}>{project.completedTaskCount}</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--nx-text-soft)", alignSelf: "center" }}>{project.completedPointValue}/{project.totalPointValue}</Typography>
+
+                  <Box sx={{ alignSelf: "center" }}>
                     <Typography variant="caption" sx={{ color: "var(--nx-text-soft)" }}>{project.weightedProgress}%</Typography>
                     <LinearProgress variant="determinate" value={project.weightedProgress} sx={{ mt: 0.4, height: 6, borderRadius: 999, bgcolor: "var(--nx-panel-2)", '& .MuiLinearProgress-bar': { bgcolor: "var(--nx-purple)" } }} />
+                  </Box>
+
+                  <Box sx={{ alignSelf: "center" }}>
+                    <Button 
+                      size="small" 
+                      variant="outlined" 
+                      disabled={!project.id}
+                      onClick={() => {
+                        if (project.id) navigate(`/manager/project-management/${project.id}`);
+                      }} 
+                      sx={{
+                        textTransform: "none",
+                        fontWeight: 700,
+                        color: "var(--nx-text)",
+                        borderColor: "var(--nx-border)",
+                        '&:hover': { backgroundColor: "var(--nx-panel-2)" },
+                        width: "100%",
+                      }}
+                    >
+                      Manage
+                    </Button>
                   </Box>
                 </Box>
               ))}
