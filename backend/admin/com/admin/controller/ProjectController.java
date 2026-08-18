@@ -35,6 +35,15 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.getMyProjects(authentication));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ProjectResponse> getProjectById(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        ProjectResponse response = projectService.getProjectById(id, authentication);
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{projectId}")
     public ResponseEntity<ProjectResponse> updateProject(
             @PathVariable Long projectId,

@@ -146,6 +146,20 @@ public class ProjectService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public ProjectResponse getProjectById(Long projectId, Authentication authentication) {
+        User manager = getAuthenticatedManager(authentication);
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        if (project.getManager() == null || !project.getManager().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only view your own projects");
+        }
+
+        return mapToResponse(project);
+    }
+
     @Transactional
     public String deleteProject(Long projectId, Authentication authentication) {
         log.info("DELETE PROJECT request received: projectId={}", projectId);
