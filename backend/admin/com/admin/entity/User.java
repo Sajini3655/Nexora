@@ -44,6 +44,15 @@ public class User implements UserDetails {
     @Builder.Default
     private Set<Role> additionalRoles = new LinkedHashSet<>();
 
+    // Custom (admin-defined) roles assigned to this user, stored by name.
+    // Built-in roles live in role/additionalRoles; these are the extra
+    // named roles created in Access Control that grant module access.
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_custom_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role_name", nullable = false)
+    @Builder.Default
+    private Set<String> customRoles = new LinkedHashSet<>();
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean enabled = false;
@@ -63,9 +72,18 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return getAllRoles().stream()
-                .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
-                .toList();
+        Set<GrantedAuthority> authorities = new LinkedHashSet<>();
+        for (Role r : getAllRoles()) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + r.name()));
+        }
+        if (customRoles != null) {
+            for (String customRole : customRoles) {
+                if (customRole != null && !customRole.isBlank()) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + customRole));
+                }
+            }
+        }
+        return authorities;
     }
 
     public Set<Role> getAllRoles() {
@@ -77,6 +95,22 @@ public class User implements UserDetails {
             all.addAll(additionalRoles);
         }
         return all;
+    }
+
+    // All assigned role names: built-in (enum) names plus custom role names.
+    public Set<String> getAllRoleNames() {
+        Set<String> names = new LinkedHashSet<>();
+        for (Role r : getAllRoles()) {
+            names.add(r.name());
+        }
+        if (customRoles != null) {
+            for (String customRole : customRoles) {
+                if (customRole != null && !customRole.isBlank()) {
+                    names.add(customRole);
+                }
+            }
+        }
+        return names;
     }
 
     @Override

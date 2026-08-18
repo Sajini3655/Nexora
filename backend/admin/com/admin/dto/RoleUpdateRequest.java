@@ -1,6 +1,5 @@
 package com.admin.dto;
 
-import com.admin.entity.Role;
 import lombok.Data;
 
 import java.util.Set;
@@ -8,7 +7,9 @@ import java.util.Set;
 @Data
 public class RoleUpdateRequest {
 
-    private Role role;
+    // Role names may be built-in (ADMIN/MANAGER/DEVELOPER/CLIENT) or custom
+    // roles defined in Access Control, so they are accepted as raw strings.
+    private String role;
 
-    private Set<Role> roles;
+    private Set<String> roles;
 }

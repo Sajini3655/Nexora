@@ -31,6 +31,7 @@ import InviteUserDialog from "./InviteUserDialog.jsx";
 import { closeWithBlur } from "../../../utils/focus";
 import {
   deleteAdminUser,
+  getAccessRoles,
   getAdminUsers,
   resendInvite,
   updateAdminUserRole,
@@ -56,6 +57,9 @@ export default function UserList() {
   const [enabled, setEnabled] = useState("");
 
   const [inviteOpen, setInviteOpen] = useState(false);
+
+  // Built-in roles plus any custom roles defined in Access Control.
+  const [assignableRoles, setAssignableRoles] = useState(ROLES);
 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState("");
@@ -98,6 +102,25 @@ export default function UserList() {
   useEffect(() => {
     loadUsers();
   }, [page, role, enabled, enabledParam]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const roles = await getAccessRoles();
+        if (!active) return;
+        const merged = Array.from(
+          new Set([...ROLES, ...(Array.isArray(roles) ? roles : [])].filter(Boolean))
+        );
+        setAssignableRoles(merged);
+      } catch {
+        if (active) setAssignableRoles(ROLES);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSearch = async () => {
     setPage(1);
@@ -411,6 +434,7 @@ export default function UserList() {
                       <TableCell sx={tableCellMid} width={260}>
                         <RoleMultiSelect
                           value={getUserRoles(user)}
+                          options={assignableRoles}
                           disabled={actionLoading === roleKey}
                           onChange={(newRoles) => handleRoleChange(user, newRoles)}
                         />
@@ -508,14 +532,50 @@ export default function UserList() {
 }
 
 function getUserRoles(user) {
-  if (Array.isArray(user?.roles)) return user.roles.filter(Boolean);
-  if (Array.isArray(user?.roleNames)) return user.roleNames.filter(Boolean);
+  // roleNames carries built-in + custom roles; prefer it so custom roles show.
+  if (Array.isArray(user?.roleNames) && user.roleNames.length > 0) {
+    return user.roleNames.filter(Boolean);
+  }
+  if (Array.isArray(user?.roles) && user.roles.length > 0) return user.roles.filter(Boolean);
   if (typeof user?.role === "string" && user.role.trim()) return [user.role.trim()];
   return [];
 }
 
-function RoleMultiSelect({ value, disabled, onChange }) {
-  const selected = Array.isArray(value) ? value : [];
+function rolesEqual(a, b) {
+  const x = [...(Array.isArray(a) ? a : [])].sort();
+  const y = [...(Array.isArray(b) ? b : [])].sort();
+  return x.length === y.length && x.every((role, i) => role === y[i]);
+}
+
+function RoleMultiSelect({ value, options, disabled, onChange }) {
+  const roleOptions = Array.isArray(options) && options.length > 0 ? options : ROLES;
+
+  // Local optimistic selection so toggles apply instantly and the menu stays
+  // open for multi-select; the change is persisted once, when the menu closes.
+  const [open, setOpen] = useState(false);
+  const [local, setLocal] = useState(Array.isArray(value) ? value : []);
+  const selected = local;
+
+  // Re-sync whenever the server value actually changes (e.g. after a save
+  // reloads the list). Keyed on the sorted contents so local edits, which
+  // don't change the incoming value, are never clobbered mid-selection.
+  const valueKey = JSON.stringify([...(Array.isArray(value) ? value : [])].sort());
+  useEffect(() => {
+    setLocal(Array.isArray(value) ? value : []);
+  }, [valueKey]);
+
+  const handleClose = () => {
+    setOpen(false);
+    const next = (Array.isArray(local) ? local : []).filter(Boolean);
+    if (next.length === 0) {
+      // At least one role is required; revert to the current server value.
+      setLocal(Array.isArray(value) ? value : []);
+      return;
+    }
+    if (!rolesEqual(next, value)) {
+      onChange(next);
+    }
+  };
 
   return (
     <Input
@@ -524,10 +584,13 @@ function RoleMultiSelect({ value, disabled, onChange }) {
       disabled={disabled}
       onChange={(e) => {
         const nextValue = e.target.value;
-        onChange(typeof nextValue === "string" ? nextValue.split(",") : nextValue);
+        setLocal(typeof nextValue === "string" ? nextValue.split(",") : nextValue);
       }}
       SelectProps={{
         multiple: true,
+        open,
+        onOpen: () => setOpen(true),
+        onClose: handleClose,
         renderValue: (selectedValues) =>
           Array.isArray(selectedValues) && selectedValues.length > 0
             ? selectedValues.join(", ")
@@ -587,10 +650,13 @@ function RoleMultiSelect({ value, disabled, onChange }) {
         },
       }}
     >
-      {ROLES.map((role) => (
+      {Array.from(new Set([...roleOptions, ...selected])).map((role) => (
         <MenuItem key={role} value={role}>
           <Checkbox checked={selected.includes(role)} />
-          <ListItemText primary={role} />
+          <ListItemText
+            primary={role}
+            secondary={ROLES.includes(role) ? "Built-in" : "Custom"}
+          />
         </MenuItem>
       ))}
     </Input>

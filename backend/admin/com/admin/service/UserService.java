@@ -12,6 +12,7 @@ import com.admin.exception.ResourceNotFoundException;
 import com.admin.repository.DeveloperProfileRepository;
 import com.admin.repository.InviteTokenRepository;
 import com.admin.repository.ProjectRepository;
+import com.admin.repository.RoleModuleAccessRepository;
 import com.admin.repository.TaskRepository;
 import com.admin.repository.TicketRepository;
 import com.admin.repository.UserRepository;
@@ -45,8 +46,12 @@ public class UserService {
     private final TicketRepository ticketRepository;
     private final DeveloperProfileRepository developerProfileRepository;
     private final ProjectRepository projectRepository;
+    private final RoleModuleAccessRepository roleModuleAccessRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
     private final EntityManager entityManager;
+
+    private static final Set<String> BUILT_IN_ROLE_NAMES =
+            Set.of("ADMIN", "MANAGER", "DEVELOPER", "CLIENT");
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -102,9 +107,6 @@ public class UserService {
             throw new RuntimeException("Name must be at least 2 characters long.");
         }
 
-        Set<Role> normalizedRoles = normalizeRoles(request.getRole(), request.getRoles());
-        Role primaryRole = normalizedRoles.iterator().next();
-
         User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
 
         if (user != null && Boolean.TRUE.equals(user.getEnabled())) {
@@ -115,18 +117,15 @@ public class UserService {
             user = User.builder()
                     .name(name)
                     .email(email)
-                    .role(primaryRole)
-                    .additionalRoles(new LinkedHashSet<>(normalizedRoles))
+                    .role(Role.CLIENT)
                     .enabled(false)
                     .build();
         } else {
             user.setName(name);
-            user.setRole(primaryRole);
-            user.setAdditionalRoles(new LinkedHashSet<>(normalizedRoles));
             user.setEnabled(false);
         }
 
-        user.getAdditionalRoles().remove(user.getRole());
+        applyRoles(user, request.getRole(), request.getRoles());
 
         user = userRepository.save(user);
 
@@ -265,18 +264,16 @@ public class UserService {
     }
 
     @Transactional
-    public String updateUserRole(Long userId, Role role, Set<Role> roles) {
+    public String updateUserRole(Long userId, String role, Set<String> roles) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Set<Role> normalizedRoles = normalizeRoles(role, roles);
-        Role newPrimaryRole = normalizedRoles.iterator().next();
+        String oldRoles = user.getAllRoleNames().toString();
 
-        Role oldRole = user.getRole();
-        user.setRole(newPrimaryRole);
-        user.setAdditionalRoles(new LinkedHashSet<>(normalizedRoles));
-        user.getAdditionalRoles().remove(user.getRole());
+        applyRoles(user, role, roles);
         userRepository.save(user);
+
+        Set<Role> normalizedRoles = user.getAllRoles();
 
         if (normalizedRoles.contains(Role.DEVELOPER)) {
             DeveloperProfile existingProfile = developerProfileRepository.findByUser_Id(userId).orElse(null);
@@ -303,7 +300,7 @@ public class UserService {
                     "UPDATED_ROLE",
                     actorEmail,
                     targetEmail,
-                    "Changed role from " + oldRole + " to " + normalizedRoles
+                    "Changed roles from " + oldRoles + " to " + user.getAllRoleNames()
             );
         } catch (Exception e) {
         }
@@ -381,33 +378,86 @@ public class UserService {
 
     private UserResponse toUserResponse(User user) {
         List<Role> roles = new ArrayList<>(user.getAllRoles());
+        List<String> customRoles = new ArrayList<>(
+                user.getCustomRoles() == null ? new LinkedHashSet<>() : user.getCustomRoles());
         return UserResponse.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .roles(roles)
+                .customRoles(customRoles)
+                .roleNames(new ArrayList<>(user.getAllRoleNames()))
                 .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
 
-    private Set<Role> normalizeRoles(Role role, Set<Role> roles) {
-        LinkedHashSet<Role> normalized = new LinkedHashSet<>();
-
-        if (role != null) {
-            normalized.add(role);
+    /**
+     * Resolves a mix of built-in and custom role names onto the user.
+     * Built-in names populate role/additionalRoles (enums); custom names
+     * populate customRoles (strings). Custom names are validated against the
+     * roles that actually exist in Access Control. When nothing valid is
+     * selected the user falls back to CLIENT, matching prior behaviour.
+     */
+    private void applyRoles(User user, String primaryName, Set<String> roleNames) {
+        LinkedHashSet<String> ordered = new LinkedHashSet<>();
+        if (primaryName != null && !primaryName.isBlank()) {
+            ordered.add(primaryName.trim().toUpperCase());
+        }
+        if (roleNames != null) {
+            for (String name : roleNames) {
+                if (name != null && !name.isBlank()) {
+                    ordered.add(name.trim().toUpperCase());
+                }
+            }
         }
 
-        if (roles != null) {
-            roles.stream().filter(r -> r != null).forEach(normalized::add);
+        Set<String> knownCustom = knownCustomRoleNames();
+        LinkedHashSet<Role> builtIns = new LinkedHashSet<>();
+        LinkedHashSet<String> customs = new LinkedHashSet<>();
+
+        for (String name : ordered) {
+            if (BUILT_IN_ROLE_NAMES.contains(name)) {
+                builtIns.add(Role.valueOf(name));
+            } else if (knownCustom.contains(name)) {
+                customs.add(name);
+            } else {
+                throw new RuntimeException("Unknown role: " + name);
+            }
         }
 
-        if (normalized.isEmpty()) {
-            normalized.add(Role.CLIENT);
+        if (builtIns.isEmpty() && customs.isEmpty()) {
+            builtIns.add(Role.CLIENT);
         }
 
-        return normalized;
+        // A primary built-in role is always kept so the user has a home
+        // workspace; custom roles only add module access on top of it.
+        Role primaryRole = builtIns.isEmpty() ? Role.CLIENT : builtIns.iterator().next();
+        LinkedHashSet<Role> additional = new LinkedHashSet<>(builtIns);
+        additional.remove(primaryRole);
+
+        user.setRole(primaryRole);
+        user.setAdditionalRoles(additional);
+        user.setCustomRoles(customs);
+    }
+
+    private Set<String> knownCustomRoleNames() {
+        LinkedHashSet<String> customs = new LinkedHashSet<>();
+        try {
+            for (String role : roleModuleAccessRepository.findDistinctRoles()) {
+                if (role == null) {
+                    continue;
+                }
+                String normalized = role.trim().toUpperCase();
+                if (!normalized.isBlank() && !BUILT_IN_ROLE_NAMES.contains(normalized)) {
+                    customs.add(normalized);
+                }
+            }
+        } catch (RuntimeException ex) {
+            // If the lookup fails, treat as no known custom roles.
+        }
+        return customs;
     }
 
     private String getCurrentActorEmail() {

@@ -16,6 +16,7 @@ import {
 
 import Input from "../../../components/ui/Input";
 import useApi from "../../../hooks/useApi";
+import { getAccessRoles } from "../../../services/api";
 import { closeWithBlur } from "../../../utils/focus";
 
 const ROLES = ["ADMIN", "MANAGER", "DEVELOPER", "CLIENT"];
@@ -56,6 +57,7 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roles, setRoles] = useState(["CLIENT"]);
+  const [availableRoles, setAvailableRoles] = useState(ROLES);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [warn, setWarn] = useState("");
@@ -83,6 +85,25 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
 
   useEffect(() => {
     if (open) reset();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    let active = true;
+    (async () => {
+      try {
+        const fetched = await getAccessRoles();
+        if (!active) return;
+        setAvailableRoles(
+          Array.from(new Set([...ROLES, ...(Array.isArray(fetched) ? fetched : [])].filter(Boolean)))
+        );
+      } catch {
+        if (active) setAvailableRoles(ROLES);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [open]);
 
   const handleClose = () => {
@@ -236,10 +257,13 @@ export default function InviteUserDialog({ open, onClose, onInvited }) {
               renderValue: (selected) => selected.join(", "),
             }}
           >
-            {ROLES.map((r) => (
+            {Array.from(new Set([...availableRoles, ...roles])).map((r) => (
               <MenuItem key={r} value={r}>
                 <Checkbox checked={roles.includes(r)} size="small" />
-                <ListItemText primary={r} />
+                <ListItemText
+                  primary={r}
+                  secondary={ROLES.includes(r) ? "Built-in" : "Custom"}
+                />
               </MenuItem>
             ))}
           </Input>

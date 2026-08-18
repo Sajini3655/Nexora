@@ -385,11 +385,15 @@ public class AccessControlService {
 
         Map<String, Map<String, Boolean>> roleMatrix = getRoleMatrix();
 
+        // Effective access is the union across every assigned role name:
+        // built-in enum roles and custom (admin-defined) roles alike.
+        Set<String> roleNames = user.getAllRoleNames();
+
         for (AccessModule module : AccessModule.values()) {
                 boolean allowed = false;
 
-                for (Role role : userRoles) {
-                    Map<String, Boolean> roleAccess = roleMatrix.getOrDefault(role.name(), Map.of());
+                for (String roleName : roleNames) {
+                    Map<String, Boolean> roleAccess = roleMatrix.getOrDefault(roleName, Map.of());
                     if (Boolean.TRUE.equals(roleAccess.get(module.name()))) {
                         allowed = true;
                         break;
@@ -399,7 +403,7 @@ public class AccessControlService {
                 effective.put(module.name(), allowed);
         }
 
-            if (userRoles.stream().noneMatch(MANAGED_ROLES::contains)) {
+            if (userRoles.stream().map(Role::name).noneMatch(MANAGED_ROLES::contains)) {
             return effective;
         }
 

@@ -1,6 +1,5 @@
 package com.admin.dto;
 
-import com.admin.entity.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -17,7 +16,9 @@ public class InviteRequest {
     @Email
     private String email;
 
-    private Role role;
+    // Role names may be built-in (ADMIN/MANAGER/DEVELOPER/CLIENT) or custom
+    // roles defined in Access Control, so they are accepted as raw strings.
+    private String role;
 
-    private Set<Role> roles;
+    private Set<String> roles;
 }

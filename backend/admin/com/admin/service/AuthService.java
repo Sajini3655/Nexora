@@ -187,6 +187,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .roles(new ArrayList<>(user.getAllRoles()))
+                .customRoles(new ArrayList<>(
+                        user.getCustomRoles() == null ? java.util.Set.of() : user.getCustomRoles()))
+                .roleNames(new ArrayList<>(user.getAllRoleNames()))
                 .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
                 .build();

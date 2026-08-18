@@ -63,6 +63,7 @@ public class AdminUserController {
             @Valid @RequestBody RoleUpdateRequest request
     ) {
         String message = userService.updateUserRole(id, request.getRole(), request.getRoles());
+        // request.getRole()/getRoles() are now role-name strings (built-in or custom)
         return ResponseEntity.ok(Map.of("message", message));
     }
 
