@@ -86,7 +86,16 @@ def summarize_chat(messages):
         lines.append(f"{sender}: {content}")
 
         lower = content.lower()
-        if any(term in lower for term in ["blocked", "blocker", "stuck", "error", "failed", "not working", "cannot continue"]):
+        ai_down_phrases = [
+            "ai service is down",
+            "ai service down",
+            "ai server is down",
+            "ai server down",
+            "ai is down",
+            "ai unavailable",
+            "ai outage",
+        ]
+        if any(term in lower for term in ["blocked", "blocker", "stuck", "error", "failed", "not working", "cannot continue", "cannot proceed", "server is down", "service is down", *ai_down_phrases]):
             blockers.append(content)
 
     summary = "Chat Summary:\n" + "\n".join(lines[-8:]) if lines else "Chat Summary:\nNo messages were available to summarize."

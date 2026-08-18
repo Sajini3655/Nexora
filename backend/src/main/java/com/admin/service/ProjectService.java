@@ -257,11 +257,19 @@ public class ProjectService {
                 throw e;
             }
 
-            // STEP 5: Delete tickets for project
+            // STEP 5: Delete tickets for project and tickets assigned to its tasks
             try {
                 log.info("DELETE PROJECT Step 5: Deleting tickets");
                 List<Ticket> projectTickets = ticketRepository.findAll().stream()
-                    .filter(ticket -> ticket.getProject() != null && ticket.getProject().getId().equals(projectId))
+                    .filter(ticket -> {
+                        if (ticket.getProject() != null && ticket.getProject().getId().equals(projectId)) {
+                            return true;
+                        }
+                        if (ticket.getAssignedTask() != null && ticket.getAssignedTask().getId() != null && taskIds.contains(ticket.getAssignedTask().getId())) {
+                            return true;
+                        }
+                        return false;
+                    })
                     .toList();
                 
                 if (!projectTickets.isEmpty()) {

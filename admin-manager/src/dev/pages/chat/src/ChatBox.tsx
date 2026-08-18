@@ -79,6 +79,8 @@ const BLOCKER_KEYWORDS = [
   "server is down",
   "service is down",
   "ai service is down",
+  "ai server is down",
+  "ai server down",
   "cannot proceed",
   "can't proceed",
   "cannot continue",

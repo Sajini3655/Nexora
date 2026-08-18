@@ -14,6 +14,7 @@ import com.admin.repository.TicketRepository;
 import com.admin.repository.TimesheetEntryRepository;
 import com.admin.repository.UserModuleOverrideRepository;
 import com.admin.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -82,6 +83,9 @@ class UserServiceDeleteTest {
     private JdbcTemplate jdbcTemplate;
 
     @Mock
+    private EntityManager entityManager;
+
+    @Mock
     private LiveUpdatePublisher liveUpdatePublisher;
 
     @InjectMocks
@@ -107,23 +111,13 @@ class UserServiceDeleteTest {
                 .build();
 
         when(userRepository.findById(42L)).thenReturn(Optional.of(targetUser));
-        when(taskRepository.findByCreatedById(42L)).thenReturn(List.of());
-        when(taskRepository.findByAssignedToId(42L)).thenReturn(List.of());
-        when(ticketRepository.findByCreatedByIdOrAssignedToIdOrderByCreatedAtDesc(42L, 42L)).thenReturn(List.of());
-        when(ticketRepository.findByManagerIdOrderByCreatedAtDesc(42L)).thenReturn(List.of());
-        when(ticketRepository.findByClientId(42L)).thenReturn(List.of());
-        when(ticketRepository.findByProjectManagerIdOrderByCreatedAtDesc(42L)).thenReturn(List.of());
-        when(chatMessageRepository.findBySenderIdOrderByCreatedAtDesc(42L)).thenReturn(List.of());
-        when(chatSessionRepository.findByStartedByIdOrderByStartedAtDesc(42L)).thenReturn(List.of());
-        when(projectRepository.findByManagerOrderByCreatedAtDesc(targetUser)).thenReturn(List.of());
-        when(projectRepository.findByClient_IdOrderByCreatedAtDesc(42L)).thenReturn(List.of());
-        when(timesheetEntryRepository.findByDeveloperIdOrderByWorkDateDesc(42L)).thenReturn(List.of());
-        when(timesheetEntryRepository.findByReviewedByIdOrderByWorkDateDesc(42L)).thenReturn(List.of());
-        when(taskStoryPointRepository.findByCompletedById(42L)).thenReturn(List.of());
-        when(developerProfileRepository.findByUser_Id(42L)).thenReturn(Optional.empty());
-        when(userModuleOverrideRepository.findByUser_Id(42L)).thenReturn(List.of());
-        when(jdbcTemplate.queryForList(anyString())).thenReturn(List.of());
-        when(jdbcTemplate.update(anyString(), anyLong())).thenReturn(0);
+        when(taskRepository.countByCreatedBy_Id(42L)).thenReturn(0L);
+        when(taskRepository.countByAssignedTo_Id(42L)).thenReturn(0L);
+        when(ticketRepository.countByCreatedBy_Id(42L)).thenReturn(0L);
+        when(ticketRepository.countByAssignedTo_Id(42L)).thenReturn(0L);
+        when(developerProfileRepository.countByUser_Id(42L)).thenReturn(0L);
+        when(projectRepository.countByManager_Id(42L)).thenReturn(0L);
+        when(jdbcTemplate.update("DELETE FROM user_roles WHERE user_id = ?", 42L)).thenReturn(1);
 
         String message = userService.deleteUser(42L);
 

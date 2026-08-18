@@ -19,6 +19,7 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class UserService {
     private final TicketRepository ticketRepository;
     private final DeveloperProfileRepository developerProfileRepository;
     private final ProjectRepository projectRepository;
+    private final JdbcTemplate jdbcTemplate;
     private final LiveUpdatePublisher liveUpdatePublisher;
     private final EntityManager entityManager;
 
@@ -361,8 +363,10 @@ public class UserService {
             return "User has related records. Disabled instead of deleted.";
         }
 
+        jdbcTemplate.update("DELETE FROM user_roles WHERE user_id = ?", userId);
         inviteTokenRepository.deleteByUser_Id(userId);
         userRepository.deleteById(userId);
+        entityManager.clear();
 
         try {
             auditLogService.log(
@@ -376,7 +380,7 @@ public class UserService {
 
         liveUpdatePublisher.publishUsersChanged("deleted");
 
-        return "User deleted successfully.";
+        return "User account permanently deleted successfully.";
     }
 
     private UserResponse toUserResponse(User user) {

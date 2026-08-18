@@ -25,15 +25,24 @@ def extract_blockers(messages):
     # Database-related issues
     if any(term in combined for term in ["database server is down", "db server is down", "database down", "db down", "database is down"]):
         blockers.append("Database server is down")
-    
+
     # API/Service-related issues
     if any(term in combined for term in ["api keys are missing", "missing api keys", "api key missing"]):
         blockers.append("API keys are missing")
-    
+
     # AI Service issues
-    if any(term in combined for term in ["ai service is down", "ai service down", "ai server down"]):
+    ai_down_phrases = [
+        "ai service is down",
+        "ai service down",
+        "ai server is down",
+        "ai server down",
+        "ai is down",
+        "ai unavailable",
+        "ai outage",
+    ]
+    if any(term in combined for term in ai_down_phrases):
         blockers.append("AI service is down")
-    
+
     # General service/bug keywords
     if any(term in combined for term in ["service is down", "server is down"]) and "ai service" not in combined and "database" not in combined:
         if "service is down" in combined:
