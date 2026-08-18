@@ -5,6 +5,7 @@ import com.admin.entity.*;
 import com.admin.exception.ResourceNotFoundException;
 import com.admin.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TaskAssignmentService {
 
     private static final List<TaskStatus> COMPLETED_TASK_STATUSES = List.of(TaskStatus.DONE, TaskStatus.COMPLETED);
@@ -25,6 +27,8 @@ public class TaskAssignmentService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final TaskStoryPointRepository storyPointRepository;
+    private final TicketRepository ticketRepository;
+    private final TimesheetEntryRepository timesheetEntryRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
     private final AiSkillExtractionService aiSkillExtractionService;
     private final AiAssigneeService aiAssigneeService;
@@ -298,40 +302,98 @@ public class TaskAssignmentService {
 
     @Transactional
     public String deleteTask(String managerEmail, Long taskId) {
-        User manager = userRepository.findByEmail(managerEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
-
-        TaskItem task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
-
-        if (task.getProject() == null || task.getProject().getManager() == null
-                || !task.getProject().getManager().getId().equals(manager.getId())) {
-            throw new AccessDeniedException("You can only delete tasks for projects you manage");
-        }
-
-        // STEP 1: Delete task story points
         try {
-            List<TaskStoryPoint> storyPoints = storyPointRepository.findAll().stream()
-                    .filter(sp -> sp.getTask() != null && sp.getTask().getId().equals(taskId))
-                    .toList();
+            log.info("DELETE TASK request received: taskId={}, managerEmail={}", taskId, managerEmail);
             
-            if (!storyPoints.isEmpty()) {
-                storyPointRepository.deleteAll(storyPoints);
+            User manager = userRepository.findByEmail(managerEmail)
+                    .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
+            TaskItem task = taskRepository.findById(taskId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+            if (task.getProject() == null || task.getProject().getManager() == null
+                    || !task.getProject().getManager().getId().equals(manager.getId())) {
+                throw new AccessDeniedException("You can only delete tasks for projects you manage");
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to delete task story points: " + e.getMessage(), e);
-        }
 
-        // STEP 2: Delete task itself
-        try {
-            taskRepository.deleteById(taskId);
-            taskRepository.flush();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to delete task: " + e.getMessage(), e);
-        }
+            log.info("DELETE TASK cleanup started: taskId={}, projectId={}", taskId, task.getProject().getId());
 
-        liveUpdatePublisher.publishTasksChanged("deleted");
-        return "Task deleted successfully.";
+            // STEP 1: Delete timesheet entries for this task
+            try {
+                log.info("DELETE TASK Step 1: Deleting timesheet entries");
+                List<TimesheetEntry> timesheetEntries = timesheetEntryRepository.findAll().stream()
+                        .filter(te -> te.getTask() != null && te.getTask().getId().equals(taskId))
+                        .toList();
+                
+                if (!timesheetEntries.isEmpty()) {
+                    timesheetEntryRepository.deleteAll(timesheetEntries);
+                    timesheetEntryRepository.flush();
+                    log.debug("DELETE TASK Step 1: Deleted {} timesheet entries", timesheetEntries.size());
+                }
+                log.debug("DELETE TASK Step 1 completed");
+            } catch (Exception e) {
+                log.error("DELETE TASK FAILED AT STEP 1: Error deleting timesheet entries: {}", e.getMessage(), e);
+                throw e;
+            }
+
+            // STEP 2: Delete tickets assigned to this task
+            try {
+                log.info("DELETE TASK Step 2: Deleting tickets assigned to task");
+                List<Ticket> tickets = ticketRepository.findAll().stream()
+                        .filter(ticket -> ticket.getAssignedTask() != null && ticket.getAssignedTask().getId().equals(taskId))
+                        .toList();
+                
+                if (!tickets.isEmpty()) {
+                    ticketRepository.deleteAll(tickets);
+                    ticketRepository.flush();
+                    log.debug("DELETE TASK Step 2: Deleted {} tickets", tickets.size());
+                }
+                log.debug("DELETE TASK Step 2 completed");
+            } catch (Exception e) {
+                log.error("DELETE TASK FAILED AT STEP 2: Error deleting tickets: {}", e.getMessage(), e);
+                throw e;
+            }
+
+            // STEP 3: Delete task story points
+            try {
+                log.info("DELETE TASK Step 3: Deleting task story points");
+                List<TaskStoryPoint> storyPoints = storyPointRepository.findAll().stream()
+                        .filter(sp -> sp.getTask() != null && sp.getTask().getId().equals(taskId))
+                        .toList();
+                
+                if (!storyPoints.isEmpty()) {
+                    storyPointRepository.deleteAll(storyPoints);
+                    storyPointRepository.flush();
+                    log.debug("DELETE TASK Step 3: Deleted {} story points", storyPoints.size());
+                }
+                log.debug("DELETE TASK Step 3 completed");
+            } catch (Exception e) {
+                log.error("DELETE TASK FAILED AT STEP 3: Error deleting task story points: {}", e.getMessage(), e);
+                throw e;
+            }
+
+            // STEP 4: Delete task itself
+            try {
+                log.info("DELETE TASK Step 4: Deleting task");
+                taskRepository.deleteById(taskId);
+                taskRepository.flush();
+                log.debug("DELETE TASK Step 4 completed");
+            } catch (Exception e) {
+                log.error("DELETE TASK FAILED AT STEP 4: Error deleting task: {}", e.getMessage(), e);
+                throw e;
+            }
+
+            log.info("DELETE TASK completed successfully: taskId={}", taskId);
+            liveUpdatePublisher.publishTasksChanged("deleted");
+            return "Task deleted successfully.";
+            
+        } catch (ResourceNotFoundException | AccessDeniedException e) {
+            // Re-throw authorization/not found exceptions as is
+            throw e;
+        } catch (Exception e) {
+            log.error("DELETE TASK FAILED: {}", e.getMessage(), e);
+            throw new RuntimeException(e.getMessage(), e);
+        }
     }
 
     @Transactional(readOnly = true)

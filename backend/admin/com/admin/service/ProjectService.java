@@ -180,7 +180,7 @@ public class ProjectService {
             // Get project tasks first
             List<TaskItem> projectTasks = taskRepository.findByProject_Id(projectId);
             List<Long> taskIds = projectTasks.stream()
-                    .map(task -> task.getId())
+                    .map(TaskItem::getId)
                     .toList();
             
             log.info("DELETE PROJECT Step 1: Found {} tasks to clean up", taskIds.size());
@@ -198,8 +198,8 @@ public class ProjectService {
                 }
                 log.debug("DELETE PROJECT Step 1 completed: Deleted messages for {} chat sessions", chatSessionIds.size());
             } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 1: Error deleting chat messages", e);
-                throw new RuntimeException("Failed to delete chat messages: " + e.getMessage(), e);
+                log.error("DELETE PROJECT FAILED AT STEP 1: Error deleting chat messages: {}", e.getMessage(), e);
+                throw e;
             }
 
             // STEP 2: Delete chat sessions
@@ -208,27 +208,34 @@ public class ProjectService {
                 chatSessionRepository.deleteAll(chatSessionRepository.findByProject_IdOrderByStartedAtDesc(projectId));
                 log.debug("DELETE PROJECT Step 2 completed");
             } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 2: Error deleting chat sessions", e);
-                throw new RuntimeException("Failed to delete chat sessions: " + e.getMessage(), e);
+                log.error("DELETE PROJECT FAILED AT STEP 2: Error deleting chat sessions: {}", e.getMessage(), e);
+                throw e;
             }
 
-            // STEP 3: Delete timesheet entries for project tasks
+            // STEP 3: Delete timesheet entries for the project (both task-based and project-based)
             try {
                 log.info("DELETE PROJECT Step 3: Deleting timesheet entries");
-                if (!taskIds.isEmpty()) {
-                    // Find and delete timesheet entries for all tasks
-                    List<TimesheetEntry> timesheetEntries = timesheetEntryRepository.findAll().stream()
-                        .filter(entry -> taskIds.contains(entry.getTask() != null ? entry.getTask().getId() : null))
-                        .toList();
-                    
-                    if (!timesheetEntries.isEmpty()) {
-                        timesheetEntryRepository.deleteAll(timesheetEntries);
-                    }
+                List<TimesheetEntry> timesheetEntries = timesheetEntryRepository.findAll().stream()
+                    .filter(entry -> {
+                        // Delete if project matches OR task is in this project
+                        if (entry.getProject() != null && entry.getProject().getId().equals(projectId)) {
+                            return true;
+                        }
+                        if (entry.getTask() != null && entry.getTask().getId() != null && taskIds.contains(entry.getTask().getId())) {
+                            return true;
+                        }
+                        return false;
+                    })
+                    .toList();
+                
+                if (!timesheetEntries.isEmpty()) {
+                    timesheetEntryRepository.deleteAll(timesheetEntries);
+                    log.debug("DELETE PROJECT Step 3: Deleted {} timesheet entries", timesheetEntries.size());
                 }
                 log.debug("DELETE PROJECT Step 3 completed");
             } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 3: Error deleting timesheet entries", e);
-                throw new RuntimeException("Failed to delete timesheet entries: " + e.getMessage(), e);
+                log.error("DELETE PROJECT FAILED AT STEP 3: Error deleting timesheet entries: {}", e.getMessage(), e);
+                throw e;
             }
 
             // STEP 4: Delete task story points
@@ -236,17 +243,18 @@ public class ProjectService {
                 log.info("DELETE PROJECT Step 4: Deleting task story points");
                 if (!taskIds.isEmpty()) {
                     List<TaskStoryPoint> storyPoints = taskStoryPointRepository.findAll().stream()
-                        .filter(sp -> taskIds.contains(sp.getTask().getId()))
+                        .filter(sp -> sp.getTask() != null && sp.getTask().getId() != null && taskIds.contains(sp.getTask().getId()))
                         .toList();
                     
                     if (!storyPoints.isEmpty()) {
                         taskStoryPointRepository.deleteAll(storyPoints);
+                        log.debug("DELETE PROJECT Step 4: Deleted {} story points", storyPoints.size());
                     }
                 }
                 log.debug("DELETE PROJECT Step 4 completed");
             } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 4: Error deleting task story points", e);
-                throw new RuntimeException("Failed to delete task story points: " + e.getMessage(), e);
+                log.error("DELETE PROJECT FAILED AT STEP 4: Error deleting task story points: {}", e.getMessage(), e);
+                throw e;
             }
 
             // STEP 5: Delete tickets for project
@@ -258,55 +266,57 @@ public class ProjectService {
                 
                 if (!projectTickets.isEmpty()) {
                     ticketRepository.deleteAll(projectTickets);
+                    log.debug("DELETE PROJECT Step 5: Deleted {} tickets", projectTickets.size());
                 }
                 log.debug("DELETE PROJECT Step 5 completed");
             } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 5: Error deleting tickets", e);
-                throw new RuntimeException("Failed to delete tickets: " + e.getMessage(), e);
+                log.error("DELETE PROJECT FAILED AT STEP 5: Error deleting tickets: {}", e.getMessage(), e);
+                throw e;
             }
 
-            // STEP 6: Delete tasks (cascades via entity relationship)
+            // STEP 6: Delete tasks
             try {
                 log.info("DELETE PROJECT Step 6: Deleting tasks");
-                taskRepository.deleteAll(projectTasks);
+                if (!projectTasks.isEmpty()) {
+                    taskRepository.deleteAll(projectTasks);
+                    taskRepository.flush();
+                    log.debug("DELETE PROJECT Step 6: Deleted {} tasks", projectTasks.size());
+                }
                 log.debug("DELETE PROJECT Step 6 completed");
             } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 6: Error deleting tasks", e);
-                throw new RuntimeException("Failed to delete tasks: " + e.getMessage(), e);
+                log.error("DELETE PROJECT FAILED AT STEP 6: Error deleting tasks: {}", e.getMessage(), e);
+                throw e;
             }
 
-            // STEP 6.5: Delete project files
+            // STEP 7: Delete project files
             try {
-                log.info("DELETE PROJECT Step 6.5: Deleting project files");
+                log.info("DELETE PROJECT Step 7: Deleting project files");
                 projectFileService.deleteAllProjectFiles(projectId);
-                log.debug("DELETE PROJECT Step 6.5 completed");
-            } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 6.5: Error deleting project files", e);
-                throw new RuntimeException("Failed to delete project files: " + e.getMessage(), e);
-            }
-
-            // STEP 7: Delete project itself
-            try {
-                log.info("DELETE PROJECT Step 7: Deleting project");
-                projectRepository.deleteById(projectId);
-                projectRepository.flush();
                 log.debug("DELETE PROJECT Step 7 completed");
             } catch (Exception e) {
-                log.error("DELETE PROJECT FAILED AT STEP 7: Error deleting project", e);
-                throw new RuntimeException("Failed to delete project: " + e.getMessage(), e);
+                log.error("DELETE PROJECT FAILED AT STEP 7: Error deleting project files: {}", e.getMessage(), e);
+                throw e;
             }
 
-        } catch (RuntimeException e) {
-            // Re-throw RuntimeException as is
-            throw e;
-        } catch (Exception e) {
-            log.error("DELETE PROJECT FAILED: Unexpected error", e);
-            throw new RuntimeException("Failed to delete project: " + e.getMessage(), e);
-        }
+            // STEP 8: Delete project itself
+            try {
+                log.info("DELETE PROJECT Step 8: Deleting project");
+                projectRepository.deleteById(projectId);
+                projectRepository.flush();
+                log.debug("DELETE PROJECT Step 8 completed");
+            } catch (Exception e) {
+                log.error("DELETE PROJECT FAILED AT STEP 8: Error deleting project: {}", e.getMessage(), e);
+                throw e;
+            }
 
-        log.info("DELETE PROJECT deleted successfully: projectId={}", projectId);
-        liveUpdatePublisher.publishProjectsChanged("deleted");
-        return "Project deleted successfully.";
+            log.info("DELETE PROJECT deleted successfully: projectId={}", projectId);
+            liveUpdatePublisher.publishProjectsChanged("deleted");
+            return "Project deleted successfully.";
+
+        } catch (Exception e) {
+            log.error("DELETE PROJECT FAILED: {}", e.getMessage(), e);
+            throw new RuntimeException(e.getMessage(), e);
+        }
     }
 
     private User getAuthenticatedManager(Authentication authentication) {
