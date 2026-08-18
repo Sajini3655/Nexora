@@ -241,3 +241,33 @@ export const updateManagerTaskEstimate = async (taskId, estimatedPoints) => {
   });
   return response.data;
 };
+
+// Project Files API functions
+export const uploadProjectFile = async (projectId, file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post(
+    `/manager/projects/${projectId}/files`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return response.data;
+};
+
+export const getProjectFiles = async (projectId) => {
+  const response = await api.get(`/manager/projects/${projectId}/files`);
+  return normalizeArray(response.data);
+};
+
+export const downloadProjectFile = async (fileId) => {
+  const response = await api.get(
+    `/manager/projects/files/${fileId}/download`,
+    { responseType: "blob" }
+  );
+  return response.data;
+};
+
+export const deleteProjectFile = async (fileId) => {
+  const response = await api.delete(`/manager/projects/files/${fileId}`);
+  return response.data;
+};

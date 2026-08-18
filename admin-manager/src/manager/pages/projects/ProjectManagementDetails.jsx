@@ -42,6 +42,10 @@ import {
   fetchManagerClients,
   deleteProject,
   deleteTask,
+  uploadProjectFile,
+  getProjectFiles,
+  downloadProjectFile,
+  deleteProjectFile,
 } from "../../../services/managerService";
 import {
   getManagerQueryScope,
@@ -169,10 +173,6 @@ function buildSummaryPreview(session) {
   return summary.length > 160 ? `${summary.substring(0, 160)}...` : summary;
 }
 
-function getProjectFilesStorageKey(projectId) {
-  return `manager/project-files/${String(projectId || "")}`;
-}
-
 function formatFileSize(size) {
   if (!Number.isFinite(size) || size <= 0) return "0 B";
 
@@ -188,18 +188,19 @@ function formatFileSize(size) {
   return `${value >= 10 || unitIndex === 0 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
 }
 
-function normalizeStoredProjectFiles(value) {
-  if (!Array.isArray(value)) return [];
-
-  return value
-    .map((entry) => ({
-      id: String(entry?.id || ""),
-      name: String(entry?.name || "Untitled file"),
-      size: Number(entry?.size || 0),
-      type: String(entry?.type || "File"),
-      uploadedAt: String(entry?.uploadedAt || ""),
-    }))
-    .filter((entry) => entry.id && entry.name);
+function formatUploadDate(isoString) {
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleDateString("en-US", { 
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch (e) {
+    return String(isoString || "");
+  }
 }
 
 export default function ProjectManagementDetails() {
@@ -254,6 +255,8 @@ export default function ProjectManagementDetails() {
   const [projectFiles, setProjectFiles] = useState([]);
   const [selectedProjectFiles, setSelectedProjectFiles] = useState([]);
   const [projectFilesInputKey, setProjectFilesInputKey] = useState(0);
+  const [loadingProjectFiles, setLoadingProjectFiles] = useState(false);
+  const [uploadingProjectFiles, setUploadingProjectFiles] = useState(false);
 
   const [originalTaskDraft, setOriginalTaskDraft] = useState(null);
   const [originalDeveloperId, setOriginalDeveloperId] = useState("");
@@ -274,7 +277,9 @@ export default function ProjectManagementDetails() {
     savingStoryPoint ||
     savingAllChanges ||
     loadingStoryPoints ||
-    chatListLoading;
+    chatListLoading ||
+    uploadingProjectFiles ||
+    loadingProjectFiles;
 
   useEffect(() => {
     if (project && !editProjectName) {
@@ -303,22 +308,23 @@ export default function ProjectManagementDetails() {
       return;
     }
 
-    try {
-      const raw = window.localStorage.getItem(getProjectFilesStorageKey(projectId));
-      setProjectFiles(normalizeStoredProjectFiles(raw ? JSON.parse(raw) : []));
-    } catch (err) {
-      setProjectFiles([]);
-    }
+    const loadFiles = async () => {
+      try {
+        setLoadingProjectFiles(true);
+        const files = await getProjectFiles(projectId);
+        setProjectFiles(Array.isArray(files) ? files : []);
+      } catch (err) {
+        console.error("Failed to load project files:", err);
+        setProjectFiles([]);
+      } finally {
+        setLoadingProjectFiles(false);
+      }
+    };
 
+    loadFiles();
     setSelectedProjectFiles([]);
     setProjectFilesInputKey((value) => value + 1);
   }, [projectId]);
-
-  useEffect(() => {
-    if (!projectId) return;
-
-    window.localStorage.setItem(getProjectFilesStorageKey(projectId), JSON.stringify(projectFiles));
-  }, [projectFiles, projectId]);
 
   const loadProjectSessions = useCallback(async () => {
     if (!projectId || authLoading) return;
@@ -347,31 +353,66 @@ export default function ProjectManagementDetails() {
     setSelectedProjectFiles(files);
   }, []);
 
-  const handleAddProjectFiles = useCallback(() => {
+  const handleAddProjectFiles = useCallback(async () => {
     if (selectedProjectFiles.length === 0) {
       setActionError("Select one or more files first.");
       return;
     }
 
-    const now = new Date().toISOString();
-    const newEntries = selectedProjectFiles.map((file) => ({
-      id: `${Date.now()}-${file.name}-${file.size}-${Math.random().toString(36).slice(2, 8)}`,
-      name: file.name,
-      size: file.size,
-      type: file.type || "File",
-      uploadedAt: now,
-    }));
+    if (!projectId) {
+      setActionError("Project not loaded.");
+      return;
+    }
 
-    setProjectFiles((current) => [...newEntries, ...current]);
-    setSelectedProjectFiles([]);
-    setProjectFilesInputKey((value) => value + 1);
-    setActionError("");
-    setSuccess(`Added ${newEntries.length} file${newEntries.length === 1 ? "" : "s"} to this project.`);
-  }, [selectedProjectFiles]);
+    try {
+      setUploadingProjectFiles(true);
+      setActionError("");
 
-  const handleRemoveProjectFile = useCallback((fileId) => {
-    setProjectFiles((current) => current.filter((file) => file.id !== fileId));
-    setSuccess("Project file removed.");
+      // Upload all selected files
+      const uploadPromises = selectedProjectFiles.map((file) =>
+        uploadProjectFile(projectId, file)
+      );
+
+      await Promise.all(uploadPromises);
+
+      // Refresh the file list
+      const updatedFiles = await getProjectFiles(projectId);
+      setProjectFiles(Array.isArray(updatedFiles) ? updatedFiles : []);
+
+      setSelectedProjectFiles([]);
+      setProjectFilesInputKey((value) => value + 1);
+      setSuccess(`Uploaded ${selectedProjectFiles.length} file${selectedProjectFiles.length === 1 ? "" : "s"} successfully.`);
+    } catch (err) {
+      setActionError(getErrorMessage(err, "Failed to upload files."));
+    } finally {
+      setUploadingProjectFiles(false);
+    }
+  }, [selectedProjectFiles, projectId]);
+
+  const handleRemoveProjectFile = useCallback(async (fileId) => {
+    try {
+      await deleteProjectFile(fileId);
+      setProjectFiles((current) => current.filter((file) => file.id !== fileId));
+      setSuccess("Project file deleted successfully.");
+    } catch (err) {
+      setActionError(getErrorMessage(err, "Failed to delete file."));
+    }
+  }, []);
+
+  const handleDownloadFile = useCallback(async (file) => {
+    try {
+      const blob = await downloadProjectFile(file.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.originalFileName || `file-${file.id}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setActionError(getErrorMessage(err, "Failed to download file."));
+    }
   }, []);
 
   useEffect(() => {
@@ -1185,23 +1226,34 @@ export default function ProjectManagementDetails() {
                     borderRadius: 1,
                     background: "var(--nx-panel-2)",
                     border: "1px solid var(--nx-border)",
+                    gap: 1,
                   }}
                 >
                   <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: 14, color: "var(--nx-text)" }} noWrap>
-                      {file.name}
+                      {file.originalFileName}
                     </Typography>
                     <Typography variant="caption" sx={{ color: "var(--nx-muted)" }}>
-                      {formatFileSize(file.size)} • {file.type}
+                      {formatFileSize(file.fileSize)} • Uploaded by {file.uploadedByName} on {formatUploadDate(file.uploadedAt)}
                     </Typography>
                   </Box>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleRemoveProjectFile(file.id)}
-                    sx={{ color: "#ef4444", "&:hover": { backgroundColor: "rgba(239,68,68,0.1)" } }}
-                  >
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
+                  <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", whiteSpace: "nowrap" }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleDownloadFile(file)}
+                      sx={{ fontSize: 12, color: "var(--nx-text-soft)", borderColor: "var(--nx-border)" }}
+                    >
+                      Download
+                    </Button>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveProjectFile(file.id)}
+                      sx={{ color: "#ef4444", "&:hover": { backgroundColor: "rgba(239,68,68,0.1)" } }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
                 </Box>
               ))}
             </Stack>

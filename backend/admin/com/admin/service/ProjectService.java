@@ -49,6 +49,7 @@ public class ProjectService {
     private final TicketRepository ticketRepository;
     private final TimesheetEntryRepository timesheetEntryRepository;
     private final LiveUpdatePublisher liveUpdatePublisher;
+    private final ProjectFileService projectFileService;
 
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request, Authentication authentication) {
@@ -272,6 +273,16 @@ public class ProjectService {
             } catch (Exception e) {
                 log.error("DELETE PROJECT FAILED AT STEP 6: Error deleting tasks", e);
                 throw new RuntimeException("Failed to delete tasks: " + e.getMessage(), e);
+            }
+
+            // STEP 6.5: Delete project files
+            try {
+                log.info("DELETE PROJECT Step 6.5: Deleting project files");
+                projectFileService.deleteAllProjectFiles(projectId);
+                log.debug("DELETE PROJECT Step 6.5 completed");
+            } catch (Exception e) {
+                log.error("DELETE PROJECT FAILED AT STEP 6.5: Error deleting project files", e);
+                throw new RuntimeException("Failed to delete project files: " + e.getMessage(), e);
             }
 
             // STEP 7: Delete project itself
