@@ -16,5 +16,7 @@ public interface ProjectFileRepository extends JpaRepository<ProjectFile, Long> 
 
     Optional<ProjectFile> findByIdAndProject_Id(Long fileId, Long projectId);
 
+    long countByUploadedBy_Id(Long userId);
+
     void deleteByProject_Id(Long projectId);
 }

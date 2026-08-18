@@ -12,6 +12,8 @@ import java.util.List;
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
     long countByCreatedBy_Id(Long userId);
     long countByAssignedTo_Id(Long userId);
+    long countByManager_Id(Long userId);
+    long countByClient_Id(Long userId);
 
     List<Ticket> findAllByOrderByCreatedAtDesc();
 

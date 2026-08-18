@@ -13,6 +13,8 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     long countByManager_Id(Long userId);
 
+    long countByClient_Id(Long userId);
+
     List<Project> findByClient_IdOrderByCreatedAtDesc(Long clientId);
 
     @Query("SELECT DISTINCT p FROM Project p LEFT JOIN FETCH p.tasks WHERE p.manager = :manager ORDER BY p.createdAt DESC")

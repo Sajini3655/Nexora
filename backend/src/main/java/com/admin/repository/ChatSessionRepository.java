@@ -15,6 +15,8 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
     List<ChatSession> findByProject_IdOrderByStartedAtDesc(@Param("projectId") Long projectId);
 
     List<ChatSession> findByStartedByIdOrderByStartedAtDesc(Long startedById);
+
+    long countByStartedBy_Id(Long startedById);
     
     List<ChatSession> findByProject_IdAndEndedFalseOrderByStartedAtDesc(Long projectId);
 }

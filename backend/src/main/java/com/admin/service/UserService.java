@@ -9,11 +9,17 @@ import com.admin.entity.InviteToken;
 import com.admin.entity.Role;
 import com.admin.entity.User;
 import com.admin.exception.ResourceNotFoundException;
+import com.admin.repository.ChatMessageRepository;
+import com.admin.repository.ChatSessionRepository;
 import com.admin.repository.DeveloperProfileRepository;
+import com.admin.repository.DeveloperSkillRepository;
 import com.admin.repository.InviteTokenRepository;
+import com.admin.repository.ProjectFileRepository;
 import com.admin.repository.ProjectRepository;
 import com.admin.repository.TaskRepository;
 import com.admin.repository.TicketRepository;
+import com.admin.repository.TimesheetEntryRepository;
+import com.admin.repository.UserModuleOverrideRepository;
 import com.admin.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +52,12 @@ public class UserService {
     private final TicketRepository ticketRepository;
     private final DeveloperProfileRepository developerProfileRepository;
     private final ProjectRepository projectRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatSessionRepository chatSessionRepository;
+    private final TimesheetEntryRepository timesheetEntryRepository;
+    private final ProjectFileRepository projectFileRepository;
+    private final UserModuleOverrideRepository userModuleOverrideRepository;
+    private final DeveloperSkillRepository developerSkillRepository;
     private final JdbcTemplate jdbcTemplate;
     private final LiveUpdatePublisher liveUpdatePublisher;
     private final EntityManager entityManager;
@@ -327,22 +339,42 @@ public class UserService {
             throw new RuntimeException("You cannot delete your own account.");
         }
 
+        // Check for all user dependencies
         long taskCreatedRefs = taskRepository.countByCreatedBy_Id(userId);
         long taskAssignedRefs = taskRepository.countByAssignedTo_Id(userId);
 
         long ticketCreatedRefs = ticketRepository.countByCreatedBy_Id(userId);
         long ticketAssignedRefs = ticketRepository.countByAssignedTo_Id(userId);
+        long ticketManagerRefs = ticketRepository.countByManager_Id(userId);
+        long ticketClientRefs = ticketRepository.countByClient_Id(userId);
 
         long profileRefs = developerProfileRepository.countByUser_Id(userId);
-        long projectRefs = projectRepository.countByManager_Id(userId);
+        long projectManagerRefs = projectRepository.countByManager_Id(userId);
+        long projectClientRefs = projectRepository.countByClient_Id(userId);
+
+        long chatMessageRefs = chatMessageRepository.countBySender_Id(userId);
+        long chatSessionRefs = chatSessionRepository.countByStartedBy_Id(userId);
+        long timesheetDevRefs = timesheetEntryRepository.countByDeveloper_Id(userId);
+        long timesheetReviewRefs = timesheetEntryRepository.countByReviewedBy_Id(userId);
+        long projectFileRefs = projectFileRepository.countByUploadedBy_Id(userId);
+        long userModuleRefs = userModuleOverrideRepository.findByUser_Id(userId).size();
 
         boolean hasDependencies =
                 taskCreatedRefs > 0 ||
                 taskAssignedRefs > 0 ||
                 ticketCreatedRefs > 0 ||
                 ticketAssignedRefs > 0 ||
+                ticketManagerRefs > 0 ||
+                ticketClientRefs > 0 ||
                 profileRefs > 0 ||
-                projectRefs > 0;
+                projectManagerRefs > 0 ||
+                projectClientRefs > 0 ||
+                chatMessageRefs > 0 ||
+                chatSessionRefs > 0 ||
+                timesheetDevRefs > 0 ||
+                timesheetReviewRefs > 0 ||
+                projectFileRefs > 0 ||
+                userModuleRefs > 0;
 
         if (hasDependencies) {
             user.setEnabled(false);
@@ -363,24 +395,44 @@ public class UserService {
             return "User has related records. Disabled instead of deleted.";
         }
 
-        jdbcTemplate.update("DELETE FROM user_roles WHERE user_id = ?", userId);
-        inviteTokenRepository.deleteByUser_Id(userId);
-        userRepository.deleteById(userId);
-        entityManager.clear();
-
+        // Cleanup: Delete user-related records in correct order
         try {
-            auditLogService.log(
-                    "DELETED_USER",
-                    actorEmail,
-                    targetEmail,
-                    "Deleted user account"
-            );
+            // 1. Delete user module overrides
+            userModuleOverrideRepository.deleteAll(userModuleOverrideRepository.findByUser_Id(userId));
+
+            // 2. Delete timesheet entries where user is reviewer (don't delete as developer, they may have legacy data)
+            timesheetEntryRepository.deleteAll(timesheetEntryRepository.findByReviewedByIdOrderByWorkDateDesc(userId));
+
+            // 3. Delete user roles join table
+            jdbcTemplate.update("DELETE FROM user_roles WHERE user_id = ?", userId);
+
+            // 4. Delete invite tokens
+            inviteTokenRepository.deleteByUser_Id(userId);
+
+            // 5. Delete the user
+            userRepository.deleteById(userId);
+            entityManager.clear();
+
+            try {
+                auditLogService.log(
+                        "DELETED_USER",
+                        actorEmail,
+                        targetEmail,
+                        "Deleted user account"
+                );
+            } catch (Exception e) {
+            }
+
+            liveUpdatePublisher.publishUsersChanged("deleted");
+
+            return "User account permanently deleted successfully.";
         } catch (Exception e) {
+            // If deletion fails, fall back to disabling
+            user.setEnabled(false);
+            userRepository.save(user);
+            liveUpdatePublisher.publishUsersChanged("disabled");
+            throw new RuntimeException("Failed to delete user. Account disabled instead: " + e.getMessage(), e);
         }
-
-        liveUpdatePublisher.publishUsersChanged("deleted");
-
-        return "User account permanently deleted successfully.";
     }
 
     private UserResponse toUserResponse(User user) {

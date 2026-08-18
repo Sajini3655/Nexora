@@ -7,6 +7,7 @@ import com.admin.repository.ChatSessionRepository;
 import com.admin.repository.DeveloperProfileRepository;
 import com.admin.repository.DeveloperSkillRepository;
 import com.admin.repository.InviteTokenRepository;
+import com.admin.repository.ProjectFileRepository;
 import com.admin.repository.ProjectRepository;
 import com.admin.repository.TaskRepository;
 import com.admin.repository.TaskStoryPointRepository;
@@ -77,6 +78,9 @@ class UserServiceDeleteTest {
     private ProjectRepository projectRepository;
 
     @Mock
+    private ProjectFileRepository projectFileRepository;
+
+    @Mock
     private UserModuleOverrideRepository userModuleOverrideRepository;
 
     @Mock
@@ -115,8 +119,18 @@ class UserServiceDeleteTest {
         when(taskRepository.countByAssignedTo_Id(42L)).thenReturn(0L);
         when(ticketRepository.countByCreatedBy_Id(42L)).thenReturn(0L);
         when(ticketRepository.countByAssignedTo_Id(42L)).thenReturn(0L);
+        when(ticketRepository.countByManager_Id(42L)).thenReturn(0L);
+        when(ticketRepository.countByClient_Id(42L)).thenReturn(0L);
         when(developerProfileRepository.countByUser_Id(42L)).thenReturn(0L);
         when(projectRepository.countByManager_Id(42L)).thenReturn(0L);
+        when(projectRepository.countByClient_Id(42L)).thenReturn(0L);
+        when(chatMessageRepository.countBySender_Id(42L)).thenReturn(0L);
+        when(chatSessionRepository.countByStartedBy_Id(42L)).thenReturn(0L);
+        when(timesheetEntryRepository.countByDeveloper_Id(42L)).thenReturn(0L);
+        when(timesheetEntryRepository.countByReviewedBy_Id(42L)).thenReturn(0L);
+        when(projectFileRepository.countByUploadedBy_Id(42L)).thenReturn(0L);
+        when(userModuleOverrideRepository.findByUser_Id(42L)).thenReturn(List.of());
+        when(timesheetEntryRepository.findByReviewedByIdOrderByWorkDateDesc(42L)).thenReturn(List.of());
         when(jdbcTemplate.update("DELETE FROM user_roles WHERE user_id = ?", 42L)).thenReturn(1);
 
         String message = userService.deleteUser(42L);

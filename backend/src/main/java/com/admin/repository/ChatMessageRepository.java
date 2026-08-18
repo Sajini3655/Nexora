@@ -28,6 +28,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     long countBySession_Id(Long sessionId);
 
+    long countBySender_Id(Long senderId);
+
     Optional<ChatMessage> findTopBySession_IdOrderByCreatedAtDesc(Long sessionId);
 
         @Query("SELECT m.session.id AS sessionId, COUNT(m.id) AS messageCount " +

@@ -12,7 +12,11 @@ public interface TimesheetEntryRepository extends JpaRepository<TimesheetEntry, 
 
     List<TimesheetEntry> findByDeveloperIdOrderByWorkDateDesc(Long developerId);
 
+    long countByDeveloper_Id(Long developerId);
+
     List<TimesheetEntry> findByReviewedByIdOrderByWorkDateDesc(Long reviewedById);
+
+    long countByReviewedBy_Id(Long reviewedById);
 
     List<TimesheetEntry> findByDeveloperIdAndStatusOrderByWorkDateDesc(Long developerId, TimesheetStatus status);
 
