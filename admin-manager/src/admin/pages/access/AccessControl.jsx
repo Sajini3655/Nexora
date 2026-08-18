@@ -178,15 +178,15 @@ export default function AccessControl() {
   };
 
   const buildTemplateDefaults = (template) => {
+    const enabledByTemplate = {
+      MANAGER: ["DASHBOARD", "TASKS", "PROJECTS", "TICKETS", "CHAT"],
+      DEVELOPER: ["DASHBOARD", "PROJECTS", "TASKS", "CHAT"],
+      CLIENT: ["DASHBOARD", "TICKETS"],
+    };
+    const enabledKeys = enabledByTemplate[template] ?? [];
     const defaults = {};
     modules.forEach((module) => {
-      if (template === "MANAGER" || template === "DEVELOPER") {
-        defaults[module.key] = true;
-      } else if (template === "CLIENT") {
-        defaults[module.key] = module.key === "DASHBOARD" || module.key === "CHAT";
-      } else {
-        defaults[module.key] = false;
-      }
+      defaults[module.key] = enabledKeys.includes(module.key);
     });
     return defaults;
   };
