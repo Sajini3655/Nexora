@@ -452,9 +452,128 @@ async def assign_recommend(req: Request):
 # ----------------------------
 def _normalize(text: str) -> str:
     text = (text or "").strip().lower()
+    text = re.sub(r"^(go to|goto|go|open|show|take me to|take me|navigate to|navigate|view)\s+", "", text)
+    text = re.sub(r"^the\s+", "", text)
     text = re.sub(r"[^a-z0-9\s]+", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
-    return text
+    if not text:
+        return ""
+
+    typo_tokens = {
+        "prjoect": "project",
+        "projct": "project",
+        "dshboard": "dashboard",
+        "dashbord": "dashboard",
+        "taks": "tasks",
+        "tsaks": "tasks",
+    }
+    words = [typo_tokens.get(word, word) for word in text.split()]
+    normalized = " ".join(words).strip()
+
+    if normalized == "project s":
+        return "projects"
+
+    return normalized
+
+
+def _page_aliases() -> set[str]:
+    aliases = {
+        "dashboard",
+        "home",
+        "settings",
+        "profile",
+        "my profile",
+        "users",
+        "timesheets",
+        "my timesheets",
+        "tickets",
+        "ticket list",
+        "tasks",
+        "task list",
+        "chat",
+        "history",
+        "access",
+        "project management",
+        "projects",
+        "project list",
+        "projects list",
+        "all projects",
+        "my projects",
+        "workstreams",
+        "work streams",
+        "manager dashboard",
+        "developer dashboard",
+        "client dashboard",
+    }
+    return aliases
+
+
+def _is_page_query(query: str) -> bool:
+    """Return True for page destinations and False for real named entity queries."""
+    q = _normalize(query)
+    if not q:
+        return False
+
+    aliases = _page_aliases()
+    if q in aliases:
+        return True
+
+    for alias in aliases:
+        if q == alias:
+            return True
+        if q.startswith(f"my {alias}") or q.startswith(f"all {alias}") or q.startswith(f"the {alias}"):
+            return True
+        if q.startswith(f"{alias} list") or q.endswith(f" {alias}"):
+            return True
+
+    # Allow typo tolerance for clean page terms only; avoid matching entity names like "project rabbit".
+    for alias in sorted(aliases, key=len, reverse=True):
+        if len(alias.split()) > 1:
+            if q == alias or q.startswith(f"{alias} "):
+                return True
+            if _fuzzy_score(q, alias) >= 0.82 and len(q.split()) <= 3:
+                return True
+        else:
+            if len(q.split()) == 1 and _fuzzy_score(q, alias) >= 0.78:
+                return True
+
+    return False
+
+
+def _levenshtein_distance(s1: str, s2: str) -> int:
+    """Compute Levenshtein distance for typo tolerance."""
+    if len(s1) < len(s2):
+        return _levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    
+    return previous_row[-1]
+
+
+def _fuzzy_score(query: str, target: str) -> float:
+    """Compute fuzzy match score with typo tolerance."""
+    if query == target:
+        return 1.0
+    if query in target or target in query:
+        return 0.95
+    
+    # Levenshtein-based scoring
+    max_len = max(len(query), len(target))
+    if max_len == 0:
+        return 1.0
+    distance = _levenshtein_distance(query, target)
+    # Convert distance to similarity score
+    return max(0.0, 1.0 - (distance / max_len))
 
 
 def _best_destination_id(query: str, allowed_destinations: List[Dict[str, Any]]) -> Optional[str]:
@@ -475,20 +594,14 @@ def _best_destination_id(query: str, allowed_destinations: List[Dict[str, Any]])
         for h in haystacks:
             if not h:
                 continue
-            if h == q:
-                score = max(score, 1.0)
-                continue
-            if h in q or q in h:
-                score = max(score, 0.92)
-                continue
-            score = max(score, SequenceMatcher(None, q, h).ratio())
+            score = max(score, _fuzzy_score(q, h))
 
         if score > best_score:
             best_score = score
             best_id = dest_id
 
-    # Small threshold to avoid nonsense picks
-    return best_id if best_score >= 0.55 else None
+    # Lower threshold to be more forgiving with partial matches and typos
+    return best_id if best_score >= 0.50 else None
 
 
 def _detect_switch_role(query: str) -> Optional[str]:
@@ -504,44 +617,96 @@ def _detect_switch_role(query: str) -> Optional[str]:
 
 
 def _detect_entity(current_role: str, query: str) -> Optional[Dict[str, str]]:
+    """Enhanced entity detection that handles queries with and without explicit entity type keywords."""
     q = _normalize(query)
     role = (current_role or "").strip().upper()
 
     # Strip common navigation verbs.
-    stripped = re.sub(r"^(go to|goto|open|show|take me to|navigate|navigate to)\s+", "", q).strip()
+    stripped = re.sub(r"^(go to|goto|open|show|take me to|navigate|navigate to|view)\s+", "", q).strip()
+
+    # Strip "the" prefix
+    stripped = re.sub(r"^the\s+", "", stripped).strip()
+
+    # Treat page names as destinations, not project/task entities.
+    if _is_page_query(stripped):
+        return None
+
+    # Guardrail: if the user query is simply a page-like phrase after stripping verbs, never treat it as a named entity.
+    if stripped in _page_aliases() or any(stripped.startswith(f"{page} ") for page in _page_aliases()):
+        return None
 
     if role == "MANAGER":
+        # Check for explicit ticket mention
         if "ticket" in stripped or "tickets" in stripped:
             name = stripped.replace("tickets", "").replace("ticket", "").strip()
             return {"entityType": "MANAGER_TICKET", "entityName": name}
+
+        # Check for explicit task mention
         if "task" in stripped or "tasks" in stripped:
             name = stripped.replace("tasks", "").replace("task", "").strip()
             return {"entityType": "MANAGER_TASK", "entityName": name}
+
+        # Check for explicit project mention.
+        # "project management" is a destination, not a specific entity.
         if "project" in stripped or "projects" in stripped or "workstream" in stripped or "workstreams" in stripped:
             name = stripped
             for w in ["projects", "project", "workstreams", "workstream"]:
                 name = name.replace(w, "")
             name = name.strip()
+
+            if not name or "management" in stripped or "list" in stripped:
+                return None
             return {"entityType": "MANAGER_PROJECT", "entityName": name}
 
+        # If no explicit keywords, assume it might be a project name for MANAGER context
+        if stripped and not any(kw in stripped for kw in ["dashboard", "home", "settings", "access", "timesheets", "users", "profile"]):
+            return {"entityType": "MANAGER_PROJECT", "entityName": stripped}
+
     if role == "CLIENT":
+        # Check for explicit ticket mention
         if "ticket" in stripped or "tickets" in stripped:
             name = stripped.replace("tickets", "").replace("ticket", "").strip()
             return {"entityType": "CLIENT_TICKET", "entityName": name}
+
+        # Check for explicit project mention
         if "project" in stripped or "projects" in stripped or "workstream" in stripped or "workstreams" in stripped:
             name = stripped
             for w in ["projects", "project", "workstreams", "workstream"]:
                 name = name.replace(w, "")
             name = name.strip()
+
+            if not name or "management" in stripped or "list" in stripped:
+                return None
             return {"entityType": "CLIENT_PROJECT", "entityName": name}
 
+        # If no explicit keywords, assume it might be a project or ticket name
+        if stripped and not any(kw in stripped for kw in ["dashboard", "home", "settings", "history", "profile"]):
+            return {"entityType": "CLIENT_PROJECT", "entityName": stripped}
+
     if role == "DEVELOPER":
+        # Check for explicit task mention
         if "task" in stripped or "tasks" in stripped:
             name = stripped.replace("tasks", "").replace("task", "").strip()
             return {"entityType": "DEVELOPER_TASK", "entityName": name}
+
+        # Check for explicit ticket mention
         if "ticket" in stripped or "tickets" in stripped:
             name = stripped.replace("tickets", "").replace("ticket", "").strip()
             return {"entityType": "TICKET", "entityName": name}
+
+        # Check for project mention
+        if "project" in stripped or "projects" in stripped or "workspace" in stripped or "workspaces" in stripped:
+            name = stripped
+            for w in ["projects", "project", "workspaces", "workspace"]:
+                name = name.replace(w, "")
+            name = name.strip()
+            if not name or "management" in stripped or "list" in stripped:
+                return None
+            return {"entityType": "DEVELOPER_PROJECT", "entityName": name}
+
+        # If no explicit keywords, might be a task name
+        if stripped and not any(kw in stripped for kw in ["dashboard", "home", "settings", "chat", "profile", "timesheets"]):
+            return {"entityType": "DEVELOPER_TASK", "entityName": stripped}
 
     return None
 

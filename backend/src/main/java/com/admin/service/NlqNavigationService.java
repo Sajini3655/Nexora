@@ -134,7 +134,7 @@ public class NlqNavigationService {
                     "/manager/project-management",
                     Set.of(Role.MANAGER),
                     AccessModule.FILES,
-                    List.of("projects", "project management", "workstreams", "work streams"),
+                    List.of("projects", "project management", "workstreams", "work streams", "project list", "all projects"),
                     true
             ),
             new Destination(
@@ -189,7 +189,7 @@ public class NlqNavigationService {
                     "/dev/projects",
                     Set.of(Role.DEVELOPER),
                     AccessModule.FILES,
-                    List.of("projects", "workspaces", "workspace"),
+                    List.of("projects", "workspaces", "workspace", "project list"),
                     false
             ),
             new Destination(
@@ -198,7 +198,7 @@ public class NlqNavigationService {
                     "/dev/tasks",
                     Set.of(Role.DEVELOPER),
                     AccessModule.TASKS,
-                    List.of("tasks", "my tasks", "board"),
+                    List.of("tasks", "my tasks", "task list", "board"),
                     false
             ),
             new Destination(
@@ -253,7 +253,7 @@ public class NlqNavigationService {
                     "/client/projects",
                     Set.of(Role.CLIENT),
                     null,
-                    List.of("projects", "workstreams", "work streams"),
+                    List.of("projects", "workstreams", "work streams", "project list"),
                     true
             ),
             new Destination(
@@ -262,7 +262,7 @@ public class NlqNavigationService {
                     "/client/tickets",
                     Set.of(Role.CLIENT),
                     null,
-                    List.of("tickets", "support", "issues"),
+                    List.of("tickets", "support", "issues", "ticket list"),
                     true
             ),
             new Destination(
@@ -415,35 +415,107 @@ public class NlqNavigationService {
             String email
     ) {
         String normalized = normalize(query).toLowerCase(Locale.ROOT);
-
-        if (activeRole == Role.MANAGER && (normalized.equals("add projects") || normalized.equals("add project"))) {
-            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
-                return null;
-            }
-            return NlqResolveResponse.builder()
-                    .action("NAVIGATE")
-                    .path("/manager/add-project")
-                    .build();
+        normalized = normalized.replaceFirst("^(go to|goto|go|open|show|take me to|take me|navigate to|navigate|view)\\s+", "");
+        normalized = normalized.replaceFirst("^the\\s+", "");
+        if ("project s".equals(normalized)) {
+            normalized = "projects";
         }
 
-        if (activeRole == Role.MANAGER && (normalized.equals("add task") || normalized.equals("add tasks"))) {
-            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.TASKS.name()))) {
-                return null;
+        if (activeRole == Role.MANAGER) {
+            if (normalized.equals("add projects") || normalized.equals("add project")) {
+                if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+                    return null;
+                }
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/manager/add-project")
+                        .build();
             }
-            return NlqResolveResponse.builder()
-                    .action("NAVIGATE")
-                    .path("/manager/ai-assignment")
-                    .build();
+
+            if (normalized.equals("add task") || normalized.equals("add tasks")) {
+                if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.TASKS.name()))) {
+                    return null;
+                }
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/manager/ai-assignment")
+                        .build();
+            }
+
+            if (normalized.contains("projects list") || normalized.equals("all projects") || normalized.equals("projects") || normalized.equals("project") || normalized.equals("project management")) {
+                if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+                    return null;
+                }
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/manager/project-management")
+                        .build();
+            }
+
+            if (normalized.equals("dashboard") || normalized.equals("manager dashboard") || normalized.equals("home")) {
+                if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.DASHBOARD.name()))) {
+                    return null;
+                }
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/manager")
+                        .build();
+            }
         }
 
-        if (activeRole == Role.MANAGER && (normalized.contains("projects list") || normalized.equals("all projects"))) {
-            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
-                return null;
+        if (activeRole == Role.DEVELOPER) {
+            if (normalized.equals("tasks") || normalized.equals("task") || normalized.equals("my tasks") || normalized.equals("task list")) {
+                if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.TASKS.name()))) {
+                    return null;
+                }
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/dev/tasks")
+                        .build();
             }
-            return NlqResolveResponse.builder()
-                    .action("NAVIGATE")
-                    .path("/manager/project-management")
-                    .build();
+
+            if (normalized.equals("projects") || normalized.equals("project") || normalized.equals("project list") || normalized.equals("my projects")) {
+                if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+                    return null;
+                }
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/dev/projects")
+                        .build();
+            }
+
+            if (normalized.equals("dashboard") || normalized.equals("developer dashboard") || normalized.equals("home")) {
+                if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.DASHBOARD.name()))) {
+                    return null;
+                }
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/dev")
+                        .build();
+            }
+        }
+
+        if (activeRole == Role.CLIENT) {
+            if (normalized.equals("projects") || normalized.equals("project") || normalized.equals("my projects") || normalized.equals("project list")) {
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/client/projects")
+                        .build();
+            }
+
+            if (normalized.equals("tickets") || normalized.equals("ticket list") || normalized.equals("support")) {
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/client/tickets")
+                        .build();
+            }
+
+            if (normalized.equals("dashboard") || normalized.equals("client dashboard") || normalized.equals("home")) {
+                return NlqResolveResponse.builder()
+                        .action("NAVIGATE")
+                        .path("/client")
+                        .build();
+            }
         }
 
         return null;
@@ -467,7 +539,7 @@ public class NlqNavigationService {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<ProjectResponse> projects = projectService.getMyProjects(authentication);
-                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.58);
+                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.45);
                 if (match.isPresent()) {
                     return "/manager/project-management/" + url(String.valueOf(match.get().getId()));
                 }
@@ -484,7 +556,7 @@ public class NlqNavigationService {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<TaskDto> tasks = taskAssignmentService.listManagerTasks(email);
-                Optional<TaskDto> match = bestMatch(name, tasks, TaskDto::getTitle, 0.58);
+                Optional<TaskDto> match = bestMatch(name, tasks, TaskDto::getTitle, 0.45);
                 if (match.isPresent()) {
                     return "/manager/tasks/" + url(String.valueOf(match.get().getId()));
                 }
@@ -496,7 +568,7 @@ public class NlqNavigationService {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<ProjectResponse> projects = clientPortalService.getMyProjects(authentication);
-                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.58);
+                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.45);
                 if (match.isPresent()) {
                     return "/client/projects/" + url(String.valueOf(match.get().getId()));
                 }
@@ -508,7 +580,7 @@ public class NlqNavigationService {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<TicketDto> tickets = clientPortalService.getMyTickets(authentication);
-                Optional<TicketDto> match = bestMatch(name, tickets, TicketDto::getTitle, 0.58);
+                Optional<TicketDto> match = bestMatch(name, tickets, TicketDto::getTitle, 0.45);
                 String q = match.map(TicketDto::getTitle).filter(v -> !safe(v).isBlank()).orElse(name);
                 return "/client/tickets?q=" + url(q);
             } catch (Exception ignored) {
@@ -516,11 +588,26 @@ public class NlqNavigationService {
             }
         }
 
+        if (activeRole == Role.DEVELOPER && "DEVELOPER_PROJECT".equals(entityType)) {
+            if (!Boolean.TRUE.equals(moduleAccess.get(AccessModule.FILES.name()))) {
+                return null;
+            }
+            String name = entityName.isBlank() ? rawQuery : entityName;
+            try {
+                List<ProjectResponse> projects = projectService.getMyProjects(authentication);
+                Optional<ProjectResponse> match = bestMatch(name, projects, ProjectResponse::getName, 0.45);
+                if (match.isPresent()) {
+                    return "/dev/projects/" + url(String.valueOf(match.get().getId()));
+                }
+            } catch (Exception ignored) {}
+            return "/dev/projects?q=" + url(name);
+        }
+
         if (activeRole == Role.DEVELOPER && "DEVELOPER_TASK".equals(entityType)) {
             String name = entityName.isBlank() ? rawQuery : entityName;
             try {
                 List<TaskDto> tasks = developerTaskService.listAssignedToMe(email);
-                Optional<TaskDto> match = bestMatch(name, tasks, TaskDto::getTitle, 0.58);
+                Optional<TaskDto> match = bestMatch(name, tasks, TaskDto::getTitle, 0.45);
                 if (match.isPresent()) {
                     return "/dev/tasks/" + url(String.valueOf(match.get().getId()));
                 }
@@ -650,8 +737,32 @@ public class NlqNavigationService {
     private static String normalize(String value) {
         if (value == null) return "";
         String lowered = value.toLowerCase(Locale.ROOT);
+        lowered = lowered.replaceFirst("^(go to|goto|go|open|show|take me to|take me|navigate to|navigate|view)\\s+", "");
+        lowered = lowered.replaceFirst("^the\\s+", "");
         String cleaned = lowered.replaceAll("[^a-z0-9]+", " ").trim();
-        return cleaned.replaceAll("\\s+", " ");
+        String normalized = cleaned.replaceAll("\\s+", " ");
+        if (normalized.isBlank()) {
+            return "";
+        }
+
+        String[] words = normalized.split(" ");
+        for (int i = 0; i < words.length; i++) {
+            switch (words[i]) {
+                case "prjoect", "projct" -> words[i] = "project";
+                case "dshboard", "dashbord" -> words[i] = "dashboard";
+                case "taks", "tsaks" -> words[i] = "tasks";
+                default -> {
+                    // Keep token as-is.
+                }
+            }
+        }
+
+        normalized = String.join(" ", words).trim();
+
+        if ("project s".equals(normalized)) {
+            return "projects";
+        }
+        return normalized;
     }
 
     private static double score(String a, String b) {
