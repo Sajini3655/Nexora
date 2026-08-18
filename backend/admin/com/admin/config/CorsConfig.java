@@ -22,13 +22,18 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         List<String> allowedOrigins = new ArrayList<>();
+        // Add frontend URL from environment
         if (frontendBaseUrl != null && !frontendBaseUrl.isBlank()) {
             allowedOrigins.add(frontendBaseUrl.trim());
         }
+        // Add development URLs
         allowedOrigins.add("http://localhost:5173");
         allowedOrigins.add("http://127.0.0.1:5173");
+        allowedOrigins.add("http://localhost:3000");
+        allowedOrigins.add("http://127.0.0.1:3000");
 
-        config.setAllowedOriginPatterns(allowedOrigins);
+        // Use setAllowedOrigins for specific origins
+        config.setAllowedOrigins(allowedOrigins);
 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of(
@@ -36,7 +41,13 @@ public class CorsConfig {
                 "Content-Type",
                 "Accept",
                 "Origin",
-                "X-Requested-With"
+                "X-Requested-With",
+                "Access-Control-Allow-Origin"
+        ));
+        config.setExposedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Access-Control-Allow-Origin"
         ));
         config.setAllowCredentials(true);
 

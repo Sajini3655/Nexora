@@ -39,8 +39,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         if (frontendBaseUrl != null && !frontendBaseUrl.isBlank()) {
             allowedOrigins.add(frontendBaseUrl.trim());
         }
+        // Add development URLs
         allowedOrigins.add("http://localhost:5173");
         allowedOrigins.add("http://127.0.0.1:5173");
+        allowedOrigins.add("http://localhost:3000");
+        allowedOrigins.add("http://127.0.0.1:3000");
 
         registry.addEndpoint("/ws")
             .setHandshakeHandler(new CustomHandshakeHandler())

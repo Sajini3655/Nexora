@@ -30,7 +30,7 @@ services:
       - key: MAIL_FROM
         sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: "https://nexora-three-peach.vercel.app"
       - key: INBOUND_EMAIL_API_KEY
         sync: false
       - key: JWT_EXPIRATION_MS
