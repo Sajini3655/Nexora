@@ -210,6 +210,7 @@ public class TaskAssignmentService {
     }
 
     @Transactional
+    @Transactional
     public TaskDto assignTask(String managerEmail, Long taskId, AssignTaskRequest req) {
         User manager = userRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
@@ -217,9 +218,10 @@ public class TaskAssignmentService {
         TaskItem task = taskRepository.findById(Objects.requireNonNull(taskId))
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (task.getCreatedBy() == null || task.getCreatedBy().getId() == null
-                || !task.getCreatedBy().getId().equals(manager.getId())) {
-            throw new ResourceNotFoundException("Task not found");
+        // Verify manager owns the project containing this task
+        if (task.getProject() == null || task.getProject().getManager() == null
+                || !task.getProject().getManager().getId().equals(manager.getId())) {
+            throw new AccessDeniedException("You can only assign tasks for projects you manage");
         }
 
         User assignee = null;
