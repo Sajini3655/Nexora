@@ -53,7 +53,6 @@ public class SystemHealthService {
         long uptimeMillis = ManagementFactory.getRuntimeMXBean().getUptime();
         HealthComponent health = healthEndpoint.health();
 
-        String overallStatus = health.getStatus().getCode();
         DatabaseProbeResult databaseProbeResult = probeDatabase();
         String databaseStatus = databaseProbeResult.status();
         if ("UNKNOWN".equalsIgnoreCase(databaseStatus)) {
@@ -65,6 +64,7 @@ public class SystemHealthService {
         String apiStatus = "OK";
         String mailStatus = resolveMailStatus(health);
         String aiServiceStatus = probeAiServiceStatus();
+        String overallStatus = resolveOverallStatus(databaseStatus, mailStatus, aiServiceStatus);
 
         return SystemHealthResponse.builder()
                 .apiStatus(apiStatus)
@@ -110,6 +110,17 @@ public class SystemHealthService {
         }
 
         return resolveComponentStatus(health, "mail");
+    }
+
+    private String resolveOverallStatus(String databaseStatus, String mailStatus, String aiServiceStatus) {
+        boolean coreServicesHealthy = "OK".equalsIgnoreCase(databaseStatus)
+                && "OK".equalsIgnoreCase(aiServiceStatus);
+
+        if (!coreServicesHealthy) {
+            return "DOWN";
+        }
+
+        return "OK".equalsIgnoreCase(mailStatus) ? "UP" : "DEGRADED";
     }
 
     private String getMailMessage(String status) {

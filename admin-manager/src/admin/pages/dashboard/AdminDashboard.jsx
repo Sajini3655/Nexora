@@ -201,7 +201,7 @@ export default function AdminDashboard() {
         title: "Overall",
         value: systemHealth?.overallStatus ?? "-",
         icon: <HeartPulse size={18} />,
-        badge: systemHealth?.overallStatus === "UP" ? "OK" : "CHECK",
+        badge: systemHealth?.overallStatus === "UP" ? "OK" : systemHealth?.overallStatus === "DEGRADED" ? "DEGRADED" : "CHECK",
         badgeTone: systemHealth?.overallStatus === "UP" ? "success" : "warning",
         description: "Aggregate health status of all system components",
         details: [
@@ -211,7 +211,7 @@ export default function AdminDashboard() {
           { label: "AI Service Status", value: systemHealth?.aiServiceStatus ?? "-" },
           { label: "Overall Status", value: systemHealth?.overallStatus ?? "-" },
         ],
-        issue: systemHealth?.overallStatus === "UP" ? null : "One or more critical services are down",
+        issue: systemHealth?.overallStatus === "UP" ? null : systemHealth?.overallStatus === "DEGRADED" ? "Core services are healthy, but an optional service needs configuration" : "One or more core services are down",
         action: systemHealth?.overallStatus === "UP" ? "All systems operational" : "Review individual service status and take corrective action",
       },
     ];
