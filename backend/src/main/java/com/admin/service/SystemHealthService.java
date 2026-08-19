@@ -43,6 +43,12 @@ public class SystemHealthService {
     @Value("${spring.mail.host:}")
     private String mailHost;
 
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
+
     public SystemHealthResponse getSystemHealth() {
         long uptimeMillis = ManagementFactory.getRuntimeMXBean().getUptime();
         HealthComponent health = healthEndpoint.health();
@@ -54,8 +60,10 @@ public class SystemHealthService {
             databaseStatus = resolveComponentStatus(health, "db");
         }
 
-        String apiStatus = "UP".equalsIgnoreCase(overallStatus) ? "OK" : "DOWN";
-        String mailStatus = resolveComponentStatus(health, "mail");
+        // Reaching this method proves the backend API is responding. A dependency
+        // such as SMTP being unavailable must not make the API itself appear down.
+        String apiStatus = "OK";
+        String mailStatus = resolveMailStatus(health);
         String aiServiceStatus = probeAiServiceStatus();
 
         return SystemHealthResponse.builder()
@@ -71,11 +79,11 @@ public class SystemHealthService {
 
                 .apiMessage(apiStatus.equals("OK")
                         ? "Backend API is responding normally."
-                        : "Backend API is not responding. Check if Spring Boot is running.")
+                        : "Backend API is responding normally.")
                 .databaseMessage(getDatabaseMessage(databaseStatus, databaseProbeResult.latencyMs()))
                 .mailMessage(mailStatus.equals("OK")
                         ? "Mail configuration is available."
-                        : "SMTP configuration is missing or invalid.")
+                        : getMailMessage(mailStatus))
                 .aiServiceMessage(getAiServiceMessage(aiServiceStatus))
 
                 .backendUrl("http://localhost:" + serverPort)
@@ -93,6 +101,25 @@ public class SystemHealthService {
             return "Database connection successful" + (latencyMs != null ? " (" + latencyMs + "ms)" : "");
         }
         return "Database connection failed. Check credentials and network access.";
+    }
+
+    private String resolveMailStatus(HealthComponent health) {
+        if (mailUsername == null || mailUsername.isBlank()
+                || mailPassword == null || mailPassword.isBlank()) {
+            return "NOT_CONFIGURED";
+        }
+
+        return resolveComponentStatus(health, "mail");
+    }
+
+    private String getMailMessage(String status) {
+        if ("OK".equalsIgnoreCase(status)) {
+            return "Mail service is configured and responding normally.";
+        }
+        if ("NOT_CONFIGURED".equalsIgnoreCase(status)) {
+            return "SMTP username and password are not configured.";
+        }
+        return "SMTP configuration is invalid or the mail server is unreachable.";
     }
 
     private String getAiServiceMessage(String status) {

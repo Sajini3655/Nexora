@@ -155,7 +155,7 @@ export default function AdminDashboard() {
         title: "Mail",
         value: systemHealth?.mailStatus ?? "-",
         icon: <Mail size={18} />,
-        badge: systemHealth?.mailStatus === "OK" ? "LIVE" : "CHECK",
+        badge: systemHealth?.mailStatus === "OK" ? "LIVE" : systemHealth?.mailStatus === "NOT_CONFIGURED" ? "CONFIG" : "CHECK",
         badgeTone: systemHealth?.mailStatus === "OK" ? "success" : "warning",
         description: "Email service for sending notifications and alerts",
         details: [
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
           { label: "Response", value: systemHealth?.mailMessage ?? "No information" },
         ],
         issue: systemHealth?.mailStatus === "OK" ? null : (systemHealth?.mailMessage ?? "Mail service unavailable"),
-        action: systemHealth?.mailStatus === "OK" ? "Email service is operational" : "Verify SMTP credentials and mail server connectivity",
+        action: systemHealth?.mailStatus === "OK" ? "Email service is operational" : "Configure MAIL_USERNAME and MAIL_PASSWORD, then restart the backend",
       },
       {
         title: "AI Service",
