@@ -86,6 +86,9 @@ export default function DevTimesheets() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const dateInputRef = useRef(null);
+  const hoursInputRef = useRef(null);
+  const workLocationInputRef = useRef(null);
+  const descriptionInputRef = useRef(null);
   const todayDate = getLocalDateInputValue();
 
   const loadData = useCallback(async () => {
@@ -166,17 +169,22 @@ export default function DevTimesheets() {
 
       const parsedHours = Number(form.hours);
       if (!Number.isFinite(parsedHours) || parsedHours <= 0 || parsedHours >= 24) {
-        setError("Hours must be greater than 0 and less than 24.");
+        alert("Hours must be greater than 0 and less than 24.");
         return;
       }
 
       if (!form.workDate) {
-        setError("Date is required for draft timesheets.");
+        alert("Date is required for draft timesheets.");
+        return;
+      }
+
+      if (form.description.trim().length < 50) {
+        alert("Description must contain at least 50 characters.");
         return;
       }
 
       if (form.workDate && isAfterDate(form.workDate, todayDate)) {
-        setError("Timesheet date cannot be in the future.");
+        alert("Timesheet date cannot be in the future.");
         return;
       }
 
@@ -380,6 +388,30 @@ export default function DevTimesheets() {
               label="Project"
               value={form.projectId}
               onChange={(event) => setForm((current) => ({ ...current, projectId: event.target.value, taskId: "" }))}
+              sx={{
+                "& .MuiSelect-select": {
+                  color: form.projectId ? "var(--nx-text)" : "var(--nx-muted)",
+                  fontWeight: form.projectId ? 800 : 400,
+                },
+              }}
+              SelectProps={{
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: "var(--nx-card)",
+                      color: "var(--nx-text)",
+                      "& .MuiMenuItem-root.Mui-selected": {
+                        backgroundColor: "color-mix(in srgb, var(--nx-purple) 24%, transparent)",
+                        color: "var(--nx-text)",
+                        fontWeight: 800,
+                      },
+                      "& .MuiMenuItem-root.Mui-selected:hover": {
+                        backgroundColor: "color-mix(in srgb, var(--nx-purple) 32%, transparent)",
+                      },
+                    },
+                  },
+                },
+              }}
             >
               <MenuItem value="">Select project</MenuItem>
               {options.projects.map((project) => (
@@ -395,6 +427,30 @@ export default function DevTimesheets() {
               value={form.taskId}
               onChange={(event) => setForm((current) => ({ ...current, taskId: event.target.value }))}
               disabled={!form.projectId}
+              sx={{
+                "& .MuiSelect-select": {
+                  color: form.taskId ? "var(--nx-text)" : "var(--nx-muted)",
+                  fontWeight: form.taskId ? 800 : 400,
+                },
+              }}
+              SelectProps={{
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: "var(--nx-card)",
+                      color: "var(--nx-text)",
+                      "& .MuiMenuItem-root.Mui-selected": {
+                        backgroundColor: "color-mix(in srgb, var(--nx-purple) 24%, transparent)",
+                        color: "var(--nx-text)",
+                        fontWeight: 800,
+                      },
+                      "& .MuiMenuItem-root.Mui-selected:hover": {
+                        backgroundColor: "color-mix(in srgb, var(--nx-purple) 32%, transparent)",
+                      },
+                    },
+                  },
+                },
+              }}
             >
               <MenuItem value="">No task</MenuItem>
               {selectedProjectTasks.map((task) => (
@@ -405,12 +461,18 @@ export default function DevTimesheets() {
             </Input>
 
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Box sx={{ position: "relative", width: "100%" }}>
+              <Grid item xs={12} md={6} sx={{ minWidth: 0, display: "flex" }}>
+                <Box sx={{ position: "relative", width: "100%", minWidth: 0, m: 0 }}>
                   <Typography variant="body2" sx={{ mb: 0.75, color: "var(--nx-muted)", fontWeight: 700 }}>
                     Date
                   </Typography>
                   <Box
+                    onKeyDownCapture={(event) => {
+                      if (event.key !== "Tab" || event.shiftKey) return;
+
+                      event.preventDefault();
+                      hoursInputRef.current?.focus();
+                    }}
                     onClick={() => {
                       dateInputRef.current?.showPicker?.();
                       dateInputRef.current?.focus();
@@ -422,6 +484,8 @@ export default function DevTimesheets() {
                       justifyContent: "space-between",
                       gap: 1,
                       px: 2,
+                      boxSizing: "border-box",
+                      width: "100%",
                       minHeight: 56,
                       borderRadius: 2.2,
                       border: "1px solid var(--nx-border)",
@@ -476,14 +540,34 @@ export default function DevTimesheets() {
                   </Box>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Input
-                  type="number"
-                  label="Hours"
-                  inputProps={{ step: "0.25", min: "0", max: "23.75" }}
-                  value={form.hours}
-                  onChange={(event) => setForm((current) => ({ ...current, hours: event.target.value }))}
-                />
+              <Grid item xs={12} md={6} sx={{ minWidth: 0, display: "flex" }}>
+                <Box sx={{ width: "100%", minWidth: 0, m: 0 }}>
+                  <Typography variant="body2" sx={{ mb: 0.75, color: "var(--nx-muted)", fontWeight: 700 }}>
+                    Hours
+                  </Typography>
+                  <Input
+                    type="number"
+                    inputProps={{ step: "0.25", min: "0", max: "23.75" }}
+                    value={form.hours}
+                    onChange={(event) => setForm((current) => ({ ...current, hours: event.target.value }))}
+                    onKeyDownCapture={(event) => {
+                      if (event.key !== "Tab" || event.shiftKey) return;
+
+                      event.preventDefault();
+                      workLocationInputRef.current?.focus();
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        minHeight: 56,
+                        borderRadius: 2.2,
+                        overflow: "hidden",
+                      },
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderRadius: 2.2,
+                      },
+                    }}
+                  />
+                </Box>
               </Grid>
             </Grid>
 
@@ -492,6 +576,13 @@ export default function DevTimesheets() {
               label="Work location"
               value={form.workLocation}
               onChange={(event) => setForm((current) => ({ ...current, workLocation: event.target.value }))}
+              inputRef={workLocationInputRef}
+              onKeyDownCapture={(event) => {
+                if (event.key !== "Tab" || event.shiftKey) return;
+
+                event.preventDefault();
+                descriptionInputRef.current?.focus();
+              }}
             >
               {Object.entries(WORK_LOCATION_LABELS).map(([value, label]) => (
                 <MenuItem key={value} value={value}>
@@ -505,6 +596,7 @@ export default function DevTimesheets() {
               multiline
               minRows={4}
               label="Description"
+              inputRef={descriptionInputRef}
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
               sx={{

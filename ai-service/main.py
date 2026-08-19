@@ -677,12 +677,20 @@ def _detect_entity(current_role: str, query: str) -> Optional[Dict[str, str]]:
                 name = name.replace(w, "")
             name = name.strip()
 
-            if not name or "management" in stripped or "list" in stripped:
+            # Only skip if query is exactly "project management" or "projects list"
+            if not name or (("management" in stripped or "list" in stripped) and len(stripped.split()) <= 2):
                 return None
-            return {"entityType": "MANAGER_PROJECT", "entityName": name}
+            
+            # If we have a name after removing project keywords, treat as project search
+            if name:
+                return {"entityType": "MANAGER_PROJECT", "entityName": name}
+            return None
 
         # If no explicit keywords, assume it might be a project name for MANAGER context
-        if stripped and not any(kw in stripped for kw in ["dashboard", "home", "settings", "access", "timesheets", "users", "profile"]):
+        # But exclude navigation-only keywords
+        excluded_keywords = ["dashboard", "home", "settings", "access", "timesheets", "users", "profile", "add", "create", "new"]
+        if stripped and not any(kw in stripped for kw in excluded_keywords):
+            # Default to project search for manager if nothing else matches
             return {"entityType": "MANAGER_PROJECT", "entityName": stripped}
 
     if role == "CLIENT":

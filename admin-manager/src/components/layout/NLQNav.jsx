@@ -40,6 +40,24 @@ export default function NLQNav() {
 
   const closeSnack = () => setSnack((s) => ({ ...s, open: false }));
 
+  React.useEffect(() => {
+    const handleTabNavigation = (event) => {
+      if (event.key !== "Tab") return;
+
+      const activeElement = document.activeElement;
+      if (activeElement?.closest?.('[role="dialog"]')) return;
+
+      const nlqInput = document.getElementById("nlq-search-input");
+      if (!nlqInput || nlqInput.disabled) return;
+
+      event.preventDefault();
+      nlqInput.focus();
+    };
+
+    document.addEventListener("keydown", handleTabNavigation);
+    return () => document.removeEventListener("keydown", handleTabNavigation);
+  }, []);
+
   const showMessage = (message, severity = "info", action = null) => {
     setSnack({ open: true, severity, message, action });
   };
