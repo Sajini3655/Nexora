@@ -45,9 +45,9 @@ services:
         sync: false
       # Required for NLQ / AI routing in production. Keep localhost fallback in Spring config for local dev.
       - key: AI_SERVICE_BASE_URL
-        value: "https://nexora-ai-service.onrender.com"
+        value: "https://nexora-1-0lpb.onrender.com"
       - key: AI_SERVICE_HEALTH_URL
-        value: "https://nexora-ai-service.onrender.com/health"
+        value: "https://nexora-1-0lpb.onrender.com/health"
       - key: FRONTEND_URL
         value: "https://nexora-three-peach.vercel.app"
       - key: INBOUND_EMAIL_API_KEY
