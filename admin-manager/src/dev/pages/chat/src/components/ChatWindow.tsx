@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-const AI_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://127.0.0.1:8000";
+const AI_URL = import.meta.env.VITE_AI_SERVICE_URL || "https://nexora-1-0lpb.onrender.com";
 
 export default function ChatWindow() {
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
