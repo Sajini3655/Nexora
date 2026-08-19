@@ -1,5 +1,19 @@
 services:
   - type: web
+    name: nexora-ai-service
+    env: python
+    rootDir: ./ai-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: standard
+
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: "openai/gpt-oss-20b"
+
+  - type: web
     name: nexora-backend
     env: docker
     dockerfilePath: ./backend/Dockerfile
@@ -31,9 +45,9 @@ services:
         sync: false
       # Required for NLQ / AI routing in production. Keep localhost fallback in Spring config for local dev.
       - key: AI_SERVICE_BASE_URL
-        value: "https://nexora-1-0lpb.onrender.com"
+        value: "https://nexora-ai-service.onrender.com"
       - key: AI_SERVICE_HEALTH_URL
-        value: "https://nexora-1-0lpb.onrender.com/health"
+        value: "https://nexora-ai-service.onrender.com/health"
       - key: FRONTEND_URL
         value: "https://nexora-three-peach.vercel.app"
       - key: INBOUND_EMAIL_API_KEY

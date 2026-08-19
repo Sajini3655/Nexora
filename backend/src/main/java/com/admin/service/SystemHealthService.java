@@ -28,11 +28,14 @@ public class SystemHealthService {
     @Value("${dashboard.refresh-interval-seconds:10}")
     private long refreshIntervalSeconds;
 
-    @Value("${app.ai-service.health-url:http://localhost:8000/health}")
+    @Value("${app.ai-service.health-url:https://nexora-1-0lpb.onrender.com/health}")
     private String aiServiceHealthUrl;
 
     @Value("${app.ai-service.timeout-ms:2000}")
     private int aiServiceTimeoutMs;
+
+    @Value("${app.ai-service.model:${GROQ_MODEL:openai/gpt-oss-20b}}")
+    private String aiServiceModel;
 
     @Value("${server.port:8081}")
     private String serverPort;
@@ -88,9 +91,7 @@ public class SystemHealthService {
 
                 .backendUrl("http://localhost:" + serverPort)
                 .aiServiceUrl(aiServiceHealthUrl)
-                .aiModel(System.getenv("GROQ_MODEL") != null
-                        ? System.getenv("GROQ_MODEL")
-                        : "llama-3.1-70b-versatile")
+                .aiModel(aiServiceModel)
                 .databaseType(isDatabaseSupabase() ? "Supabase/PostgreSQL" : "PostgreSQL")
                 .mailProvider(mailHost.isEmpty() ? "Not configured" : mailHost)
                 .build();
